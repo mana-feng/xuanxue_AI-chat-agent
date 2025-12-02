@@ -117,7 +117,7 @@
 						</view>
 						<view v-else-if="charts.length === 0" class="py-20">
 							<tm-text 
-								:label="searchKeyword || genderFilter ? '未找到符合条件的记录' : '暂无保存记录，可在排盘结果页点击"保存到账号"。'" 
+								:label="searchKeyword || genderFilter ? '未找到符合条件的记录' : '暂无保存记录，可在排盘结果页点击「保存到账号」。'" 
 								color="#999999"
 							></tm-text>
 						</view>
@@ -138,28 +138,28 @@
 											<tm-text
 												:bold="true"
 												font-size="24"
-												:label="item.title"
+												:label="item.title || '未命名'"
 												_class="text-overflow-1"
 											></tm-text>
 											<tm-text
 												class="mt-4"
 												font-size="22"
 												color="#666666"
-												:label="formatBirth(item)"
+												:label="formatBirth(item) || ''"
 												_class="text-overflow-1"
 											></tm-text>
 											<view class="flex flex-row items-center mt-2">
 												<tm-text
 													font-size="20"
 													color="#BBBBBB"
-													:label="'保存时间：' + item.createdAtLabel"
+													:label="'保存时间：' + (item.createdAtLabel || '')"
 												></tm-text>
 												<tm-text
 													v-if="item.gender !== null && item.gender !== undefined"
 													class="ml-8"
 													font-size="20"
 													color="#BBBBBB"
-													:label="item.gender === '0' ? '男' : '女'"
+													:label="item.gender === '1' || item.gender === 1 ? '男' : '女'"
 												></tm-text>
 											</view>
 										</view>
@@ -232,7 +232,9 @@ const isLoggedIn = computed(() => user_store.isLoggedIn);
 
 // 监听筛选条件变化
 watch([genderFilter, sortByIndex, sortOrder], () => {
-	fetchCharts();
+	if (user_store.isLoggedIn) {
+		fetchCharts();
+	}
 });
 
 onMounted(() => {
@@ -297,35 +299,60 @@ function fetchCharts() {
 			Authorization: 'Bearer ' + user_store.token
 		},
 		success(res: any) {
-			if (res.statusCode >= 200 && res.statusCode < 300) {
-				// 兼容新旧API格式
-				let data = res.data;
-				if (Array.isArray(data)) {
-					// 旧格式：直接返回数组
-					charts.value = data.map((it: any) => ({
-						...it,
-						createdAtLabel: formatDateTime(it.createdAt)
-					}));
-					totalCount.value = charts.value.length;
-				} else if (data && data.list) {
-					// 新格式：返回对象包含list和total
-					charts.value = data.list.map((it: any) => ({
-						...it,
-						createdAtLabel: formatDateTime(it.createdAt)
-					}));
-					totalCount.value = data.total || charts.value.length;
+			try {
+				if (res.statusCode >= 200 && res.statusCode < 300) {
+					// 兼容新旧API格式
+					let data = res.data;
+					if (Array.isArray(data)) {
+						// 旧格式：直接返回数组
+						charts.value = data.map((it: any) => {
+							try {
+								return {
+									...it,
+									createdAtLabel: formatDateTime(it.createdAt || '')
+								};
+							} catch (e) {
+								console.error('Error mapping chart item:', e, it);
+								return {
+									...it,
+									createdAtLabel: ''
+								};
+							}
+						});
+						totalCount.value = charts.value.length;
+					} else if (data && data.list) {
+						// 新格式：返回对象包含list和total
+						charts.value = data.list.map((it: any) => {
+							try {
+								return {
+									...it,
+									createdAtLabel: formatDateTime(it.createdAt || '')
+								};
+							} catch (e) {
+								console.error('Error mapping chart item:', e, it);
+								return {
+									...it,
+									createdAtLabel: ''
+								};
+							}
+						});
+						totalCount.value = data.total || charts.value.length;
+					} else {
+						charts.value = [];
+						totalCount.value = 0;
+					}
+				} else if (res.statusCode === 401) {
+					uni.showToast({
+						title: '登录已失效，请重新登录',
+						icon: 'none',
+						duration: 2000
+					});
 				} else {
-					charts.value = [];
-					totalCount.value = 0;
+					error.value = (res.data && res.data.error) || '获取失败，请稍后重试';
 				}
-			} else if (res.statusCode === 401) {
-				uni.showToast({
-					title: '登录已失效，请重新登录',
-					icon: 'none',
-					duration: 2000
-				});
-			} else {
-				error.value = (res.data && res.data.error) || '获取失败，请稍后重试';
+			} catch (e) {
+				console.error('fetchCharts success handler error:', e);
+				error.value = '数据处理失败，请稍后重试';
 			}
 		},
 		fail() {
@@ -339,31 +366,117 @@ function fetchCharts() {
 
 function formatDateTime(iso: string) {
 	if (!iso) return '';
-	const d = new Date(iso);
-	return utils.HideSecond(d.getTime());
+	try {
+		const d = new Date(iso);
+		if (isNaN(d.getTime())) {
+			return '';
+		}
+		const result = utils.HideSecond(d.getTime());
+		return result || '';
+	} catch (e) {
+		console.error('formatDateTime error:', e);
+		return '';
+	}
 }
 
 function formatBirth(item: ChartItem) {
-	if (!item.birthDatetime) return '';
-	const d = new Date(item.birthDatetime);
-	return '出生：' + utils.HideSecond(d.getTime());
+	if (!item || !item.birthDatetime) return '';
+	try {
+		const d = new Date(item.birthDatetime);
+		if (isNaN(d.getTime())) {
+			return '';
+		}
+		const result = utils.HideSecond(d.getTime());
+		return result ? '出生：' + result : '';
+	} catch (e) {
+		console.error('formatBirth error:', e);
+		return '';
+	}
 }
 
 function openChart(item: ChartItem) {
-	if (item.rawPayload && item.rawPayload.user && item.rawPayload.bazi) {
-		const u = item.rawPayload.user;
+	try {
+		// 优先使用 rawPayload 恢复数据
+		if (item.rawPayload && item.rawPayload.user && item.rawPayload.bazi) {
+			const u = item.rawPayload.user;
+			user_store.set({
+				realname: u.realname || item.title || '不知名网友',
+				gender: u.gender,
+				timestamp: u.timestamp
+			});
+			bazi_store.$patch(item.rawPayload.bazi);
+			uni.navigateTo({
+				url: '/pages/index/detail'
+			});
+			return;
+		}
+		
+		// 如果 rawPayload 不存在或不完整，从基本信息重新计算
+		if (!item.birthDatetime) {
+			uni.showToast({
+				title: '该记录缺少出生时间数据',
+				icon: 'none',
+				duration: 2000
+			});
+			return;
+		}
+		
+		// 转换时间戳
+		let timestamp: number;
+		if (typeof item.birthDatetime === 'string') {
+			timestamp = new Date(item.birthDatetime).getTime();
+		} else if (typeof item.birthDatetime === 'number') {
+			timestamp = item.birthDatetime;
+		} else {
+			uni.showToast({
+				title: '出生时间格式错误',
+				icon: 'none',
+				duration: 2000
+			});
+			return;
+		}
+		
+		// 转换性别：数据库中 '1'=男, '0'=女；user_store 中 1=男, 0=女
+		// 所以数据库 '1' -> user_store 1, 数据库 '0' -> user_store 0
+		let gender: number;
+		if (item.gender === null || item.gender === undefined) {
+			gender = 0; // 默认值（女）
+		} else if (typeof item.gender === 'string') {
+			gender = item.gender === '1' ? 1 : 0; // '1'=男=1, '0'=女=0
+		} else {
+			gender = item.gender === 1 ? 1 : 0; // 1=男=1, 0=女=0
+		}
+		
+		// 显示加载提示
+		uni.showLoading({
+			title: '排盘中，请稍后！'
+		});
+		
+		// 设置用户信息
 		user_store.set({
-			realname: u.realname,
-			gender: u.gender,
-			timestamp: u.timestamp
+			realname: item.title || '不知名网友',
+			gender: gender,
+			timestamp: timestamp
 		});
-		bazi_store.$patch(item.rawPayload.bazi);
-		uni.navigateTo({
-			url: '/pages/index/detail'
+		
+		// 重新计算八字盘（调用和主界面一样的方法）
+		bazi_store.pull({
+			timestamp: timestamp,
+			gender: gender
 		});
-	} else {
+		
+		// 延迟跳转，确保计算完成（和主界面保持一致）
+		setTimeout(() => {
+			uni.hideLoading();
+			uni.navigateTo({
+				url: '/pages/index/detail'
+			});
+		}, 0);
+	} catch (e) {
+		console.error('openChart error:', e);
+		uni.hideLoading();
 		uni.showToast({
-			title: '该记录缺少详细排盘数据',
+			title: '打开排盘记录失败：' + (e.message || '未知错误'),
 			icon: 'none',
 			duration: 2000
 		});

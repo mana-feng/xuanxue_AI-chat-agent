@@ -76,9 +76,23 @@ export default {
 		}
 	},
 	HideSecond(time){
-		const solar = Solar.fromDate(new Date(time));
-		let date = solar.toYmdHms().replace(/-/g, '/')
-		date = date.substr(0,date.lastIndexOf(":"))
-		return date;
+		try {
+			if (!time || isNaN(time)) {
+				return '';
+			}
+			const dateObj = new Date(time);
+			if (isNaN(dateObj.getTime())) {
+				return '';
+			}
+			const solar = Solar.fromDate(dateObj);
+			let date = solar.toYmdHms().replace(/-/g, '/')
+			if (date && date.lastIndexOf(":") !== -1) {
+				date = date.substr(0, date.lastIndexOf(":"))
+			}
+			return date || '';
+		} catch (e) {
+			console.error('HideSecond error:', e);
+			return '';
+		}
 	}
 }
