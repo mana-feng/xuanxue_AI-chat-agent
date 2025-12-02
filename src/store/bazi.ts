@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { useYunStore } from './yun.ts';
 import { Solar } from 'lunar-javascript';
 import utils from '@/tool/utils.ts';
+import { enhanceBaziAnalysis, BaziEnhancedData, calculateShenShaForGanZhi } from '@/tool/bazi-enhanced.ts';
 
 export const useBaziStore = defineStore('bazi', {
 	state: () => {
@@ -87,7 +88,9 @@ export const useBaziStore = defineStore('bazi', {
 				hour: null,
 				solar: null
 			},
-			table: []
+			table: [],
+			// 增强分析数据
+			enhanced: null as BaziEnhancedData | null
 		};
 	},
 	actions: {
@@ -197,6 +200,32 @@ export const useBaziStore = defineStore('bazi', {
 				solar: yun.getStartSolar().toYmd()
 			};
 
+			// 计算增强分析数据（提前计算，用于神煞显示）
+			let enhanced: BaziEnhancedData | null = null;
+			try {
+				const shishen = {
+					year: this.zhuxing.year,
+					month: this.zhuxing.month,
+					day: this.zhuxing.day,
+					time: this.zhuxing.time
+				};
+				enhanced = enhanceBaziAnalysis(bazi, solar, shishen);
+				this.enhanced = enhanced;
+			} catch (e) {
+				console.error('增强分析计算失败:', e);
+				this.enhanced = null;
+			}
+
+			// 计算每个四柱的神煞
+			const dayGan = bazi.getDayGan();
+			const allZhi = [this.dizhi.year, this.dizhi.month, this.dizhi.day, this.dizhi.time];
+			const shensha = {
+				year: calculateShenShaForGanZhi(dayGan, this.sizhu.year, allZhi),
+				month: calculateShenShaForGanZhi(dayGan, this.sizhu.month, allZhi),
+				day: calculateShenShaForGanZhi(dayGan, this.sizhu.day, allZhi),
+				time: calculateShenShaForGanZhi(dayGan, this.sizhu.time, allZhi)
+			};
+
 			const table = [];
 
 			table.push({
@@ -231,16 +260,6 @@ export const useBaziStore = defineStore('bazi', {
 
 			table.push({
 				data: {
-					name: '五行',
-					year: this.wuxing.year,
-					month: this.wuxing.month,
-					day: this.wuxing.day,
-					time: this.wuxing.time
-				}
-			});
-
-			table.push({
-				data: {
 					name: '藏干',
 					year: utils.DeArray(this.canggan.year, 'canggan'),
 					month: utils.DeArray(this.canggan.month, 'canggan'),
@@ -266,6 +285,16 @@ export const useBaziStore = defineStore('bazi', {
 					month: this.dishi.month,
 					day: this.dishi.day,
 					time: this.dishi.time
+				}
+			});
+
+			table.push({
+				data: {
+					name: '神煞',
+					year: shensha.year,
+					month: shensha.month,
+					day: shensha.day,
+					time: shensha.time
 				}
 			});
 

@@ -396,8 +396,44 @@ function formatBirth(item: ChartItem) {
 
 function openChart(item: ChartItem) {
 	try {
-		// 优先使用 rawPayload 恢复数据
+		console.log('openChart called with item:', {
+			id: item.id,
+			title: item.title,
+			hasRawPayload: !!item.rawPayload,
+			birthDatetime: item.birthDatetime,
+			gender: item.gender
+		});
+		
+		// 验证 rawPayload 数据完整性
+		let useRawPayload = false;
 		if (item.rawPayload && item.rawPayload.user && item.rawPayload.bazi) {
+			const u = item.rawPayload.user;
+			const b = item.rawPayload.bazi;
+			
+			// 检查关键字段是否存在（包括 table 字段，这是详情页显示表格必需的）
+			if (u.timestamp && u.gender !== undefined && u.gender !== null &&
+				b.solar && b.solar.year && b.sizhu && b.sizhu.year && 
+				b.yinli && b.xinzuo && b.table && Array.isArray(b.table) && b.table.length > 0) {
+				useRawPayload = true;
+				console.log('使用 rawPayload 恢复数据');
+			} else {
+				console.warn('rawPayload 数据不完整，将重新计算', {
+					hasUser: !!u,
+					hasTimestamp: !!u.timestamp,
+					hasGender: u.gender !== undefined && u.gender !== null,
+					hasBazi: !!b,
+					hasSolar: !!b.solar,
+					hasSizhu: !!b.sizhu,
+					hasYinli: !!b.yinli,
+					hasXinzuo: !!b.xinzuo,
+					hasTable: !!b.table,
+					tableIsArray: Array.isArray(b.table),
+					tableLength: b.table ? b.table.length : 0
+				});
+			}
+		}
+		
+		if (useRawPayload) {
 			const u = item.rawPayload.user;
 			user_store.set({
 				realname: u.realname || item.title || '不知名网友',
@@ -405,9 +441,13 @@ function openChart(item: ChartItem) {
 				timestamp: u.timestamp
 			});
 			bazi_store.$patch(item.rawPayload.bazi);
-			uni.navigateTo({
-				url: '/pages/index/detail'
-			});
+			
+			// 延迟跳转，确保状态更新完成
+			setTimeout(() => {
+				uni.navigateTo({
+					url: '/pages/index/detail'
+				});
+			}, 100);
 			return;
 		}
 		
@@ -421,13 +461,33 @@ function openChart(item: ChartItem) {
 			return;
 		}
 		
-		// 转换时间戳
+		// 转换时间戳并验证有效性
 		let timestamp: number;
 		if (typeof item.birthDatetime === 'string') {
-			timestamp = new Date(item.birthDatetime).getTime();
+			const date = new Date(item.birthDatetime);
+			timestamp = date.getTime();
+			if (isNaN(timestamp)) {
+				console.error('时间戳转换失败:', item.birthDatetime);
+				uni.showToast({
+					title: '出生时间格式错误，无法解析',
+					icon: 'none',
+					duration: 2000
+				});
+				return;
+			}
 		} else if (typeof item.birthDatetime === 'number') {
 			timestamp = item.birthDatetime;
+			if (isNaN(timestamp) || timestamp <= 0) {
+				console.error('时间戳无效:', item.birthDatetime);
+				uni.showToast({
+					title: '出生时间无效',
+					icon: 'none',
+					duration: 2000
+				});
+				return;
+			}
 		} else {
+			console.error('出生时间类型错误:', typeof item.birthDatetime, item.birthDatetime);
 			uni.showToast({
 				title: '出生时间格式错误',
 				icon: 'none',
@@ -441,11 +501,14 @@ function openChart(item: ChartItem) {
 		let gender: number;
 		if (item.gender === null || item.gender === undefined) {
 			gender = 0; // 默认值（女）
+			console.warn('性别为空，使用默认值（女）');
 		} else if (typeof item.gender === 'string') {
 			gender = item.gender === '1' ? 1 : 0; // '1'=男=1, '0'=女=0
 		} else {
 			gender = item.gender === 1 ? 1 : 0; // 1=男=1, 0=女=0
 		}
+		
+		console.log('准备重新计算八字盘:', { timestamp, gender, realname: item.title });
 		
 		// 显示加载提示
 		uni.showLoading({
@@ -460,18 +523,40 @@ function openChart(item: ChartItem) {
 		});
 		
 		// 重新计算八字盘（调用和主界面一样的方法）
-		bazi_store.pull({
-			timestamp: timestamp,
-			gender: gender
-		});
+		try {
+			bazi_store.pull({
+				timestamp: timestamp,
+				gender: gender
+			});
+			console.log('八字盘计算完成');
+		} catch (pullError) {
+			console.error('八字盘计算失败:', pullError);
+			uni.hideLoading();
+			uni.showToast({
+				title: '排盘计算失败：' + (pullError.message || '未知错误'),
+				icon: 'none',
+				duration: 2000
+			});
+			return;
+		}
 		
-		// 延迟跳转，确保计算完成（和主界面保持一致）
+		// 延迟跳转，确保计算完成（增加延迟时间，确保异步计算完成）
 		setTimeout(() => {
 			uni.hideLoading();
+			// 验证关键数据是否存在
+			if (!bazi_store.solar || !bazi_store.solar.year) {
+				console.error('八字盘数据不完整，跳转可能失败');
+				uni.showToast({
+					title: '排盘数据不完整，请重试',
+					icon: 'none',
+					duration: 2000
+				});
+				return;
+			}
 			uni.navigateTo({
 				url: '/pages/index/detail'
 			});
-		}, 0);
+		}, 200); // 增加延迟时间，确保异步计算完成
 	} catch (e) {
 		console.error('openChart error:', e);
 		uni.hideLoading();
