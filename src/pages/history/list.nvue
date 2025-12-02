@@ -1,0 +1,418 @@
+<template>
+	<tm-app>
+		<view class="page-wrapper">
+			<view class="page-content-scale">
+				<yx-nav-header></yx-nav-header>
+
+				<tm-sheet
+					:round="3"
+					:shadow="2"
+					:margin="[20, 20]"
+					:padding="[16, 16]"
+				>
+					<view class="flex flex-row items-center justify-between mb-10">
+						<tm-text
+							font-size="28"
+							:bold="true"
+							label="历史排盘记录"
+						></tm-text>
+						<tm-button
+							size="small"
+							type="grey"
+							:margin="[0, 0]"
+							label="刷新"
+							@tap="fetchCharts"
+						></tm-button>
+					</view>
+
+					<view v-if="!isLoggedIn">
+						<tm-text
+							color="#999999"
+							label="登录后可查看和管理您保存的八字排盘记录。"
+						></tm-text>
+						<tm-button
+							class="mt-10"
+							type="primary"
+							block
+							label="去登录"
+							@tap="goLogin"
+						></tm-button>
+					</view>
+
+					<view v-else>
+						<!-- 搜索和筛选区域 -->
+						<view class="mb-12">
+							<!-- 搜索框 -->
+							<tm-input
+								v-model="searchKeyword"
+								:margin="[0, 8]"
+								prefix="tmicon-md-search"
+								placeholder="搜索姓名..."
+								@input="onSearchInput"
+								clearable
+							></tm-input>
+							
+							<!-- 筛选和排序 -->
+							<view class="flex flex-row items-center mt-8">
+								<!-- 性别筛选 -->
+								<view class="flex-1 mr-8">
+									<tm-text font-size="22" color="#666666" label="性别：" class="mb-4"></tm-text>
+									<tm-radio-group v-model="genderFilter">
+										<tm-radio label="全部" :value="''"></tm-radio>
+										<tm-radio label="男" :value="'0'"></tm-radio>
+										<tm-radio label="女" :value="'1'"></tm-radio>
+									</tm-radio-group>
+								</view>
+								
+								<!-- 排序方式 -->
+								<view class="flex-1">
+									<tm-text font-size="22" color="#666666" label="排序：" class="mb-4"></tm-text>
+									<tm-segtab
+										v-model="sortByIndex"
+										:list="[
+											{ text: '时间' },
+											{ text: '姓名' }
+										]"
+										:margin="[0, 0]"
+									></tm-segtab>
+								</view>
+							</view>
+							
+							<!-- 排序方向 -->
+							<view class="flex flex-row items-center mt-8">
+								<tm-button
+									:type="sortOrder === 'DESC' ? 'primary' : 'grey'"
+									size="small"
+									:margin="[0, 4]"
+									:padding="[16, 12]"
+									shape="round"
+									:label="sortOrder === 'DESC' ? '↓ 降序' : '↑ 升序'"
+									@tap="toggleSortOrder"
+								></tm-button>
+								<tm-button
+									v-if="searchKeyword || genderFilter"
+									type="danger"
+									size="small"
+									:margin="[0, 4]"
+									:padding="[16, 12]"
+									shape="round"
+									label="清除筛选"
+									@tap="clearFilters"
+								></tm-button>
+							</view>
+							
+							<!-- 统计信息 -->
+							<view v-if="totalCount > 0" class="mt-8">
+								<tm-text
+									font-size="22"
+									color="#999999"
+									:label="`共找到 ${totalCount} 条记录`"
+								></tm-text>
+							</view>
+						</view>
+
+						<!-- 列表内容 -->
+						<view v-if="loading" class="py-20">
+							<tm-text label="加载中..." color="#999999"></tm-text>
+						</view>
+						<view v-else-if="charts.length === 0" class="py-20">
+							<tm-text 
+								:label="searchKeyword || genderFilter ? '未找到符合条件的记录' : '暂无保存记录，可在排盘结果页点击"保存到账号"。'" 
+								color="#999999"
+							></tm-text>
+						</view>
+						<view v-else>
+							<view
+								v-for="item in charts"
+								:key="item.id"
+								class="mb-10"
+							>
+								<tm-sheet
+									:round="3"
+									:shadow="1"
+									:margin="[0, 0]"
+									:padding="[12, 12]"
+								>
+									<view class="flex flex-row items-center justify-between">
+										<view class="flex-1 mr-10">
+											<tm-text
+												:bold="true"
+												font-size="24"
+												:label="item.title"
+												_class="text-overflow-1"
+											></tm-text>
+											<tm-text
+												class="mt-4"
+												font-size="22"
+												color="#666666"
+												:label="formatBirth(item)"
+												_class="text-overflow-1"
+											></tm-text>
+											<view class="flex flex-row items-center mt-2">
+												<tm-text
+													font-size="20"
+													color="#BBBBBB"
+													:label="'保存时间：' + item.createdAtLabel"
+												></tm-text>
+												<tm-text
+													v-if="item.gender !== null && item.gender !== undefined"
+													class="ml-8"
+													font-size="20"
+													color="#BBBBBB"
+													:label="item.gender === '0' ? '男' : '女'"
+												></tm-text>
+											</view>
+										</view>
+										<view class="flex flex-column items-end">
+											<tm-button
+												size="small"
+												type="primary"
+												:margin="[0, 4]"
+												label="查看"
+												@tap="openChart(item)"
+											></tm-button>
+											<tm-button
+												size="small"
+												type="danger"
+												:margin="[0, 4]"
+												label="删除"
+												@tap="removeChart(item)"
+											></tm-button>
+										</view>
+									</view>
+								</tm-sheet>
+							</view>
+						</view>
+						<view v-if="error" class="mt-10">
+							<tm-text :label="error" color="red"></tm-text>
+						</view>
+					</view>
+				</tm-sheet>
+			</view>
+		</view>
+	</tm-app>
+</template>
+
+<script lang="ts" setup>
+import { ref, computed, onMounted, watch } from 'vue';
+import { useUserStore } from '@/store/user.ts';
+import { useBaziStore } from '@/store/bazi.ts';
+import { API_BASE_URL } from '@/common/config.ts';
+import utils from '@/tool/utils.ts';
+
+interface ChartItem {
+	id: number;
+	title: string;
+	gender?: string | null;
+	birthDatetime: string;
+	createdAt: string;
+	createdAtLabel?: string;
+	rawPayload?: any;
+}
+
+const user_store = useUserStore();
+const bazi_store = useBaziStore();
+
+const charts = ref<ChartItem[]>([]);
+const loading = ref(false);
+const error = ref('');
+const totalCount = ref(0);
+
+// 搜索和筛选
+const searchKeyword = ref('');
+const genderFilter = ref('');
+const sortByIndex = ref(0); // 0: 时间, 1: 姓名
+const sortBy = computed(() => sortByIndex.value === 0 ? 'created_at' : 'name');
+const sortOrder = ref<'ASC' | 'DESC'>('DESC');
+
+// 防抖定时器
+let searchTimer: any = null;
+
+const isLoggedIn = computed(() => user_store.isLoggedIn);
+
+// 监听筛选条件变化
+watch([genderFilter, sortByIndex, sortOrder], () => {
+	fetchCharts();
+});
+
+onMounted(() => {
+	user_store.restoreAuth();
+	if (user_store.isLoggedIn) {
+		fetchCharts();
+	}
+});
+
+function onSearchInput() {
+	// 防抖处理，500ms后执行搜索
+	if (searchTimer) {
+		clearTimeout(searchTimer);
+	}
+	searchTimer = setTimeout(() => {
+		fetchCharts();
+	}, 500);
+}
+
+function toggleSortOrder() {
+	sortOrder.value = sortOrder.value === 'DESC' ? 'ASC' : 'DESC';
+}
+
+function clearFilters() {
+	searchKeyword.value = '';
+	genderFilter.value = '';
+	sortByIndex.value = 0;
+	sortOrder.value = 'DESC';
+	fetchCharts();
+}
+
+function fetchCharts() {
+	if (!user_store.isLoggedIn || !user_store.token) {
+		return;
+	}
+	loading.value = true;
+	error.value = '';
+
+	// 构建查询参数
+	const params: Record<string, string> = {};
+	if (searchKeyword.value) {
+		params.keyword = searchKeyword.value;
+	}
+	if (genderFilter.value) {
+		params.gender = genderFilter.value;
+	}
+	if (sortBy.value) {
+		params.sortBy = sortBy.value as string;
+	}
+	if (sortOrder.value) {
+		params.sortOrder = sortOrder.value;
+	}
+
+	const queryString = Object.keys(params)
+		.map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+		.join('&');
+
+	uni.request({
+		url: API_BASE_URL + '/api/charts' + (queryString ? '?' + queryString : ''),
+		method: 'GET',
+		header: {
+			Authorization: 'Bearer ' + user_store.token
+		},
+		success(res: any) {
+			if (res.statusCode >= 200 && res.statusCode < 300) {
+				// 兼容新旧API格式
+				let data = res.data;
+				if (Array.isArray(data)) {
+					// 旧格式：直接返回数组
+					charts.value = data.map((it: any) => ({
+						...it,
+						createdAtLabel: formatDateTime(it.createdAt)
+					}));
+					totalCount.value = charts.value.length;
+				} else if (data && data.list) {
+					// 新格式：返回对象包含list和total
+					charts.value = data.list.map((it: any) => ({
+						...it,
+						createdAtLabel: formatDateTime(it.createdAt)
+					}));
+					totalCount.value = data.total || charts.value.length;
+				} else {
+					charts.value = [];
+					totalCount.value = 0;
+				}
+			} else if (res.statusCode === 401) {
+				uni.showToast({
+					title: '登录已失效，请重新登录',
+					icon: 'none',
+					duration: 2000
+				});
+			} else {
+				error.value = (res.data && res.data.error) || '获取失败，请稍后重试';
+			}
+		},
+		fail() {
+			error.value = '网络错误，请检查后端是否已启动';
+		},
+		complete() {
+			loading.value = false;
+		}
+	});
+}
+
+function formatDateTime(iso: string) {
+	if (!iso) return '';
+	const d = new Date(iso);
+	return utils.HideSecond(d.getTime());
+}
+
+function formatBirth(item: ChartItem) {
+	if (!item.birthDatetime) return '';
+	const d = new Date(item.birthDatetime);
+	return '出生：' + utils.HideSecond(d.getTime());
+}
+
+function openChart(item: ChartItem) {
+	if (item.rawPayload && item.rawPayload.user && item.rawPayload.bazi) {
+		const u = item.rawPayload.user;
+		user_store.set({
+			realname: u.realname,
+			gender: u.gender,
+			timestamp: u.timestamp
+		});
+		bazi_store.$patch(item.rawPayload.bazi);
+		uni.navigateTo({
+			url: '/pages/index/detail'
+		});
+	} else {
+		uni.showToast({
+			title: '该记录缺少详细排盘数据',
+			icon: 'none',
+			duration: 2000
+		});
+	}
+}
+
+function removeChart(item: ChartItem) {
+	uni.showModal({
+		title: '删除确认',
+		content: '确定要删除这条排盘记录吗？',
+		success(res) {
+			if (res.confirm) {
+				doRemove(item);
+			}
+		}
+	});
+}
+
+function doRemove(item: ChartItem) {
+	if (!user_store.token) return;
+
+	uni.request({
+		url: API_BASE_URL + '/api/charts/' + item.id,
+		method: 'DELETE',
+		header: {
+			Authorization: 'Bearer ' + user_store.token
+		},
+		success(res: any) {
+			if (res.statusCode >= 200 && res.statusCode < 300) {
+				charts.value = charts.value.filter(c => c.id !== item.id);
+				totalCount.value = charts.value.length;
+				uni.showToast({
+					title: '已删除',
+					icon: 'none',
+					duration: 1500
+				});
+			} else {
+				error.value = (res.data && res.data.error) || '删除失败，请稍后重试';
+			}
+		},
+		fail() {
+			error.value = '网络错误，请检查后端是否已启动';
+		}
+	});
+}
+
+function goLogin() {
+	uni.navigateTo({
+		url: '/pages/auth/auth?mode=login'
+	});
+}
+</script>

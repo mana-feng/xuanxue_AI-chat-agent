@@ -1,0 +1,548 @@
+<template>
+	<tm-app>
+		<view class="page-wrapper">
+			<view class="page-content-scale">
+				<yx-nav-header></yx-nav-header>
+
+				<!-- 顶部标题，模拟淘宝登录/注册文案结构 -->
+				<view class="flex flex-column mb-16" v-if="!isLoggedIn">
+					<tm-text
+						font-size="30"
+						:bold="true"
+						label="欢迎登录八字排盘账号"
+					></tm-text>
+					<tm-text
+						class="mt-4"
+						font-size="22"
+						color="#999999"
+						label="登录后可在多设备同步查看您的排盘历史，像淘宝订单一样随时翻查"
+					></tm-text>
+				</view>
+
+				<!-- 已登录状态 -->
+				<tm-sheet
+					v-if="isLoggedIn"
+					:round="4"
+					:shadow="3"
+					:margin="[0, 18]"
+					:padding="[18, 18]"
+				>
+					<view class="flex flex-row items-center justify-between mb-16">
+						<view>
+							<tm-text
+								font-size="28"
+								:bold="true"
+								:label="'您好，' + (user_store.email || '已登录用户')"
+							></tm-text>
+							<tm-text
+								class="mt-4"
+								font-size="22"
+								color="#999999"
+								label="当前登录账号将自动保存您的排盘记录"
+							></tm-text>
+						</view>
+						<view class="flex flex-row flex-center">
+							<tm-button
+								size="small"
+								type="danger"
+								:margin="[10, 0]"
+								:padding="[20, 6]"
+								shape="round"
+								label="退出登录"
+								@tap="logout"
+							></tm-button>
+						</view>
+					</view>
+
+					<view class="flex flex-row mt-14">
+						<tm-button
+							type="primary"
+							block
+							:margin="[0, 0]"
+							label="返回上一页"
+							@tap="goBack"
+						></tm-button>
+					</view>
+				</tm-sheet>
+
+				<!-- 未登录：登录 / 注册两个独立框体 -->
+				<view v-else>
+					<!-- 登录框体 -->
+					<tm-sheet
+						:round="4"
+						:shadow="3"
+						:margin="[0, 18]"
+						:padding="[18, 18]"
+					>
+						<view class="flex flex-row items-center justify-between">
+							<tm-text
+								font-size="28"
+								:bold="true"
+								label="账号登录"
+							></tm-text>
+							<tm-text
+								font-size="22"
+								color="#409EFF"
+								label="免费注册"
+								@tap="scrollToRegister"
+							></tm-text>
+						</view>
+						<tm-text
+							class="mt-4"
+							font-size="22"
+							color="#999999"
+							label="可使用已注册邮箱或用户名登录账号"
+						></tm-text>
+
+						<tm-input
+							v-model="loginIdentifier"
+							@input="loginError = ''"
+							:margin="[0, 12]"
+							prefix="tmicon-md-mail"
+							type="text"
+							placeholder="请输入邮箱 / 用户名"
+						></tm-input>
+						<tm-input
+							v-model="loginPassword"
+							@input="loginError = ''"
+							:margin="[0, 12]"
+							prefix="tmicon-md-lock"
+							type="password"
+							placeholder="请输入登录密码"
+						></tm-input>
+
+						<view class="flex flex-row items-center justify-between mt-6">
+							<tm-text
+								font-size="20"
+								color="#bbbbbb"
+								label="为保障安全，请在私人环境下登录账号"
+							></tm-text>
+							<tm-text
+								font-size="20"
+								color="#409EFF"
+								label="忘记密码？"
+							></tm-text>
+						</view>
+
+						<view v-if="loginError" class="mt-8">
+							<tm-text
+								:label="loginError"
+								color="#ff4d4f"
+							></tm-text>
+						</view>
+
+						<view class="flex flex-row mt-14">
+							<tm-button
+								block
+								:loading="loginLoading"
+								:disabled="loginLoading || !loginIdentifier || !loginPassword"
+								:margin="[0, 0]"
+								type="primary"
+								label="登录"
+								@tap="submitLogin"
+							></tm-button>
+							<tm-button
+								class="ml-10"
+								type="grey"
+								:margin="[0, 0]"
+								label="返回"
+								@tap="goBack"
+							></tm-button>
+						</view>
+					</tm-sheet>
+
+					<!-- 注册框体 -->
+					<tm-sheet
+						id="registerBox"
+						:round="4"
+						:shadow="1"
+						:margin="[0, 18]"
+						:padding="[18, 18]"
+					>
+						<tm-text
+							font-size="28"
+							:bold="true"
+							label="新用户注册"
+						></tm-text>
+						<tm-text
+							class="mt-4"
+							font-size="22"
+							color="#999999"
+							label="只需邮箱和密码，即可开始管理您的八字排盘历史"
+						></tm-text>
+
+						<tm-input
+							v-model="registerUsername"
+							@input="registerError = ''"
+							:margin="[0, 12]"
+							prefix="tmicon-ios-person"
+							type="text"
+							placeholder="设置用户名（2-20 个字符，可用于登录）"
+						></tm-input>
+
+						<tm-input
+							v-model="registerEmail"
+							@input="registerError = ''"
+							:margin="[0, 12]"
+							prefix="tmicon-md-mail"
+							type="text"
+							placeholder="请输入常用邮箱，用于登录与找回账号"
+						></tm-input>
+						
+						<!-- 验证码输入区域 -->
+						<view class="flex flex-row items-center" style="margin-top: 12px; margin-bottom: 12px;">
+							<view style="flex: 1; margin-right: 12px;">
+								<tm-input
+									v-model="registerVerificationCode"
+									@input="registerError = ''"
+									:margin="[0, 0]"
+									prefix="tmicon-md-key"
+									type="number"
+									placeholder="请输入邮箱验证码"
+								></tm-input>
+							</view>
+							<tm-button
+								:disabled="codeCountdown > 0 || !registerEmail || sendCodeLoading"
+								:loading="sendCodeLoading"
+								:margin="[0, 0]"
+								:padding="[20, 16]"
+								size="small"
+								type="primary"
+								shape="round"
+								:label="codeCountdown > 0 ? `${codeCountdown}秒` : '发送验证码'"
+								@tap="sendVerificationCode"
+							></tm-button>
+						</view>
+						
+						<tm-input
+							v-model="registerPassword"
+							@input="registerError = ''"
+							:margin="[0, 12]"
+							prefix="tmicon-md-lock"
+							type="password"
+							placeholder="设置登录密码（不少于 6 位，包含字母和数字更安全）"
+						></tm-input>
+						<tm-input
+							v-model="registerPasswordConfirm"
+							@input="registerError = ''"
+							:margin="[0, 12]"
+							prefix="tmicon-md-lock"
+							type="password"
+							placeholder="请再次输入密码确认"
+						></tm-input>
+
+						<view class="flex flex-row items-center justify-between mt-6">
+							<view class="flex flex-row flex-wrap">
+								<tm-text
+									font-size="20"
+									color="#bbbbbb"
+									label="注册即表示同意"
+								></tm-text>
+								<tm-text
+									class="ml-4"
+									font-size="20"
+									color="#409EFF"
+									label="《用户服务协议》"
+									@tap="openProtocol('user')"
+								></tm-text>
+								<tm-text
+									class="ml-4"
+									font-size="20"
+									color="#409EFF"
+									label="《隐私权政策》"
+									@tap="openProtocol('privacy')"
+								></tm-text>
+							</view>
+							<tm-text
+								v-if="false"
+								font-size="20"
+								color="#bbbbbb"
+								label=" "
+							></tm-text>
+						</view>
+
+						<view v-if="registerError" class="mt-8">
+							<tm-text
+								:label="registerError"
+								color="#ff4d4f"
+							></tm-text>
+						</view>
+
+						<view class="flex flex-row mt-14">
+							<tm-button
+								block
+								:loading="registerLoading"
+								:disabled="
+									registerLoading ||
+									!registerEmail ||
+									!registerVerificationCode ||
+									!registerPassword ||
+									registerPassword.length < 6 ||
+									!registerPasswordConfirm ||
+									registerPasswordConfirm !== registerPassword
+								"
+								:margin="[0, 0]"
+								type="success"
+								label="注册并登录"
+								@tap="submitRegister"
+							></tm-button>
+						</view>
+					</tm-sheet>
+				</view>
+			</view>
+		</view>
+	</tm-app>
+</template>
+
+<script lang="ts" setup>
+import { ref, computed, onUnmounted } from 'vue';
+import { useUserStore } from '@/store/user.ts';
+import { API_BASE_URL } from '@/common/config.ts';
+import { sendEmailVerificationCode, verifyEmailCode } from '@/common/emailVerification.ts';
+
+const user_store = useUserStore();
+
+const isLoggedIn = computed(() => user_store.isLoggedIn);
+
+// 登录表单（支持邮箱或用户名）
+const loginIdentifier = ref('');
+const loginPassword = ref('');
+const loginLoading = ref(false);
+const loginError = ref('');
+
+// 注册表单
+const registerUsername = ref('');
+const registerEmail = ref('');
+const registerVerificationCode = ref('');
+const registerPassword = ref('');
+const registerPasswordConfirm = ref('');
+const registerLoading = ref(false);
+const registerError = ref('');
+
+// 验证码相关
+const sendCodeLoading = ref(false);
+const codeCountdown = ref(0);
+let countdownTimer: any = null;
+
+function scrollToRegister() {
+	// 在 nvue 中可以用 dom 模块滚动，这里做一个兼容占位实现
+	// 实际滚动体验由容器决定，不影响功能使用
+	// @ts-ignore
+	if (uni.pageScrollTo) {
+		uni.pageScrollTo({
+			scrollTop: 400,
+			duration: 300
+		});
+	}
+}
+
+function openProtocol(type: 'user' | 'privacy') {
+	const title = type === 'user' ? '用户服务协议' : '隐私权政策';
+	uni.showToast({
+		title: title + '页面开发中',
+		icon: 'none',
+		duration: 1500
+	});
+}
+
+function submitLogin() {
+	if (!loginIdentifier.value || !loginPassword.value) {
+		loginError.value = '请输入账号和密码';
+		return;
+	}
+	loginLoading.value = true;
+	loginError.value = '';
+
+	uni.request({
+		url: API_BASE_URL + '/api/login',
+		method: 'POST',
+		data: {
+			identifier: loginIdentifier.value,
+			password: loginPassword.value
+		},
+		success(res: any) {
+			if (res.statusCode >= 200 && res.statusCode < 300 && res.data?.token) {
+				user_store.setAuth({
+					username: res.data.user?.username || null,
+					email: res.data.user?.email,
+					token: res.data.token
+				});
+				uni.showToast({
+					title: '登录成功',
+					icon: 'success',
+					duration: 1500
+				});
+				setTimeout(() => {
+					uni.navigateBack();
+				}, 600);
+			} else {
+				loginError.value = res.data?.error || '登录失败，请稍后重试';
+			}
+		},
+		fail() {
+			loginError.value = '网络错误，请检查后端是否已启动';
+		},
+		complete() {
+			loginLoading.value = false;
+		}
+	});
+}
+
+// 发送验证码
+async function sendVerificationCode() {
+	if (!registerEmail.value) {
+		registerError.value = '请先输入邮箱地址';
+		return;
+	}
+	
+	// 简单的邮箱格式验证
+	const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+	if (!emailRegex.test(registerEmail.value.trim())) {
+		registerError.value = '邮箱格式不正确';
+		return;
+	}
+	
+	sendCodeLoading.value = true;
+	registerError.value = '';
+	
+	try {
+		const result = await sendEmailVerificationCode(registerEmail.value, 'register');
+		if (result.success) {
+			uni.showToast({
+				title: result.message || '验证码已发送到您的邮箱',
+				icon: 'success',
+				duration: 2000
+			});
+			
+			// 开发环境可能会返回 code，可以用于测试
+			if (result.code) {
+				console.log('开发模式验证码:', result.code);
+			}
+			
+			// 开始倒计时（60秒）
+			codeCountdown.value = 60;
+			if (countdownTimer) clearInterval(countdownTimer);
+			countdownTimer = setInterval(() => {
+				codeCountdown.value--;
+				if (codeCountdown.value <= 0) {
+					clearInterval(countdownTimer);
+					countdownTimer = null;
+				}
+			}, 1000);
+		}
+	} catch (error: any) {
+		registerError.value = error.message || '发送验证码失败，请稍后重试';
+		uni.showToast({
+			title: error.message || '发送失败',
+			icon: 'none',
+			duration: 2000
+		});
+	} finally {
+		sendCodeLoading.value = false;
+	}
+}
+
+async function submitRegister() {
+	if (!registerUsername.value || !registerEmail.value || !registerPassword.value) {
+		registerError.value = '请输入用户名、邮箱和密码';
+		return;
+	}
+	if (!registerVerificationCode.value) {
+		registerError.value = '请输入邮箱验证码';
+		return;
+	}
+	if (registerUsername.value.length < 2) {
+		registerError.value = '用户名长度不能少于 2 个字符';
+		return;
+	}
+	if (registerPassword.value.length < 6) {
+		registerError.value = '密码长度不能少于 6 位';
+		return;
+	}
+	if (registerPasswordConfirm.value !== registerPassword.value) {
+		registerError.value = '两次输入的密码不一致';
+		return;
+	}
+	
+	// 先验证验证码
+	registerLoading.value = true;
+	registerError.value = '';
+	
+	try {
+		const verifyResult = await verifyEmailCode(registerEmail.value, registerVerificationCode.value, 'register');
+		if (!verifyResult.success) {
+			registerError.value = verifyResult.message || '验证码验证失败';
+			registerLoading.value = false;
+			return;
+		}
+	} catch (error: any) {
+		registerError.value = error.message || '验证码错误，请检查后重试';
+		registerLoading.value = false;
+		uni.showToast({
+			title: error.message || '验证码错误',
+			icon: 'none',
+			duration: 2000
+		});
+		return;
+	}
+	
+	// 验证码验证成功，继续注册流程
+	uni.request({
+		url: API_BASE_URL + '/api/register',
+		method: 'POST',
+		data: {
+			username: registerUsername.value,
+			email: registerEmail.value,
+			password: registerPassword.value
+		},
+		success(res: any) {
+			if (res.statusCode >= 200 && res.statusCode < 300 && res.data?.token) {
+				user_store.setAuth({
+					username: res.data.user?.username || registerUsername.value,
+					email: res.data.user?.email || registerEmail.value,
+					token: res.data.token
+				});
+				uni.showToast({
+					title: '注册并登录成功',
+					icon: 'success',
+					duration: 1500
+				});
+				setTimeout(() => {
+					uni.navigateBack();
+				}, 600);
+			} else {
+				registerError.value = res.data?.error || '注册失败，请稍后重试';
+			}
+		},
+		fail() {
+			registerError.value = '网络错误，请检查后端是否已启动';
+		},
+		complete() {
+			registerLoading.value = false;
+		}
+	});
+}
+
+function goBack() {
+	uni.navigateBack();
+}
+
+function logout() {
+	user_store.logout();
+	uni.showToast({
+		title: '已退出登录',
+		icon: 'none',
+		duration: 1200
+	});
+}
+
+// 清理倒计时定时器
+onUnmounted(() => {
+	if (countdownTimer) {
+		clearInterval(countdownTimer);
+		countdownTimer = null;
+	}
+});
+</script>
+
+

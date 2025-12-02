@@ -1,0 +1,231 @@
+<template>
+	<tm-app>
+		<view class="page-wrapper">
+			<view class="page-content-scale">
+				<yx-nav-header></yx-nav-header>
+
+				<tm-sheet :round="3" :shadow="2" :margin="[20, 20]" :padding="[10, 10]">
+					<view class="flex flex-wrap px-20 py-10">
+						<view style="width: 100%; max-width: 360px;" class="mb-10">
+							<view>
+								<tm-text
+									:label="'姓名：' + user_store.realname"
+									_class="text-overflow-1"
+								></tm-text>
+							</view>
+							<view>
+								<tm-text
+									:label="'生肖：' + GetChineseZodiac(bazi_store.solar.year)"
+								></tm-text>
+							</view>
+							<view>
+								<tm-text
+									:label="'性别：靓' + (user_store.gender ? '仔' : '女')"
+								></tm-text>
+							</view>
+						</view>
+						<view style="width: 100%; max-width: 360px;">
+							<view>
+								<tm-text :label="'阴历：' + bazi_store.yinli"></tm-text>
+							</view>
+							<view>
+								<tm-text
+									:label="'阳历：' + utils.HideSecond(user_store.timestamp)"
+								></tm-text>
+							</view>
+							<view>
+								<tm-text :label="'星座：' + bazi_store.xinzuo + '座'"></tm-text>
+							</view>
+						</view>
+					</view>
+
+					<view class="px-20 pb-10 mt-10">
+						<tm-button
+							block
+							type="primary"
+							:loading="saving"
+							:disabled="saving"
+							label="保存到账号"
+							@tap="saveToAccount"
+						></tm-button>
+						<view v-if="saveError" class="mt-6">
+							<tm-text :label="saveError" color="red"></tm-text>
+						</view>
+					</view>
+				</tm-sheet>
+
+				<tm-sheet :round="3" :shadow="2" :margin="[20, 0]" :padding="[10, 10]">
+					<yx-detail-table></yx-detail-table>
+					<view class="px-20 py-30">
+						<tm-text :label="'起运：' + GetStartYunLabel()"></tm-text>
+						<tm-text :label="'起运公历：' + bazi_store.start_yun.solar"></tm-text>
+					</view>
+				</tm-sheet>
+
+				<yx-yun-scroll-list></yx-yun-scroll-list>
+			</view>
+		</view>
+	</tm-app>
+</template>
+
+<script lang="ts" setup>
+import { ref } from 'vue';
+import { useBaziStore } from '@/store/bazi.ts';
+import { useUserStore } from '@/store/user.ts';
+import utils from '@/tool/utils.ts';
+import { API_BASE_URL } from '@/common/config.ts';
+
+const bazi_store = useBaziStore();
+const user_store = useUserStore();
+
+const saving = ref(false);
+const saveError = ref('');
+
+if (user_store.timestamp === null) {
+	uni.redirectTo({
+		url: '/pages/index/index'
+	});
+}
+
+function saveToAccount() {
+	if (!user_store.isLoggedIn || !user_store.token) {
+		uni.showToast({
+			title: '请先登录账号后再保存',
+			icon: 'none',
+			duration: 2000
+		});
+		return;
+	}
+
+	if (!user_store.timestamp) {
+		uni.showToast({
+			title: '缺少出生时间，无法保存',
+			icon: 'none',
+			duration: 2000
+		});
+		return;
+	}
+
+	saving.value = true;
+	saveError.value = '';
+
+	// 准备 rawPayload，确保可以序列化
+	let rawPayload = null;
+	try {
+		// 使用 JSON.parse(JSON.stringify()) 来确保数据可序列化
+		rawPayload = JSON.parse(JSON.stringify({
+			user: {
+				realname: user_store.realname,
+				gender: user_store.gender,
+				timestamp: user_store.timestamp
+			},
+			bazi: bazi_store.$state
+		}));
+	} catch (e) {
+		console.error('准备 rawPayload 失败:', e);
+		// 如果序列化失败，使用简化版本
+		rawPayload = {
+			user: {
+				realname: user_store.realname,
+				gender: user_store.gender,
+				timestamp: user_store.timestamp
+			},
+			bazi: {
+				solar: bazi_store.solar,
+				lunar: bazi_store.lunar,
+				sizhu: bazi_store.sizhu
+			}
+		};
+	}
+
+	// 准备要发送的数据对象，确保所有值都是可序列化的
+	const requestData = {
+		name: user_store.realname || '不知名网友',
+		gender: user_store.gender !== undefined && user_store.gender !== null ? String(user_store.gender) : null,
+		birthDatetime: user_store.timestamp !== undefined && user_store.timestamp !== null ? Number(user_store.timestamp) : null,
+		calendarType: 'solar',
+		rawPayload: rawPayload
+	};
+
+	// 验证数据是否可以序列化
+	try {
+		const testString = JSON.stringify(requestData);
+		console.log('数据序列化验证成功，长度:', testString.length);
+	} catch (e) {
+		console.error('数据序列化验证失败:', e);
+		saveError.value = '数据格式错误，无法保存: ' + e.message;
+		saving.value = false;
+		return;
+	}
+
+	console.log('准备发送数据:', {
+		name: requestData.name,
+		gender: requestData.gender,
+		birthDatetime: requestData.birthDatetime,
+		calendarType: requestData.calendarType,
+		rawPayloadKeys: rawPayload ? Object.keys(rawPayload) : []
+	});
+
+	uni.request({
+		url: API_BASE_URL + '/api/bazi',
+		method: 'POST',
+		header: {
+			'Content-Type': 'application/json; charset=utf-8',
+			'Authorization': 'Bearer ' + user_store.token
+		},
+		data: requestData,
+		success(res) {
+			if (res.statusCode >= 200 && res.statusCode < 300) {
+				uni.showToast({
+					title: '已保存到账号',
+					icon: 'success',
+					duration: 1500
+				});
+				saveError.value = '';
+			} else if (res.statusCode === 401) {
+				user_store.clearAuth();
+				uni.showToast({
+					title: '登录已失效，请重新登录',
+					icon: 'none',
+					duration: 2000
+				});
+				saveError.value = '';
+			} else {
+				const errorMsg = (res.data && res.data.error) || `保存失败 (${res.statusCode})`;
+				saveError.value = errorMsg;
+				uni.showToast({
+					title: errorMsg,
+					icon: 'none',
+					duration: 2000
+				});
+			}
+		},
+		fail(err) {
+			const errorMsg = '网络错误，请检查后端是否已启动';
+			saveError.value = errorMsg;
+			console.error('保存失败:', err);
+			uni.showToast({
+				title: errorMsg,
+				icon: 'none',
+				duration: 2000
+			});
+		},
+		complete() {
+			saving.value = false;
+		}
+	});
+}
+
+function GetStartYunLabel() {
+	let str = '出生后';
+	const { start_yun } = bazi_store;
+	if (start_yun.year) str += start_yun.year + '年';
+	if (start_yun.month) str += start_yun.month + '月';
+	if (start_yun.day) str += start_yun.day + '日';
+	if (start_yun.hour) str += start_yun.hour + '时';
+	str += '后起运';
+	return str;
+}
+
+const GetChineseZodiac = year => utils.GetChineseZodiac(year);
+</script>

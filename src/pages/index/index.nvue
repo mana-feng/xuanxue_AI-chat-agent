@@ -1,0 +1,441 @@
+<template>
+	<tm-app>
+		<view class="page-wrapper">
+			<view class="page-content-scale">
+				<yx-nav-header @open-auth="openAuth"></yx-nav-header>
+
+				<!-- 欢迎 & 说明（使用普通卡片，避免特殊渐变样式导致兼容问题） -->
+				<tm-sheet
+					:round="4"
+					:shadow="1"
+					:margin="[0, 10]"
+					:padding="[18, 18]"
+				>
+					<view class="flex flex-row items-center">
+						<view class="flex-1">
+							<tm-text
+								font-size="34"
+								label="欢迎使用八字排盘"
+								:bold="true"
+							></tm-text>
+							<tm-text
+								class="mt-6"
+								font-size="24"
+								color="#666666"
+								:label="isLoggedIn ? '已登录账号，可随时保存与查看排盘记录' : '登录后可保存排盘到账号，在多设备间同步与管理历史记录'"
+							></tm-text>
+						</view>
+					</view>
+				</tm-sheet>
+
+				<!-- 登录 / 注册区域（卡片） -->
+				<tm-sheet
+					:round="4"
+					:shadow="3"
+					:margin="[0, 12]"
+					:padding="[18, 18]"
+				>
+					<view class="flex flex-row items-center justify-between mb-16">
+						<view>
+							<tm-text
+								v-if="isLoggedIn"
+								font-size="28"
+								:bold="true"
+								:label="'您好，' + (user_store.email || '已登录用户')"
+							></tm-text>
+							<tm-text
+								v-else
+								font-size="28"
+								:bold="true"
+								label="账号登录 / 注册"
+							></tm-text>
+							<tm-text
+								class="mt-4"
+								font-size="22"
+								color="#999999"
+								:label="isLoggedIn ? '当前登录账号将自动保存您的排盘记录' : '只需邮箱和密码，即可轻松管理您的八字排盘历史'"
+							></tm-text>
+						</view>
+
+						<view class="flex flex-row flex-center">
+							<tm-button
+								v-if="isLoggedIn"
+								size="small"
+								type="primary"
+								:margin="[10, 6]"
+								:padding="[20, 16]"
+								shape="round"
+								label="历史查询"
+								@tap="goToHistory"
+							></tm-button>
+							<tm-button
+								v-if="isLoggedIn"
+								size="small"
+								type="danger"
+								:margin="[10, 0]"
+								:padding="[20, 6]"
+								shape="round"
+								label="退出登录"
+								@tap="user_store.logout()"
+							></tm-button>
+						</view>
+					</view>
+
+					<view
+						v-if="showAuthForm"
+						class="mt-4"
+					>
+						<!-- 登录 / 注册切换 -->
+						<view class="flex flex-row mb-16">
+							<tm-button
+								:plain="authMode !== 'login'"
+								:type="authMode === 'login' ? 'primary' : 'grey'"
+								size="small"
+								:margin="[0, 0]"
+								:padding="[22, 8]"
+								shape="round"
+								label="登录"
+								@tap="authMode = 'login'; authError = ''"
+							></tm-button>
+							<tm-button
+								class="ml-10"
+								:plain="authMode !== 'register'"
+								:type="authMode === 'register' ? 'primary' : 'grey'"
+								size="small"
+								:margin="[0, 0]"
+								:padding="[22, 8]"
+								shape="round"
+								label="注册"
+								@tap="authMode = 'register'; authError = ''"
+							></tm-button>
+						</view>
+
+						<!-- 表单输入 -->
+						<tm-input
+							v-model="authEmail"
+							:margin="[0, 12]"
+							prefix="tmicon-md-mail"
+							type="text"
+							placeholder="请输入常用邮箱，用于登录与找回账号"
+						></tm-input>
+						<tm-input
+							v-model="authPassword"
+							:margin="[0, 12]"
+							prefix="tmicon-md-lock"
+							type="password"
+							placeholder="设置登录密码（建议不少于 6 位，包含字母和数字）"
+						></tm-input>
+
+						<view class="flex flex-row items-center justify-between mt-6">
+							<tm-text
+								font-size="20"
+								color="#bbbbbb"
+								:label="authMode === 'login' ? '为保障安全，请在私人环境下登录账号' : '注册即表示同意相关服务条款'"
+							></tm-text>
+							<tm-text
+								v-if="authMode === 'login'"
+								font-size="20"
+								color="#409EFF"
+								label="忘记密码？"
+							></tm-text>
+						</view>
+
+						<view v-if="authError" class="mt-8">
+							<tm-text
+								:label="authError"
+								color="#ff4d4f"
+							></tm-text>
+						</view>
+
+						<view class="flex flex-row mt-14">
+							<tm-button
+								block
+								:loading="authLoading"
+								:disabled="authLoading"
+								:margin="[0, 0]"
+								:type="authMode === 'login' ? 'primary' : 'success'"
+								:label="authMode === 'login' ? '登录' : '注册并登录'"
+								@tap="submitAuth"
+							></tm-button>
+							<tm-button
+								class="ml-10"
+								type="grey"
+								:margin="[0, 0]"
+								label="取消"
+								@tap="showAuthForm = false"
+							></tm-button>
+						</view>
+					</view>
+				</tm-sheet>
+
+				<tm-sheet :round="3" :shadow="2" :margin="[0, 30]">
+					<tm-input
+						v-model="realname"
+						:margin="[0, 24]"
+						placeholder="请输入姓名"
+						prefix="tmicon-md-person"
+					></tm-input>
+
+					<view class="flex flex-wrap items-center">
+						<view class="flex-3 mb-10">
+							<tm-radio-group v-model="gender">
+								<tm-radio label="男" :value="0"></tm-radio>
+								<tm-radio label="女" :value="1"></tm-radio>
+							</tm-radio-group>
+						</view>
+						<view class="flex-9">
+							<tm-segtab
+								:margin="[20, 10]"
+								v-model="model"
+								:default-value="0"
+								:list="[{ text: '阴历' }, { text: '四柱' }]"
+							></tm-segtab>
+						</view>
+					</view>
+
+					<tm-input
+						disabled
+						placeholder="请选择出生日期和时间（精确到分钟）"
+						prefix="tmicon-calendar-alt"
+						suffix="tmicon-angle-right"
+						v-model="datetime_label"
+						:margin="[0, 12]"
+						@tap="SelectTime"
+					></tm-input>
+
+					<tm-input
+						:margin="[0, 12]"
+						prefix="tmicon-integral"
+						disabled
+						v-if="lunar_label"
+						v-model="lunar_label"
+					></tm-input>
+
+					<tm-button block label="开始排盘" @tap="Sumbit"></tm-button>
+				</tm-sheet>
+
+				<yx-friend></yx-friend>
+
+				<yxn-pillar-picker
+					v-model:show="pillar_select_show"
+					:default-value="pillar_default_value"
+					@Confirm="PillarConfirm"
+				></yxn-pillar-picker>
+
+				<tm-time-picker
+					v-model:show="solar_select_show"
+					:round="6"
+					:default-value="solar_default_value"
+					:start="time_pick.start"
+					:end="time_pick.end"
+					:format="time_pick.format"
+					:showDetail="time_pick.detail"
+					@confirm="SolarConfirm"
+				></tm-time-picker>
+			</view>
+		</view>
+	</tm-app>
+</template>
+
+<script lang="ts" setup>
+import { ref, computed, watch } from 'vue';
+import { onLoad } from '@dcloudio/uni-app';
+import { Solar, Lunar } from 'lunar-javascript';
+import {useUserStore} from '@/store/user.ts'
+import {useBaziStore} from '@/store/bazi.ts'
+import utils from '@/tool/utils.ts';
+import { API_BASE_URL } from '@/common/config.ts';
+
+let realname = ref('');
+let gender = ref(0);
+let model = ref(0);
+let timestamp = ref(null);
+let datetime_label = ref('');
+let lunar_label = ref(null);
+
+const user_store = useUserStore();
+const bazi_store = useBaziStore();
+
+// 登录 / 注册相关
+const authMode = ref<'login' | 'register'>('login');
+const showAuthForm = ref(false);
+const authEmail = ref('');
+const authPassword = ref('');
+const authLoading = ref(false);
+const authError = ref('');
+const isLoggedIn = computed(() => user_store.isLoggedIn);
+
+let solar_select_show = ref(false);
+let pillar_select_show = ref(false);
+
+let solar_default_value = ref("")
+let pillar_default_value = ref("");
+
+const time_pick = {
+	start: '1900/01/01 00:00',
+	end: '2099/12/30 00:00',
+	format: 'YYYY/MM/DD hh:MM',
+	detail: {
+		year: true,
+		month: true,
+		day: true,
+		hour: true,
+		minute: true,
+		second: false
+	}
+};
+
+watch(model, () => PullDatatimeLabel());
+watch(timestamp, () => PullDatatimeLabel());
+onLoad(() =>{
+	// 恢复登录状态
+	user_store.restoreAuth();
+
+	const cache = uni.getStorageSync('info');
+	if (cache) {
+		let data = null
+		try {
+			data = JSON.parse(cache);
+			realname.value = data.realname
+			gender.value = data.gender== 0 ? 1 : 0
+			timestamp.value = data.timestamp
+			PullDatatimeLabel()
+		} catch (e) {
+			uni.removeStorageSync('info');
+		}
+	}
+})
+
+function openAuth(mode: 'login' | 'register') {
+	uni.navigateTo({
+		url: `/pages/auth/auth?mode=${mode}`
+	});
+}
+
+function goToHistory() {
+	uni.navigateTo({
+		url: '/pages/history/list'
+	});
+}
+
+function submitAuth() {
+	if (!authEmail.value || !authPassword.value) {
+		authError.value = '请输入邮箱和密码';
+		return;
+	}
+	authLoading.value = true;
+	authError.value = '';
+
+	const url = API_BASE_URL + (authMode.value === 'login' ? '/api/login' : '/api/register');
+
+	uni.request({
+		url,
+		method: 'POST',
+		data: {
+			email: authEmail.value,
+			password: authPassword.value
+		},
+		success(res: any) {
+			if (res.statusCode >= 200 && res.statusCode < 300 && res.data?.token) {
+				user_store.setAuth({
+					username: res.data.user?.username || null,
+					email: res.data.user?.email || authEmail.value,
+					token: res.data.token
+				});
+				uni.showToast({
+					title: authMode.value === 'login' ? '登录成功' : '注册并登录成功',
+					icon: 'success',
+					duration: 1500
+				});
+				showAuthForm.value = false;
+				authPassword.value = '';
+			} else {
+				authError.value = res.data?.error || '请求失败，请稍后重试';
+			}
+		},
+		fail() {
+			authError.value = '网络错误，请检查后端是否已启动';
+		},
+		complete() {
+			authLoading.value = false;
+		}
+	});
+}
+
+function SelectTime  ()  {
+	const type = model.value;
+	uni.hideKeyboard();
+	setTimeout(()=>{
+		if (type === 0) {
+			solar_select_show.value = true;
+		} else if (type === 1) {
+			pillar_select_show.value = true;
+		}
+	},400)
+};
+
+const SolarConfirm = time => timestamp.value = new Date(time).getTime();
+const PillarConfirm = e => {
+	timestamp.value = e.value;
+	pillar_select_show.value = false;
+}
+
+function PullDatatimeLabel  ()  {
+	const time = timestamp.value;
+	if (time === null) return;
+	const index = model.value;
+	const solar = Solar.fromDate(new Date(time));
+	const lunar = solar.getLunar();
+	lunar_label.value = `${lunar.toString()} ${lunar.getTimeZhi()}时`;
+	if (index === 0) {
+		let date = utils.HideSecond(time);
+		datetime_label.value = date;
+		solar_default_value.value = date
+	} else {
+		const bazi = lunar.getEightChar();
+		const list = [bazi.getYear(), bazi.getMonth(), bazi.getDay(), bazi.getTime()];
+		datetime_label.value = list.join(' ');
+		pillar_default_value.value = [
+			bazi.getYear()[0],
+			bazi.getMonth()[0],
+			bazi.getDay()[0],
+			bazi.getTime()[0],
+			bazi.getYear()[1],
+			bazi.getMonth()[1],
+			bazi.getDay()[1],
+			bazi.getTime()[1],
+		].join('');
+	}
+};
+
+function Sumbit ()  {
+	const datetime = timestamp.value;
+	if(datetime === null){
+		uni.showToast({
+			title: "请先选择出生日期和时间",
+			icon: "none",
+			duration: 2000
+		});
+		SelectTime();
+		return;
+	}
+
+	const params = {
+		realname: realname.value??"不知名网友",
+		timestamp: datetime,
+		gender: gender.value == 0 ? 1 : 0
+	}
+	uni.showLoading({
+		title:"排盘中，请稍后！"
+	})
+	uni.setStorageSync('info', JSON.stringify(params));
+	user_store.set(params)
+	bazi_store.pull(params);
+	setTimeout(()=>{
+		uni.hideLoading()
+		uni.navigateTo({
+			url:"/pages/index/detail"
+		})
+	},0)
+};
+</script>
