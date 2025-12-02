@@ -75,6 +75,17 @@ db.serialize(() => {
 				}
 			});
 		}
+		// 检查并添加 role 字段（默认值为 'user'）
+		const hasRole = rows?.some((c) => c.name === 'role');
+		if (!hasRole) {
+			db.run("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'", (alterErr) => {
+				if (alterErr) {
+					console.error('尝试为 users 表增加 role 字段失败', alterErr);
+				} else {
+					console.log('✓ 已添加 role 字段到 users 表');
+				}
+			});
+		}
 	});
 
 	// 八字记录表
@@ -376,7 +387,12 @@ app.post('/api/register', (req, res) => {
 
 				res.json({
 					token,
-					user: { id: userId, email: trimmedEmail, username: trimmedUsername }
+					user: { 
+						id: userId, 
+						email: trimmedEmail, 
+						username: trimmedUsername,
+						role: 'user' // 新注册用户默认为普通用户
+					}
 				});
 			}
 		);
@@ -404,7 +420,7 @@ app.post('/api/login', (req, res) => {
 	}
 
 	db.get(
-		'SELECT id, email, username, password_hash FROM users WHERE email = ? OR username = ?',
+		'SELECT id, email, username, password_hash, role FROM users WHERE email = ? OR username = ?',
 		[emailCandidate, trimmedIdentifier],
 		(err, row) => {
 			if (err) {
@@ -423,7 +439,12 @@ app.post('/api/login', (req, res) => {
 			const token = jwt.sign({ uid: row.id }, JWT_SECRET, { expiresIn: '7d' });
 			res.json({
 				token,
-				user: { id: row.id, email: row.email, username: row.username || null }
+				user: { 
+					id: row.id, 
+					email: row.email, 
+					username: row.username || null,
+					role: row.role || 'user'
+				}
 			});
 		}
 	);
@@ -442,6 +463,38 @@ function authMiddleware(req, res, next) {
 		const decoded = jwt.verify(token, JWT_SECRET);
 		req.user = { id: decoded.uid };
 		next();
+	} catch (e) {
+		return res.status(401).json({ error: '登录已失效，请重新登录' });
+	}
+}
+
+// 管理员鉴权中间件
+function adminMiddleware(req, res, next) {
+	const authHeader = req.headers.authorization || '';
+	const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+	if (!token) {
+		return res.status(401).json({ error: '未登录' });
+	}
+
+	try {
+		const decoded = jwt.verify(token, JWT_SECRET);
+		const userId = decoded.uid;
+		
+		// 查询用户角色
+		db.get('SELECT role FROM users WHERE id = ?', [userId], (err, row) => {
+			if (err) {
+				console.error('查询用户角色失败:', err);
+				return res.status(500).json({ error: '服务器错误' });
+			}
+			
+			if (!row || row.role !== 'admin') {
+				return res.status(403).json({ error: '需要管理员权限' });
+			}
+			
+			req.user = { id: userId, role: 'admin' };
+			next();
+		});
 	} catch (e) {
 		return res.status(401).json({ error: '登录已失效，请重新登录' });
 	}
@@ -673,6 +726,749 @@ function safeJsonParse(text) {
 		return null;
 	}
 }
+
+// ==================== 管理员后台API ====================
+
+// 获取统计数据
+app.get('/api/admin/stats', adminMiddleware, (req, res) => {
+	const queries = {
+		totalUsers: 'SELECT COUNT(*) as count FROM users',
+		totalRecords: 'SELECT COUNT(*) as count FROM bazi_records',
+		todayUsers: "SELECT COUNT(*) as count FROM users WHERE DATE(created_at) = DATE('now')",
+		todayRecords: "SELECT COUNT(*) as count FROM bazi_records WHERE DATE(created_at) = DATE('now')",
+		adminUsers: "SELECT COUNT(*) as count FROM users WHERE role = 'admin'"
+	};
+
+	const results = {};
+	let completed = 0;
+	const total = Object.keys(queries).length;
+
+	Object.keys(queries).forEach((key) => {
+		db.get(queries[key], [], (err, row) => {
+			if (err) {
+				console.error(`查询 ${key} 失败:`, err);
+				results[key] = 0;
+			} else {
+				results[key] = row?.count || 0;
+			}
+			completed++;
+			if (completed === total) {
+				res.json(results);
+			}
+		});
+	});
+});
+
+// 获取用户列表
+app.get('/api/admin/users', adminMiddleware, (req, res) => {
+	const page = parseInt(req.query.page) || 1;
+	const pageSize = parseInt(req.query.pageSize) || 20;
+	const offset = (page - 1) * pageSize;
+	const search = req.query.search || '';
+
+	let query = `
+		SELECT 
+			u.id, 
+			u.email, 
+			u.username, 
+			u.role, 
+			u.created_at,
+			COUNT(b.id) as recordCount
+		FROM users u
+		LEFT JOIN bazi_records b ON u.id = b.user_id
+	`;
+	let countQuery = 'SELECT COUNT(*) as count FROM users';
+	const params = [];
+	const groupBy = ' GROUP BY u.id';
+
+	if (search) {
+		query += ' WHERE u.email LIKE ? OR u.username LIKE ?';
+		countQuery += ' WHERE email LIKE ? OR username LIKE ?';
+		const searchPattern = `%${search}%`;
+		params.push(searchPattern, searchPattern);
+	}
+
+	query += groupBy + ' ORDER BY u.created_at DESC LIMIT ? OFFSET ?';
+	const queryParams = [...params, pageSize, offset];
+	const countParams = params;
+
+	// 先获取总数
+	db.get(countQuery, countParams, (err, countRow) => {
+		if (err) {
+			console.error('查询用户总数失败:', err);
+			return res.status(500).json({ error: '查询失败' });
+		}
+
+		const total = countRow?.count || 0;
+
+		// 再获取列表
+		db.all(query, queryParams, (err, rows) => {
+			if (err) {
+				console.error('查询用户列表失败:', err);
+				return res.status(500).json({ error: '查询失败' });
+			}
+
+			res.json({
+				list: rows || [],
+				total,
+				page,
+				pageSize,
+				totalPages: Math.ceil(total / pageSize)
+			});
+		});
+	});
+});
+
+// 创建用户（管理员）- 必须在 /api/admin/users/:id 之前
+app.post('/api/admin/users', adminMiddleware, (req, res) => {
+	console.log('POST /api/admin/users - 收到请求');
+	console.log('请求体:', req.body);
+	const { email, username, password, role = 'user' } = req.body || {};
+
+	if (!email || !password) {
+		return res.status(400).json({ error: '缺少 email 或 password' });
+	}
+
+	// 使用安全工具验证和清理输入
+	const trimmedEmail = SecurityUtils.sanitizeString(String(email), { maxLength: 255 }).toLowerCase();
+	
+	if (!SecurityUtils.isValidEmail(trimmedEmail)) {
+		return res.status(400).json({ error: '邮箱格式不正确' });
+	}
+
+	// 验证用户名（如果提供）
+	let trimmedUsername = null;
+	if (username) {
+		const usernameValidation = SecurityUtils.validateUsername(username);
+		if (!usernameValidation.valid) {
+			return res.status(400).json({ error: usernameValidation.error });
+		}
+		trimmedUsername = usernameValidation.sanitized;
+	}
+
+	// 验证密码
+	const passwordValidation = SecurityUtils.validatePassword(password);
+	if (!passwordValidation.valid) {
+		return res.status(400).json({ error: passwordValidation.error });
+	}
+
+	// 验证角色
+	if (role !== 'user' && role !== 'admin') {
+		return res.status(400).json({ error: '无效的角色，必须是 user 或 admin' });
+	}
+
+	// 检查邮箱或用户名是否已存在
+	const checkQuery = trimmedUsername 
+		? 'SELECT id FROM users WHERE email = ? OR username = ?'
+		: 'SELECT id FROM users WHERE email = ?';
+	const checkParams = trimmedUsername ? [trimmedEmail, trimmedUsername] : [trimmedEmail];
+
+	db.get(checkQuery, checkParams, (err, row) => {
+		if (err) {
+			console.error('检查用户是否存在失败:', err);
+			return res.status(500).json({ error: '服务器错误' });
+		}
+		if (row) {
+			return res.status(409).json({ error: '该邮箱或用户名已被使用' });
+		}
+
+		const passwordHash = bcrypt.hashSync(String(password), 10);
+
+		const insertQuery = trimmedUsername
+			? 'INSERT INTO users (email, username, password_hash, role) VALUES (?, ?, ?, ?)'
+			: 'INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)';
+		const insertParams = trimmedUsername
+			? [trimmedEmail, trimmedUsername, passwordHash, role]
+			: [trimmedEmail, passwordHash, role];
+
+		db.run(insertQuery, insertParams, function (insertErr) {
+			if (insertErr) {
+				console.error('创建用户失败:', insertErr);
+				return res.status(500).json({ error: '创建失败' });
+			}
+
+			res.json({
+				success: true,
+				user: {
+					id: this.lastID,
+					email: trimmedEmail,
+					username: trimmedUsername,
+					role: role
+				}
+			});
+		});
+	});
+});
+
+// 获取用户详情
+app.get('/api/admin/users/:id', adminMiddleware, (req, res) => {
+	const id = SecurityUtils.validateId(req.params.id);
+	if (!id) {
+		return res.status(400).json({ error: '无效的用户ID' });
+	}
+
+	db.get(
+		'SELECT id, email, username, role, created_at FROM users WHERE id = ?',
+		[id],
+		(err, row) => {
+			if (err) {
+				console.error('查询用户详情失败:', err);
+				return res.status(500).json({ error: '查询失败' });
+			}
+			if (!row) {
+				return res.status(404).json({ error: '用户不存在' });
+			}
+
+			// 获取该用户的八字记录数
+			db.get(
+				'SELECT COUNT(*) as count FROM bazi_records WHERE user_id = ?',
+				[id],
+				(countErr, countRow) => {
+					if (countErr) {
+						console.error('查询用户记录数失败:', countErr);
+					}
+					res.json({
+						...row,
+						recordCount: countRow?.count || 0
+					});
+				}
+			);
+		}
+	);
+});
+
+// 更新用户信息（管理员）
+app.put('/api/admin/users/:id', adminMiddleware, (req, res) => {
+	const id = SecurityUtils.validateId(req.params.id);
+	const { email, username, password, role } = req.body || {};
+
+	if (!id) {
+		return res.status(400).json({ error: '无效的用户ID' });
+	}
+
+	// 不能修改自己的角色
+	if (role && req.user.id === id && role !== 'admin') {
+		return res.status(400).json({ error: '不能修改自己的角色' });
+	}
+
+	// 先查询用户是否存在
+	db.get('SELECT id, email, username, role FROM users WHERE id = ?', [id], (err, userRow) => {
+		if (err) {
+			console.error('查询用户失败:', err);
+			return res.status(500).json({ error: '查询失败' });
+		}
+		if (!userRow) {
+			return res.status(404).json({ error: '用户不存在' });
+		}
+
+		// 验证和准备更新数据
+		const updates = [];
+		const params = [];
+
+		// 更新邮箱
+		if (email !== undefined) {
+			const trimmedEmail = SecurityUtils.sanitizeString(String(email), { maxLength: 255 }).toLowerCase();
+			if (!SecurityUtils.isValidEmail(trimmedEmail)) {
+				return res.status(400).json({ error: '邮箱格式不正确' });
+			}
+			updates.push('email = ?');
+			params.push(trimmedEmail);
+		}
+
+		// 更新用户名
+		if (username !== undefined) {
+			if (username === null || username === '') {
+				// 允许清空用户名
+				updates.push('username = NULL');
+			} else {
+				const usernameValidation = SecurityUtils.validateUsername(username);
+				if (!usernameValidation.valid) {
+					return res.status(400).json({ error: usernameValidation.error });
+				}
+				updates.push('username = ?');
+				params.push(usernameValidation.sanitized);
+			}
+		}
+
+		// 更新密码
+		if (password !== undefined && password !== null && password !== '') {
+			const passwordValidation = SecurityUtils.validatePassword(password);
+			if (!passwordValidation.valid) {
+				return res.status(400).json({ error: passwordValidation.error });
+			}
+			const passwordHash = bcrypt.hashSync(String(password), 10);
+			updates.push('password_hash = ?');
+			params.push(passwordHash);
+		}
+
+		// 更新角色
+		if (role !== undefined) {
+			if (role !== 'user' && role !== 'admin') {
+				return res.status(400).json({ error: '无效的角色，必须是 user 或 admin' });
+			}
+			updates.push('role = ?');
+			params.push(role);
+		}
+
+		if (updates.length === 0) {
+			return res.status(400).json({ error: '没有要更新的字段' });
+		}
+
+		// 检查邮箱和用户名是否冲突（如果有更新）
+		const checkConditions = [];
+		const checkParams = [];
+		
+		if (email !== undefined) {
+			checkConditions.push('email = ?');
+			checkParams.push(SecurityUtils.sanitizeString(String(email), { maxLength: 255 }).toLowerCase());
+		}
+		if (username !== undefined && username !== null && username !== '') {
+			const usernameValidation = SecurityUtils.validateUsername(username);
+			if (usernameValidation.valid) {
+				checkConditions.push('username = ?');
+				checkParams.push(usernameValidation.sanitized);
+			}
+		}
+
+		if (checkConditions.length > 0) {
+			checkParams.push(id);
+			const checkQuery = `SELECT id FROM users WHERE (${checkConditions.join(' OR ')}) AND id != ?`;
+			db.get(checkQuery, checkParams, (checkErr, checkRow) => {
+				if (checkErr) {
+					console.error('检查冲突失败:', checkErr);
+					return res.status(500).json({ error: '服务器错误' });
+				}
+				if (checkRow) {
+					return res.status(409).json({ error: '该邮箱或用户名已被使用' });
+				}
+				performUpdate();
+			});
+		} else {
+			performUpdate();
+		}
+
+		function performUpdate() {
+			params.push(id);
+			const updateQuery = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
+
+			db.run(updateQuery, params, function (updateErr) {
+				if (updateErr) {
+					console.error('更新用户失败:', updateErr);
+					return res.status(500).json({ error: '更新失败' });
+				}
+				if (this.changes === 0) {
+					return res.status(404).json({ error: '用户不存在' });
+				}
+				res.json({ success: true });
+			});
+		}
+	});
+});
+
+// 更新用户角色
+app.put('/api/admin/users/:id/role', adminMiddleware, (req, res) => {
+	const id = SecurityUtils.validateId(req.params.id);
+	const { role } = req.body || {};
+
+	if (!id) {
+		return res.status(400).json({ error: '无效的用户ID' });
+	}
+
+	if (!role || (role !== 'user' && role !== 'admin')) {
+		return res.status(400).json({ error: '无效的角色，必须是 user 或 admin' });
+	}
+
+	// 不能修改自己的角色
+	if (req.user.id === id) {
+		return res.status(400).json({ error: '不能修改自己的角色' });
+	}
+
+	db.run('UPDATE users SET role = ? WHERE id = ?', [role, id], function (err) {
+		if (err) {
+			console.error('更新用户角色失败:', err);
+			return res.status(500).json({ error: '更新失败' });
+		}
+		if (this.changes === 0) {
+			return res.status(404).json({ error: '用户不存在' });
+		}
+		res.json({ success: true });
+	});
+});
+
+// 删除用户
+app.delete('/api/admin/users/:id', adminMiddleware, (req, res) => {
+	const id = SecurityUtils.validateId(req.params.id);
+	if (!id) {
+		return res.status(400).json({ error: '无效的用户ID' });
+	}
+
+	// 不能删除自己
+	if (req.user.id === id) {
+		return res.status(400).json({ error: '不能删除自己' });
+	}
+
+	// 先删除该用户的所有八字记录
+	db.run('DELETE FROM bazi_records WHERE user_id = ?', [id], (err) => {
+		if (err) {
+			console.error('删除用户记录失败:', err);
+			return res.status(500).json({ error: '删除失败' });
+		}
+
+		// 再删除用户
+		db.run('DELETE FROM users WHERE id = ?', [id], function (deleteErr) {
+			if (deleteErr) {
+				console.error('删除用户失败:', deleteErr);
+				return res.status(500).json({ error: '删除失败' });
+			}
+			if (this.changes === 0) {
+				return res.status(404).json({ error: '用户不存在' });
+			}
+			res.json({ success: true });
+		});
+	});
+});
+
+// 获取八字记录列表（管理员）
+app.get('/api/admin/records', adminMiddleware, (req, res) => {
+	const page = parseInt(req.query.page) || 1;
+	const pageSize = parseInt(req.query.pageSize) || 20;
+	const offset = (page - 1) * pageSize;
+	const userId = req.query.userId ? parseInt(req.query.userId) : null;
+	const search = req.query.search || '';
+
+	let query = `
+		SELECT 
+			r.id, 
+			r.name, 
+			r.gender, 
+			r.birth_datetime AS birthDatetime, 
+			r.calendar_type AS calendarType,
+			r.created_at AS createdAt,
+			u.id AS userId,
+			u.email AS userEmail,
+			u.username AS userUsername
+		FROM bazi_records r
+		LEFT JOIN users u ON r.user_id = u.id
+	`;
+	let countQuery = 'SELECT COUNT(*) as count FROM bazi_records r';
+	const params = [];
+	const conditions = [];
+
+	if (userId) {
+		conditions.push('r.user_id = ?');
+		params.push(userId);
+	}
+
+	if (search) {
+		conditions.push('(r.name LIKE ? OR u.email LIKE ? OR u.username LIKE ?)');
+		const searchPattern = `%${search}%`;
+		params.push(searchPattern, searchPattern, searchPattern);
+	}
+
+	if (conditions.length > 0) {
+		const whereClause = ' WHERE ' + conditions.join(' AND ');
+		query += whereClause;
+		countQuery += whereClause;
+	}
+
+	query += ' ORDER BY r.created_at DESC LIMIT ? OFFSET ?';
+	const queryParams = [...params, pageSize, offset];
+	const countParams = params;
+
+	// 先获取总数
+	db.get(countQuery, countParams, (err, countRow) => {
+		if (err) {
+			console.error('查询记录总数失败:', err);
+			return res.status(500).json({ error: '查询失败' });
+		}
+
+		const total = countRow?.count || 0;
+
+		// 再获取列表
+		db.all(query, queryParams, (err, rows) => {
+			if (err) {
+				console.error('查询记录列表失败:', err);
+				return res.status(500).json({ error: '查询失败' });
+			}
+
+			res.json({
+				list: rows || [],
+				total,
+				page,
+				pageSize,
+				totalPages: Math.ceil(total / pageSize)
+			});
+		});
+	});
+});
+
+// 获取八字记录详情（管理员）
+app.get('/api/admin/records/:id', adminMiddleware, (req, res) => {
+	const id = SecurityUtils.validateId(req.params.id);
+	if (!id) {
+		return res.status(400).json({ error: '无效的记录ID' });
+	}
+
+	db.get(
+		`SELECT 
+			r.id, 
+			r.name, 
+			r.gender, 
+			r.birth_datetime AS birthDatetime, 
+			r.calendar_type AS calendarType,
+			r.raw_payload AS rawPayload,
+			r.created_at AS createdAt,
+			u.id AS userId,
+			u.email AS userEmail,
+			u.username AS userUsername
+		FROM bazi_records r
+		LEFT JOIN users u ON r.user_id = u.id
+		WHERE r.id = ?`,
+		[id],
+		(err, row) => {
+			if (err) {
+				console.error('查询记录详情失败:', err);
+				return res.status(500).json({ error: '查询失败' });
+			}
+			if (!row) {
+				return res.status(404).json({ error: '记录不存在' });
+			}
+
+			// 解析 rawPayload
+			let rawPayload = null;
+			if (row.rawPayload) {
+				try {
+					rawPayload = JSON.parse(row.rawPayload);
+				} catch (e) {
+					console.error('解析 rawPayload 失败:', e);
+				}
+			}
+
+			res.json({
+				...row,
+				rawPayload
+			});
+		}
+	);
+});
+
+// 创建八字记录（管理员）
+app.post('/api/admin/records', adminMiddleware, (req, res) => {
+	const { userId, name, gender, birthDatetime, calendarType, rawPayload } = req.body || {};
+
+	if (!userId || birthDatetime === null || birthDatetime === undefined || birthDatetime === '') {
+		return res.status(400).json({ error: '缺少 userId 或 birthDatetime' });
+	}
+
+	// 验证用户是否存在
+	db.get('SELECT id FROM users WHERE id = ?', [userId], (userErr, userRow) => {
+		if (userErr) {
+			console.error('查询用户失败:', userErr);
+			return res.status(500).json({ error: '服务器错误' });
+		}
+		if (!userRow) {
+			return res.status(404).json({ error: '用户不存在' });
+		}
+
+		// 使用安全工具验证和清理输入
+		const sanitizedName = name ? SecurityUtils.sanitizeString(String(name), { maxLength: 100 }) : null;
+		const validatedGender = SecurityUtils.validateGender(gender);
+		const validatedDateTime = SecurityUtils.validateDateTime(birthDatetime);
+		
+		if (!validatedDateTime) {
+			return res.status(400).json({ error: '出生时间格式不正确' });
+		}
+
+		const sanitizedCalendarType = calendarType ? SecurityUtils.sanitizeString(String(calendarType), { maxLength: 20 }) : null;
+
+		// 安全地序列化 rawPayload
+		let rawPayloadJson = null;
+		if (rawPayload) {
+			try {
+				const payloadStr = JSON.stringify(rawPayload);
+				if (payloadStr.length > 1000000) { // 1MB 限制
+					return res.status(400).json({ error: '数据过大，无法保存' });
+				}
+				rawPayloadJson = payloadStr;
+			} catch (e) {
+				console.error('序列化 rawPayload 失败:', e);
+				return res.status(400).json({ error: '数据格式错误，无法保存: ' + e.message });
+			}
+		}
+
+		const insertSql =
+			'INSERT INTO bazi_records (user_id, name, gender, birth_datetime, calendar_type, raw_payload) VALUES (?, ?, ?, ?, ?, ?)';
+
+		db.run(
+			insertSql,
+			[userId, sanitizedName, validatedGender, validatedDateTime, sanitizedCalendarType, rawPayloadJson],
+			function (err) {
+				if (err) {
+					console.error('创建记录失败:', err);
+					return res.status(500).json({ error: '创建失败' });
+				}
+
+				res.json({
+					success: true,
+					record: {
+						id: this.lastID,
+						userId,
+						name: sanitizedName,
+						gender: validatedGender,
+						birthDatetime: validatedDateTime,
+						calendarType: sanitizedCalendarType
+					}
+				});
+			}
+		);
+	});
+});
+
+// 更新八字记录（管理员）
+app.put('/api/admin/records/:id', adminMiddleware, (req, res) => {
+	const id = SecurityUtils.validateId(req.params.id);
+	const { userId, name, gender, birthDatetime, calendarType, rawPayload } = req.body || {};
+
+	if (!id) {
+		return res.status(400).json({ error: '无效的记录ID' });
+	}
+
+	// 先查询记录是否存在
+	db.get('SELECT id, user_id FROM bazi_records WHERE id = ?', [id], (err, recordRow) => {
+		if (err) {
+			console.error('查询记录失败:', err);
+			return res.status(500).json({ error: '查询失败' });
+		}
+		if (!recordRow) {
+			return res.status(404).json({ error: '记录不存在' });
+		}
+
+		// 如果更新 userId，验证用户是否存在
+		if (userId !== undefined && userId !== recordRow.user_id) {
+			db.get('SELECT id FROM users WHERE id = ?', [userId], (userErr, userRow) => {
+				if (userErr) {
+					console.error('查询用户失败:', userErr);
+					return res.status(500).json({ error: '服务器错误' });
+				}
+				if (!userRow) {
+					return res.status(404).json({ error: '用户不存在' });
+				}
+				performUpdate();
+			});
+		} else {
+			performUpdate();
+		}
+
+		function performUpdate() {
+			const updates = [];
+			const params = [];
+
+			// 更新用户ID
+			if (userId !== undefined) {
+				updates.push('user_id = ?');
+				params.push(userId);
+			}
+
+			// 更新姓名
+			if (name !== undefined) {
+				if (name === null || name === '') {
+					updates.push('name = NULL');
+				} else {
+					updates.push('name = ?');
+					params.push(SecurityUtils.sanitizeString(String(name), { maxLength: 100 }));
+				}
+			}
+
+			// 更新性别
+			if (gender !== undefined) {
+				const validatedGender = SecurityUtils.validateGender(gender);
+				updates.push('gender = ?');
+				params.push(validatedGender);
+			}
+
+			// 更新出生时间
+			if (birthDatetime !== undefined) {
+				const validatedDateTime = SecurityUtils.validateDateTime(birthDatetime);
+				if (!validatedDateTime) {
+					return res.status(400).json({ error: '出生时间格式不正确' });
+				}
+				updates.push('birth_datetime = ?');
+				params.push(validatedDateTime);
+			}
+
+			// 更新历法类型
+			if (calendarType !== undefined) {
+				if (calendarType === null || calendarType === '') {
+					updates.push('calendar_type = NULL');
+				} else {
+					updates.push('calendar_type = ?');
+					params.push(SecurityUtils.sanitizeString(String(calendarType), { maxLength: 20 }));
+				}
+			}
+
+			// 更新 rawPayload
+			if (rawPayload !== undefined) {
+				if (rawPayload === null) {
+					updates.push('raw_payload = NULL');
+				} else {
+					try {
+						const payloadStr = JSON.stringify(rawPayload);
+						if (payloadStr.length > 1000000) {
+							return res.status(400).json({ error: '数据过大，无法保存' });
+						}
+						updates.push('raw_payload = ?');
+						params.push(payloadStr);
+					} catch (e) {
+						return res.status(400).json({ error: '数据格式错误: ' + e.message });
+					}
+				}
+			}
+
+			if (updates.length === 0) {
+				return res.status(400).json({ error: '没有要更新的字段' });
+			}
+
+			params.push(id);
+			const updateQuery = `UPDATE bazi_records SET ${updates.join(', ')} WHERE id = ?`;
+
+			db.run(updateQuery, params, function (updateErr) {
+				if (updateErr) {
+					console.error('更新记录失败:', updateErr);
+					return res.status(500).json({ error: '更新失败' });
+				}
+				if (this.changes === 0) {
+					return res.status(404).json({ error: '记录不存在' });
+				}
+				res.json({ success: true });
+			});
+		}
+	});
+});
+
+// 删除八字记录（管理员）
+app.delete('/api/admin/records/:id', adminMiddleware, (req, res) => {
+	const id = SecurityUtils.validateId(req.params.id);
+	if (!id) {
+		return res.status(400).json({ error: '无效的记录ID' });
+	}
+
+	db.run('DELETE FROM bazi_records WHERE id = ?', [id], function (err) {
+		if (err) {
+			console.error('删除记录失败:', err);
+			return res.status(500).json({ error: '删除失败' });
+		}
+		if (this.changes === 0) {
+			return res.status(404).json({ error: '记录不存在' });
+		}
+		res.json({ success: true });
+	});
+});
+
+// 404处理（必须在所有路由之后，错误处理之前）
+app.use((req, res) => {
+	console.log('404 - 未找到路由:', req.method, req.path);
+	res.status(404).json({ error: '接口不存在' });
+});
 
 // 添加错误处理中间件来捕获 body-parser 错误（必须在所有路由之后）
 app.use((err, req, res, next) => {

@@ -54,6 +54,16 @@
 						</view>
 					</view>
 
+					<view class="flex flex-row mt-14" v-if="user_store.isAdmin">
+						<tm-button
+							type="warning"
+							block
+							:margin="[0, 0]"
+							label="管理员后台"
+							@tap="goToAdmin"
+						></tm-button>
+					</view>
+
 					<view class="flex flex-row mt-14">
 						<tm-button
 							type="primary"
@@ -365,7 +375,8 @@ function submitLogin() {
 				user_store.setAuth({
 					username: res.data.user?.username || null,
 					email: res.data.user?.email,
-					token: res.data.token
+					token: res.data.token,
+					role: res.data.user?.role || 'user'
 				});
 				uni.showToast({
 					title: '登录成功',
@@ -495,7 +506,8 @@ async function submitRegister() {
 				user_store.setAuth({
 					username: res.data.user?.username || registerUsername.value,
 					email: res.data.user?.email || registerEmail.value,
-					token: res.data.token
+					token: res.data.token,
+					role: res.data.user?.role || 'user'
 				});
 				uni.showToast({
 					title: '注册并登录成功',
@@ -520,6 +532,12 @@ async function submitRegister() {
 
 function goBack() {
 	uni.navigateBack();
+}
+
+function goToAdmin() {
+	uni.navigateTo({
+		url: '/pages/admin/login'
+	});
 }
 
 function logout() {

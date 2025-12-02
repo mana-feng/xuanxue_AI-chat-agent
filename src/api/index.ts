@@ -28,9 +28,17 @@ export function request<T = any>(
 
 	// 如果需要认证，添加token
 	if (needAuth) {
-		const token = uni.getStorageSync('auth')?.token;
-		if (token) {
-			header['Authorization'] = `Bearer ${token}`;
+		try {
+			const authCache = uni.getStorageSync('auth');
+			if (authCache) {
+				const auth = typeof authCache === 'string' ? JSON.parse(authCache) : authCache;
+				const token = auth?.token;
+				if (token) {
+					header['Authorization'] = `Bearer ${token}`;
+				}
+			}
+		} catch (e) {
+			console.error('获取token失败:', e);
 		}
 	}
 

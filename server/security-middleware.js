@@ -164,14 +164,40 @@ function securityLogging(req, res, next) {
 	res.send = function(data) {
 		// 记录错误响应
 		if (res.statusCode >= 400) {
-			console.warn('安全警告:', {
+			const logData = {
 				ip: req.ip,
 				method: req.method,
 				path: req.path,
 				statusCode: res.statusCode,
 				userAgent: req.headers['user-agent'],
 				timestamp: new Date().toISOString()
+			};
+			
+			// 定义正常业务错误的路径和状态码组合（不记录为安全警告）
+			const normalBusinessErrors = [
+				{ path: '/api/login', statusCodes: [401] }, // 登录失败是正常业务
+				{ path: '/api/register', statusCodes: [400, 409] }, // 注册失败是正常业务
+				{ path: '/api/reset-password', statusCodes: [400, 401, 404] }, // 密码重置失败是正常业务
+			];
+			
+			// 检查是否是正常业务错误
+			const isNormalError = normalBusinessErrors.some(rule => {
+				return req.path === rule.path && rule.statusCodes.includes(res.statusCode);
 			});
+			
+			if (isNormalError) {
+				// 正常业务错误，使用 info 级别记录（可选，也可以不记录）
+				// console.log('业务错误:', logData);
+			} else if (res.statusCode >= 500) {
+				// 服务器错误，使用 error 级别
+				console.error('服务器错误:', logData);
+			} else if (res.statusCode === 403 || res.statusCode === 429) {
+				// 真正的安全威胁：禁止访问或频率限制
+				console.warn('安全警告:', logData);
+			} else if (res.statusCode >= 400) {
+				// 其他客户端错误，使用 warn 但标记为一般错误
+				console.warn('请求错误:', logData);
+			}
 		}
 		
 		return originalSend.call(this, data);

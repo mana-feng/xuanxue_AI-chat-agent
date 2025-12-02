@@ -69,6 +69,16 @@
 								@tap="goToHistory"
 							></tm-button>
 							<tm-button
+								v-if="isLoggedIn && user_store.isAdmin"
+								size="small"
+								type="warning"
+								:margin="[10, 6]"
+								:padding="[20, 16]"
+								shape="round"
+								label="管理员后台"
+								@tap="goToAdmin"
+							></tm-button>
+							<tm-button
 								v-if="isLoggedIn"
 								size="small"
 								type="danger"
@@ -320,6 +330,12 @@ function goToHistory() {
 	});
 }
 
+function goToAdmin() {
+	uni.navigateTo({
+		url: '/pages/admin/login'
+	});
+}
+
 function submitAuth() {
 	if (!authEmail.value || !authPassword.value) {
 		authError.value = '请输入邮箱和密码';
@@ -342,7 +358,8 @@ function submitAuth() {
 				user_store.setAuth({
 					username: res.data.user?.username || null,
 					email: res.data.user?.email || authEmail.value,
-					token: res.data.token
+					token: res.data.token,
+					role: res.data.user?.role || 'user'
 				});
 				uni.showToast({
 					title: authMode.value === 'login' ? '登录成功' : '注册并登录成功',

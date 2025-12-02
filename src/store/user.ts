@@ -9,11 +9,13 @@ export const useUserStore = defineStore('user', {
 			// 账号信息
 			username: null as string | null,
 			email: null as string | null,
-			token: null as string | null
+			token: null as string | null,
+			role: null as 'user' | 'admin' | null
 		};
 	},
 	getters: {
-		isLoggedIn: (state) => !!state.token
+		isLoggedIn: (state) => !!state.token,
+		isAdmin: (state) => state.role === 'admin'
 	},
 	actions: {
 		set(data: Record<string, unknown>) {
@@ -31,24 +33,28 @@ export const useUserStore = defineStore('user', {
 				this.username = parsed.username || null;
 				this.email = parsed.email || null;
 				this.token = parsed.token || null;
+				this.role = parsed.role || null;
 			} catch (e) {
 				uni.removeStorageSync('auth');
 			}
 		},
-		setAuth(payload: { username?: string | null; email: string; token: string }) {
+		setAuth(payload: { username?: string | null; email: string; token: string; role?: 'user' | 'admin' }) {
 			this.username = payload.username || null;
 			this.email = payload.email;
 			this.token = payload.token;
+			this.role = payload.role || 'user';
 			uni.setStorageSync('auth', {
 				username: this.username,
 				email: this.email,
-				token: this.token
+				token: this.token,
+				role: this.role
 			});
 		},
 		logout() {
 			this.username = null;
 			this.email = null;
 			this.token = null;
+			this.role = null;
 			uni.removeStorageSync('auth');
 		}
 	}

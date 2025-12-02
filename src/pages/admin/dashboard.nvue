@@ -1,0 +1,267 @@
+<template>
+	<tm-app>
+		<view class="page-wrapper">
+			<yx-nav-header></yx-nav-header>
+			
+			<view class="page-content">
+				<!-- 顶部标题 -->
+				<view class="header">
+					<tm-text
+						font-size="36"
+						:bold="true"
+						label="管理员后台"
+					></tm-text>
+					<tm-button
+						size="small"
+						type="danger"
+						label="退出登录"
+						@tap="handleLogout"
+					></tm-button>
+				</view>
+				
+				<!-- 统计卡片 -->
+				<view class="stats-grid" v-if="stats">
+					<tm-sheet
+						:round="4"
+						:shadow="2"
+						:padding="[20, 20]"
+						class="stat-card"
+					>
+						<tm-text
+							font-size="24"
+							color="#666"
+							label="总用户数"
+						></tm-text>
+						<tm-text
+							class="mt-8"
+							font-size="40"
+							:bold="true"
+							:label="stats.totalUsers.toString()"
+						></tm-text>
+					</tm-sheet>
+					
+					<tm-sheet
+						:round="4"
+						:shadow="2"
+						:padding="[20, 20]"
+						class="stat-card"
+					>
+						<tm-text
+							font-size="24"
+							color="#666"
+							label="总记录数"
+						></tm-text>
+						<tm-text
+							class="mt-8"
+							font-size="40"
+							:bold="true"
+							:label="stats.totalRecords.toString()"
+						></tm-text>
+					</tm-sheet>
+					
+					<tm-sheet
+						:round="4"
+						:shadow="2"
+						:padding="[20, 20]"
+						class="stat-card"
+					>
+						<tm-text
+							font-size="24"
+							color="#666"
+							label="今日新增用户"
+						></tm-text>
+						<tm-text
+							class="mt-8"
+							font-size="40"
+							:bold="true"
+							:label="stats.todayUsers.toString()"
+						></tm-text>
+					</tm-sheet>
+					
+					<tm-sheet
+						:round="4"
+						:shadow="2"
+						:padding="[20, 20]"
+						class="stat-card"
+					>
+						<tm-text
+							font-size="24"
+							color="#666"
+							label="今日新增记录"
+						></tm-text>
+						<tm-text
+							class="mt-8"
+							font-size="40"
+							:bold="true"
+							:label="stats.todayRecords.toString()"
+						></tm-text>
+					</tm-sheet>
+				</view>
+				
+				<!-- 功能菜单 -->
+				<view class="menu-section">
+					<tm-text
+						font-size="28"
+						:bold="true"
+						label="功能菜单"
+						:margin="[0, 0, 20, 0]"
+					></tm-text>
+					
+					<tm-sheet
+						:round="4"
+						:shadow="2"
+						:padding="[20, 20]"
+						:margin="[0, 0, 20, 0]"
+						@tap="goToUsers"
+					>
+						<view class="menu-item">
+							<tm-text
+								font-size="28"
+								:bold="true"
+								label="用户管理"
+							></tm-text>
+							<tm-icon name="chevron-right" :font-size="24"></tm-icon>
+						</view>
+						<tm-text
+							class="mt-8"
+							font-size="22"
+							color="#999"
+							label="查看和管理所有用户账号"
+						></tm-text>
+					</tm-sheet>
+					
+					<tm-sheet
+						:round="4"
+						:shadow="2"
+						:padding="[20, 20]"
+						:margin="[0, 0, 20, 0]"
+						@tap="goToRecords"
+					>
+						<view class="menu-item">
+							<tm-text
+								font-size="28"
+								:bold="true"
+								label="八字记录管理"
+							></tm-text>
+							<tm-icon name="chevron-right" :font-size="24"></tm-icon>
+						</view>
+						<tm-text
+							class="mt-8"
+							font-size="22"
+							color="#999"
+							label="查看和管理所有八字排盘记录"
+						></tm-text>
+					</tm-sheet>
+				</view>
+			</view>
+		</view>
+	</tm-app>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue';
+import { useUserStore } from '@/store/user';
+import { getAdminStats, type AdminStats } from '@/api/admin';
+
+const userStore = useUserStore();
+const stats = ref<AdminStats | null>(null);
+
+onMounted(() => {
+	// 先恢复登录状态
+	userStore.restoreAuth();
+	
+	// 检查是否为管理员
+	if (!userStore.isAdmin) {
+		uni.reLaunch({
+			url: '/pages/admin/login'
+		});
+		return;
+	}
+	
+	loadStats();
+});
+
+async function loadStats() {
+	try {
+		const res = await getAdminStats();
+		if (res.success && res.data) {
+			stats.value = res.data;
+		}
+	} catch (err) {
+		console.error('加载统计数据失败:', err);
+		uni.showToast({
+			title: '加载失败',
+			icon: 'none'
+		});
+	}
+}
+
+function goToUsers() {
+	uni.navigateTo({
+		url: '/pages/admin/users'
+	});
+}
+
+function goToRecords() {
+	uni.navigateTo({
+		url: '/pages/admin/records'
+	});
+}
+
+function handleLogout() {
+	uni.showModal({
+		title: '确认退出',
+		content: '确定要退出管理员后台吗？',
+		success: (res) => {
+			if (res.confirm) {
+				userStore.logout();
+				uni.reLaunch({
+					url: '/pages/admin/login'
+				});
+			}
+		}
+	});
+}
+</script>
+
+<style scoped>
+.page-wrapper {
+	min-height: 100vh;
+	background-color: #f5f5f5;
+}
+
+.page-content {
+	padding: 20rpx;
+}
+
+.header {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 30rpx;
+}
+
+.stats-grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 20rpx;
+	margin-bottom: 40rpx;
+}
+
+.stat-card {
+	background: white;
+}
+
+.menu-section {
+	margin-top: 40rpx;
+}
+
+.menu-item {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+}
+</style>
+
