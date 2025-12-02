@@ -297,8 +297,8 @@
 <script lang="ts" setup>
 import { ref, computed, onUnmounted } from 'vue';
 import { useUserStore } from '@/store/user.ts';
-import { API_BASE_URL } from '@/common/config.ts';
-import { sendEmailVerificationCode, verifyEmailCode } from '@/common/emailVerification.ts';
+import { API_BASE_URL } from '@/config/config.ts';
+import { sendEmailVerificationCode, verifyEmailCode } from '@/config/emailVerification.ts';
 
 const user_store = useUserStore();
 
@@ -413,11 +413,6 @@ async function sendVerificationCode() {
 				icon: 'success',
 				duration: 2000
 			});
-			
-			// 开发环境可能会返回 code，可以用于测试
-			if (result.code) {
-				console.log('开发模式验证码:', result.code);
-			}
 			
 			// 开始倒计时（60秒）
 			codeCountdown.value = 60;

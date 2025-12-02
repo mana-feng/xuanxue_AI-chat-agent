@@ -50,7 +50,149 @@ const SHEN_SHA = {
 		'亥': '巳',
 		'卯': '巳',
 		'未': '巳'
-	}
+	},
+	// 天德贵人（根据月支）
+	tiande: {
+		'寅': '丁', '卯': '申', '辰': '壬', '巳': '辛',
+		'午': '亥', '未': '甲', '申': '癸', '酉': '寅',
+		'戌': '丙', '亥': '乙', '子': '己', '丑': '庚'
+	},
+	// 月德贵人（根据月支）
+	yuede: {
+		'寅': '丙', '卯': '甲', '辰': '壬', '巳': '庚',
+		'午': '丙', '未': '甲', '申': '壬', '酉': '庚',
+		'戌': '丙', '亥': '甲', '子': '壬', '丑': '庚'
+	},
+	// 太极贵人（根据日干）
+	taiji: {
+		'甲': ['子', '午'],
+		'乙': ['子', '午'],
+		'丙': ['卯', '酉'],
+		'丁': ['卯', '酉'],
+		'戊': ['辰', '戌', '丑', '未'],
+		'己': ['辰', '戌', '丑', '未'],
+		'庚': ['寅', '申'],
+		'辛': ['寅', '申'],
+		'壬': ['巳', '亥'],
+		'癸': ['巳', '亥']
+	},
+	// 福星贵人（根据日干）
+	fuxing: {
+		'甲': '丙',
+		'乙': '丁',
+		'丙': '戊',
+		'丁': '己',
+		'戊': '庚',
+		'己': '辛',
+		'庚': '壬',
+		'辛': '癸',
+		'壬': '甲',
+		'癸': '乙'
+	},
+	// 国印贵人（根据日干）
+	guoyin: {
+		'甲': '戌',
+		'乙': '亥',
+		'丙': '丑',
+		'丁': '寅',
+		'戊': '丑',
+		'己': '寅',
+		'庚': '辰',
+		'辛': '巳',
+		'壬': '未',
+		'癸': '申'
+	},
+	// 学堂（根据日干）
+	xuetang: {
+		'甲': '巳',
+		'乙': '午',
+		'丙': '申',
+		'丁': '酉',
+		'戊': '申',
+		'己': '酉',
+		'庚': '亥',
+		'辛': '子',
+		'壬': '寅',
+		'癸': '卯'
+	},
+	// 词馆（根据日干）
+	ciguan: {
+		'甲': '寅',
+		'乙': '卯',
+		'丙': '巳',
+		'丁': '午',
+		'戊': '巳',
+		'己': '午',
+		'庚': '申',
+		'辛': '酉',
+		'壬': '亥',
+		'癸': '子'
+	},
+	// 金舆（根据日干）
+	jinyu: {
+		'甲': '辰',
+		'乙': '巳',
+		'丙': '未',
+		'丁': '申',
+		'戊': '未',
+		'己': '申',
+		'庚': '戌',
+		'辛': '亥',
+		'壬': '丑',
+		'癸': '寅'
+	},
+	// 禄神（根据日干）
+	lushen: {
+		'甲': '寅',
+		'乙': '卯',
+		'丙': '巳',
+		'丁': '午',
+		'戊': '巳',
+		'己': '午',
+		'庚': '申',
+		'辛': '酉',
+		'壬': '亥',
+		'癸': '子'
+	},
+	// 羊刃（根据日干）
+	yangren: {
+		'甲': '卯',
+		'乙': '寅',
+		'丙': '午',
+		'丁': '巳',
+		'戊': '午',
+		'己': '巳',
+		'庚': '酉',
+		'辛': '申',
+		'壬': '子',
+		'癸': '亥'
+	},
+	// 红鸾（根据年支）
+	hongluan: {
+		'子': '卯', '丑': '寅', '寅': '丑', '卯': '子',
+		'辰': '亥', '巳': '戌', '午': '酉', '未': '申',
+		'申': '未', '酉': '午', '戌': '巳', '亥': '辰'
+	},
+	// 天喜（根据年支，与红鸾相冲）
+	tianxi: {
+		'子': '酉', '丑': '申', '寅': '未', '卯': '午',
+		'辰': '巳', '巳': '辰', '午': '卯', '未': '寅',
+		'申': '丑', '酉': '子', '戌': '亥', '亥': '戌'
+	},
+	// 华盖（根据年支）
+	huagai: {
+		'子': '辰', '丑': '丑', '寅': '戌', '卯': '未',
+		'辰': '辰', '巳': '丑', '午': '戌', '未': '未',
+		'申': '辰', '酉': '丑', '戌': '戌', '亥': '未'
+	},
+	// 将星（根据年支）
+	jiangxing: {
+		'子': '子', '丑': '酉', '寅': '午', '卯': '卯',
+		'辰': '子', '巳': '酉', '午': '午', '未': '卯',
+		'申': '子', '酉': '酉', '戌': '午', '亥': '卯'
+	},
+	// 魁罡（根据日柱干支）
+	kuigang: ['庚戌', '庚辰', '戊戌', '壬辰']
 };
 
 // 格局判断
@@ -100,6 +242,21 @@ export interface BaziEnhancedData {
 		wenchang?: string[]; // 文昌
 		taohua?: string[]; // 桃花
 		yima?: string[]; // 驿马
+		tiande?: string[]; // 天德贵人
+		yuede?: string[]; // 月德贵人
+		taiji?: string[]; // 太极贵人
+		fuxing?: string[]; // 福星贵人
+		guoyin?: string[]; // 国印贵人
+		xuetang?: string[]; // 学堂
+		ciguan?: string[]; // 词馆
+		jinyu?: string[]; // 金舆
+		lushen?: string[]; // 禄神
+		yangren?: string[]; // 羊刃
+		hongluan?: string[]; // 红鸾
+		tianxi?: string[]; // 天喜
+		huagai?: string[]; // 华盖
+		jiangxing?: string[]; // 将星
+		kuigang?: boolean; // 魁罡
 		all?: string[]; // 所有神煞汇总
 	};
 	// 格局
@@ -153,19 +310,22 @@ function getZhiWuxing(zhi: string): string {
 }
 
 /**
- * 根据日干和单个干支计算神煞（用于大运、小运、流月、流时等）
+ * 根据日干和单个干支计算神煞（用于大运、流年、流月、流时等）
  * @param dayGan 日干
  * @param ganzhi 干支（如"甲子"）
  * @param originalZhiList 原四柱地支数组（可选，用于计算驿马）
+ * @param yearZhi 年支（可选，用于计算红鸾、天喜、华盖、将星）
+ * @param monthZhi 月支（可选，用于计算天德贵人、月德贵人）
  * @returns 神煞数组
  */
-export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, originalZhiList?: string[]): string[] {
+export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, originalZhiList?: string[], yearZhi?: string, monthZhi?: string): string[] {
 	const shenshaList: string[] = [];
 	
 	if (!ganzhi || ganzhi.length < 2) {
 		return shenshaList;
 	}
 	
+	const gan = ganzhi[0]; // 取天干
 	const zhi = ganzhi[1]; // 取地支
 	
 	// 天乙贵人
@@ -198,6 +358,108 @@ export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, origin
 		}
 	}
 	
+	// 天德贵人（根据月支）
+	if (monthZhi) {
+		const tiandeMap = SHEN_SHA.tiande as { [key: string]: string };
+		if (tiandeMap[monthZhi] === gan) {
+			shenshaList.push(`天德贵人(${gan})`);
+		}
+	}
+	
+	// 月德贵人（根据月支）
+	if (monthZhi) {
+		const yuedeMap = SHEN_SHA.yuede as { [key: string]: string };
+		if (yuedeMap[monthZhi] === gan) {
+			shenshaList.push(`月德贵人(${gan})`);
+		}
+	}
+	
+	// 太极贵人（根据日干）
+	const taijiMap = SHEN_SHA.taiji as { [key: string]: string[] };
+	if (taijiMap[dayGan] && taijiMap[dayGan].includes(zhi)) {
+		shenshaList.push(`太极贵人(${zhi})`);
+	}
+	
+	// 福星贵人（根据日干，检查天干）
+	const fuxingMap = SHEN_SHA.fuxing as { [key: string]: string };
+	if (fuxingMap[dayGan] === gan) {
+		shenshaList.push(`福星贵人(${gan})`);
+	}
+	
+	// 国印贵人（根据日干）
+	const guoyinMap = SHEN_SHA.guoyin as { [key: string]: string };
+	if (guoyinMap[dayGan] === zhi) {
+		shenshaList.push(`国印贵人(${zhi})`);
+	}
+	
+	// 学堂（根据日干）
+	const xuetangMap = SHEN_SHA.xuetang as { [key: string]: string };
+	if (xuetangMap[dayGan] === zhi) {
+		shenshaList.push(`学堂(${zhi})`);
+	}
+	
+	// 词馆（根据日干）
+	const ciguanMap = SHEN_SHA.ciguan as { [key: string]: string };
+	if (ciguanMap[dayGan] === zhi) {
+		shenshaList.push(`词馆(${zhi})`);
+	}
+	
+	// 金舆（根据日干）
+	const jinyuMap = SHEN_SHA.jinyu as { [key: string]: string };
+	if (jinyuMap[dayGan] === zhi) {
+		shenshaList.push(`金舆(${zhi})`);
+	}
+	
+	// 禄神（根据日干）
+	const lushenMap = SHEN_SHA.lushen as { [key: string]: string };
+	if (lushenMap[dayGan] === zhi) {
+		shenshaList.push(`禄神(${zhi})`);
+	}
+	
+	// 羊刃（根据日干）
+	const yangrenMap = SHEN_SHA.yangren as { [key: string]: string };
+	if (yangrenMap[dayGan] === zhi) {
+		shenshaList.push(`羊刃(${zhi})`);
+	}
+	
+	// 红鸾（根据年支）
+	if (yearZhi) {
+		const hongluanMap = SHEN_SHA.hongluan as { [key: string]: string };
+		if (hongluanMap[yearZhi] === zhi) {
+			shenshaList.push(`红鸾(${zhi})`);
+		}
+	}
+	
+	// 天喜（根据年支）
+	if (yearZhi) {
+		const tianxiMap = SHEN_SHA.tianxi as { [key: string]: string };
+		if (tianxiMap[yearZhi] === zhi) {
+			shenshaList.push(`天喜(${zhi})`);
+		}
+	}
+	
+	// 华盖（根据年支）
+	if (yearZhi) {
+		const huagaiMap = SHEN_SHA.huagai as { [key: string]: string };
+		if (huagaiMap[yearZhi] === zhi) {
+			shenshaList.push(`华盖(${zhi})`);
+		}
+	}
+	
+	// 将星（根据年支）
+	if (yearZhi) {
+		const jiangxingMap = SHEN_SHA.jiangxing as { [key: string]: string };
+		if (jiangxingMap[yearZhi] === zhi) {
+			shenshaList.push(`将星(${zhi})`);
+		}
+	}
+	
+	// 魁罡（根据日柱干支）
+	const kuigangList = SHEN_SHA.kuigang as string[];
+	if (kuigangList.includes(ganzhi)) {
+		shenshaList.push(`魁罡(${ganzhi})`);
+	}
+	
 	return shenshaList;
 }
 
@@ -210,12 +472,16 @@ function calculateShenSha(bazi: any): BaziEnhancedData['shensha'] {
 	};
 
 	const dayGan = bazi.getDayGan();
+	const yearGan = bazi.getYearGan();
+	const monthGan = bazi.getMonthGan();
 	const yearZhi = bazi.getYearZhi();
 	const monthZhi = bazi.getMonthZhi();
 	const dayZhi = bazi.getDayZhi();
 	const timeZhi = bazi.getTimeZhi();
+	const dayGanZhi = bazi.getDayGan() + bazi.getDayZhi();
 
 	const allZhi = [yearZhi, monthZhi, dayZhi, timeZhi];
+	const allGan = [yearGan, monthGan, dayGan, bazi.getTimeGan()];
 
 	// 天乙贵人
 	const tianyiMap = SHEN_SHA.tianyi as { [key: string]: string[] };
@@ -259,6 +525,150 @@ function calculateShenSha(bazi: any): BaziEnhancedData['shensha'] {
 		shensha.yima = [...new Set(yima)];
 		if (shensha.all) {
 			shensha.all.push(...shensha.yima.map((z: string) => `驿马(${z})`));
+		}
+	}
+
+	// 天德贵人（根据月支）
+	const tiandeMap = SHEN_SHA.tiande as { [key: string]: string };
+	if (tiandeMap[monthZhi]) {
+		const tiandeGan = tiandeMap[monthZhi];
+		if (allGan.includes(tiandeGan)) {
+			shensha.tiande = [tiandeGan];
+			if (shensha.all) {
+				shensha.all.push(`天德贵人(${tiandeGan})`);
+			}
+		}
+	}
+
+	// 月德贵人（根据月支）
+	const yuedeMap = SHEN_SHA.yuede as { [key: string]: string };
+	if (yuedeMap[monthZhi]) {
+		const yuedeGan = yuedeMap[monthZhi];
+		if (allGan.includes(yuedeGan)) {
+			shensha.yuede = [yuedeGan];
+			if (shensha.all) {
+				shensha.all.push(`月德贵人(${yuedeGan})`);
+			}
+		}
+	}
+
+	// 太极贵人（根据日干）
+	const taijiMap = SHEN_SHA.taiji as { [key: string]: string[] };
+	if (taijiMap[dayGan]) {
+		const taiji = taijiMap[dayGan].filter((zhi: string) => allZhi.includes(zhi));
+		if (taiji.length > 0) {
+			shensha.taiji = taiji;
+			if (shensha.all) {
+				shensha.all.push(...taiji.map((z: string) => `太极贵人(${z})`));
+			}
+		}
+	}
+
+	// 福星贵人（根据日干）
+	const fuxingMap = SHEN_SHA.fuxing as { [key: string]: string };
+	if (fuxingMap[dayGan] && allGan.includes(fuxingMap[dayGan])) {
+		shensha.fuxing = [fuxingMap[dayGan]];
+		if (shensha.all) {
+			shensha.all.push(`福星贵人(${fuxingMap[dayGan]})`);
+		}
+	}
+
+	// 国印贵人（根据日干）
+	const guoyinMap = SHEN_SHA.guoyin as { [key: string]: string };
+	if (guoyinMap[dayGan] && allZhi.includes(guoyinMap[dayGan])) {
+		shensha.guoyin = [guoyinMap[dayGan]];
+		if (shensha.all) {
+			shensha.all.push(`国印贵人(${guoyinMap[dayGan]})`);
+		}
+	}
+
+	// 学堂（根据日干）
+	const xuetangMap = SHEN_SHA.xuetang as { [key: string]: string };
+	if (xuetangMap[dayGan] && allZhi.includes(xuetangMap[dayGan])) {
+		shensha.xuetang = [xuetangMap[dayGan]];
+		if (shensha.all) {
+			shensha.all.push(`学堂(${xuetangMap[dayGan]})`);
+		}
+	}
+
+	// 词馆（根据日干）
+	const ciguanMap = SHEN_SHA.ciguan as { [key: string]: string };
+	if (ciguanMap[dayGan] && allZhi.includes(ciguanMap[dayGan])) {
+		shensha.ciguan = [ciguanMap[dayGan]];
+		if (shensha.all) {
+			shensha.all.push(`词馆(${ciguanMap[dayGan]})`);
+		}
+	}
+
+	// 金舆（根据日干）
+	const jinyuMap = SHEN_SHA.jinyu as { [key: string]: string };
+	if (jinyuMap[dayGan] && allZhi.includes(jinyuMap[dayGan])) {
+		shensha.jinyu = [jinyuMap[dayGan]];
+		if (shensha.all) {
+			shensha.all.push(`金舆(${jinyuMap[dayGan]})`);
+		}
+	}
+
+	// 禄神（根据日干）
+	const lushenMap = SHEN_SHA.lushen as { [key: string]: string };
+	if (lushenMap[dayGan] && allZhi.includes(lushenMap[dayGan])) {
+		shensha.lushen = [lushenMap[dayGan]];
+		if (shensha.all) {
+			shensha.all.push(`禄神(${lushenMap[dayGan]})`);
+		}
+	}
+
+	// 羊刃（根据日干）
+	const yangrenMap = SHEN_SHA.yangren as { [key: string]: string };
+	if (yangrenMap[dayGan] && allZhi.includes(yangrenMap[dayGan])) {
+		shensha.yangren = [yangrenMap[dayGan]];
+		if (shensha.all) {
+			shensha.all.push(`羊刃(${yangrenMap[dayGan]})`);
+		}
+	}
+
+	// 红鸾（根据年支）
+	const hongluanMap = SHEN_SHA.hongluan as { [key: string]: string };
+	if (hongluanMap[yearZhi] && allZhi.includes(hongluanMap[yearZhi])) {
+		shensha.hongluan = [hongluanMap[yearZhi]];
+		if (shensha.all) {
+			shensha.all.push(`红鸾(${hongluanMap[yearZhi]})`);
+		}
+	}
+
+	// 天喜（根据年支）
+	const tianxiMap = SHEN_SHA.tianxi as { [key: string]: string };
+	if (tianxiMap[yearZhi] && allZhi.includes(tianxiMap[yearZhi])) {
+		shensha.tianxi = [tianxiMap[yearZhi]];
+		if (shensha.all) {
+			shensha.all.push(`天喜(${tianxiMap[yearZhi]})`);
+		}
+	}
+
+	// 华盖（根据年支）
+	const huagaiMap = SHEN_SHA.huagai as { [key: string]: string };
+	if (huagaiMap[yearZhi] && allZhi.includes(huagaiMap[yearZhi])) {
+		shensha.huagai = [huagaiMap[yearZhi]];
+		if (shensha.all) {
+			shensha.all.push(`华盖(${huagaiMap[yearZhi]})`);
+		}
+	}
+
+	// 将星（根据年支）
+	const jiangxingMap = SHEN_SHA.jiangxing as { [key: string]: string };
+	if (jiangxingMap[yearZhi] && allZhi.includes(jiangxingMap[yearZhi])) {
+		shensha.jiangxing = [jiangxingMap[yearZhi]];
+		if (shensha.all) {
+			shensha.all.push(`将星(${jiangxingMap[yearZhi]})`);
+		}
+	}
+
+	// 魁罡（根据日柱干支）
+	const kuigangList = SHEN_SHA.kuigang as string[];
+	if (kuigangList.includes(dayGanZhi)) {
+		shensha.kuigang = true;
+		if (shensha.all) {
+			shensha.all.push(`魁罡(${dayGanZhi})`);
 		}
 	}
 
@@ -840,7 +1250,7 @@ const GAN_DISHI_MAP: { [key: string]: { [key: string]: string } } = {
 };
 
 /**
- * 根据干支获取藏干（用于大运、小运、流月、流日）
+ * 根据干支获取藏干（用于大运、流年、流月、流日）
  * @param ganzhi 干支（如"甲子"）
  * @returns 藏干数组
  */
@@ -853,7 +1263,7 @@ export function getHideGanForGanZhi(ganzhi: string): string[] {
 }
 
 /**
- * 根据日干和地支获取副星（十神，用于大运、小运、流月、流日）
+ * 根据日干和地支获取副星（十神，用于大运、流年、流月、流日）
  * 副星是地支藏干的十神数组
  * @param dayGan 日干
  * @param zhi 地支
@@ -881,7 +1291,7 @@ export function getFuXingForGanZhi(dayGan: string, zhi: string, dizhiMap: any, t
 }
 
 /**
- * 根据日干和地支获取地势（星运，用于大运、小运、流月、流日）
+ * 根据日干和地支获取地势（星运，用于大运、流年、流月、流日）
  * @param dayGan 日干
  * @param zhi 地支
  * @returns 地势字符串

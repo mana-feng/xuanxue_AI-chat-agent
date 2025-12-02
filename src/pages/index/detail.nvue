@@ -20,7 +20,7 @@
 							</view>
 							<view>
 								<tm-text
-									:label="'性别：靓' + (user_store.gender ? '仔' : '女')"
+									:label="'性别：' + (user_store.gender ? '元男' : '元女')"
 								></tm-text>
 							</view>
 						</view>
@@ -126,8 +126,8 @@
 import { ref } from 'vue';
 import { useBaziStore } from '@/store/bazi.ts';
 import { useUserStore } from '@/store/user.ts';
-import utils from '@/tool/utils.ts';
-import { API_BASE_URL } from '@/common/config.ts';
+import utils from '@/utils/utils.ts';
+import { API_BASE_URL } from '@/config/config.ts';
 
 const bazi_store = useBaziStore();
 const user_store = useUserStore();
@@ -176,7 +176,6 @@ function saveToAccount() {
 			bazi: bazi_store.$state
 		}));
 	} catch (e) {
-		console.error('准备 rawPayload 失败:', e);
 		// 如果序列化失败，使用简化版本
 		rawPayload = {
 			user: {
@@ -203,22 +202,12 @@ function saveToAccount() {
 
 	// 验证数据是否可以序列化
 	try {
-		const testString = JSON.stringify(requestData);
-		console.log('数据序列化验证成功，长度:', testString.length);
+		JSON.stringify(requestData);
 	} catch (e) {
-		console.error('数据序列化验证失败:', e);
 		saveError.value = '数据格式错误，无法保存: ' + e.message;
 		saving.value = false;
 		return;
 	}
-
-	console.log('准备发送数据:', {
-		name: requestData.name,
-		gender: requestData.gender,
-		birthDatetime: requestData.birthDatetime,
-		calendarType: requestData.calendarType,
-		rawPayloadKeys: rawPayload ? Object.keys(rawPayload) : []
-	});
 
 	uni.request({
 		url: API_BASE_URL + '/api/bazi',
@@ -257,7 +246,6 @@ function saveToAccount() {
 		fail(err) {
 			const errorMsg = '网络错误，请检查后端是否已启动';
 			saveError.value = errorMsg;
-			console.error('保存失败:', err);
 			uni.showToast({
 				title: errorMsg,
 				icon: 'none',

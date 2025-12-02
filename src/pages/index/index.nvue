@@ -243,8 +243,8 @@ import { onLoad } from '@dcloudio/uni-app';
 import { Solar, Lunar } from 'lunar-javascript';
 import {useUserStore} from '@/store/user.ts'
 import {useBaziStore} from '@/store/bazi.ts'
-import utils from '@/tool/utils.ts';
-import { API_BASE_URL } from '@/common/config.ts';
+import utils from '@/utils/utils.ts';
+import { API_BASE_URL } from '@/config/config.ts';
 
 let realname = ref('');
 let gender = ref(0);

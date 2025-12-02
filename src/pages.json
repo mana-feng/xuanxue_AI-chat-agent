@@ -2,9 +2,9 @@
 	"easycom": {
 		"autoscan": true,
 		"custom": {
-			"^tm-(.*)": "@/tmui/components/tm-$1/tm-$1.vue",
-			"^yx-(.*)": "@/yxbug-cn/yx-$1/yx-$1.vue",
-			"^yxn-(.*)": "@/yxbug-cn/yxn-$1/yxn-$1.nvue"
+			"^tm-(.*)": "@/libs/tmui/components/tm-$1/tm-$1.vue",
+			"^yx-(.*)": "@/components/business/yx-$1/yx-$1.vue",
+			"^yxn-(.*)": "@/components/business/yxn-$1/yxn-$1.nvue"
 		}
 	},
 	"_comment_pages": "pages数组中第一项表示应用启动页，参考：https://uniapp.dcloud.io/collocation/pages",

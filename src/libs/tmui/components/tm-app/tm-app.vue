@@ -57,7 +57,7 @@
 		onShow,
 		onLoad,onInit
 	} from "@dcloudio/uni-app";
-	import { useTmRouterAfter,useTmRouterBefore } from "../../../router/index"
+	import { useTmRouterAfter,useTmRouterBefore } from "@/router/index"
 	//请在scr/目录下创建一个router/index.ts路由,见文档：https://tmui.design/doc/JSTool/router.html
 	const store = useTmpiniaStore();
 	const {proxy} = <ComponentInternalInstance>getCurrentInstance()

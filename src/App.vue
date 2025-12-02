@@ -11,10 +11,10 @@ onPageNotFound(() => {
 
 <style>
 /* #ifdef APP-NVUE */
-@import './tmui/scss/nvue.css';
+@import './libs/tmui/scss/nvue.css';
 /* #endif */
 /* #ifndef APP-NVUE */
-@import './tmui/scss/noNvue.css';
+@import './libs/tmui/scss/noNvue.css';
 /* #endif */
 
 /* #ifdef H5 */
@@ -70,7 +70,7 @@ body {
 
 @font-face{
 	font-family: PingFangSC-Medium;
-	src: url('./static/font/pingfang-font.ttf')
+	src: url('./assets/fonts/pingfang-font.ttf')
 }
 
 view,

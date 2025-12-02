@@ -28,13 +28,10 @@
     "globalTypesPath": "./src/__volar_global.d.ts"
   },
   "include": [
-    "tmui/**/*.ts",
-    "tmui/**/*.d.ts",
     "src/**/*.ts",
     "src/**/*.d.ts",
     "src/**/*.tsx",
     "src/**/*.vue",
-    "src/**/*.nvue",
-    "./src/*"
+    "src/**/*.nvue"
   ]
 }

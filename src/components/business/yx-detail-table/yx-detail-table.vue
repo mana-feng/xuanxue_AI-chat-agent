@@ -6,9 +6,9 @@
 import { computed } from 'vue';
 import { useBaziStore } from '@/store/bazi.ts';
 import { useYunStore } from '@/store/yun.ts';
-import { getHideGanForGanZhi, getFuXingForGanZhi, getDiShiForGanZhi, calculateShenShaForGanZhi } from '@/tool/bazi-enhanced.ts';
-import config from '@/common/config.ts';
-import utils from '@/tool/utils.ts';
+import { getHideGanForGanZhi, getFuXingForGanZhi, getDiShiForGanZhi, calculateShenShaForGanZhi } from '@/utils/bazi-enhanced.ts';
+import config from '@/config/config.ts';
+import utils from '@/utils/utils.ts';
 
 interface headerOpts {
 	title:string,
@@ -22,7 +22,7 @@ const width: number = 150;
 // 四柱列宽：增加到足够显示所有信息
 const sizhuWidth: number = 200;
 
-// 获取选中的大运、小运、流月、流日
+// 获取选中的大运、流年、流月、流日
 const selectedDayun = computed(() => {
 	const index = yunStore.current_index;
 	if (index >= 0 && yunStore.dayun_list && yunStore.dayun_list[index]) {
@@ -69,13 +69,13 @@ const header = computed<headerOpts[]>(() => {
 		{ title: '时柱', key: 'time', width: columnWidth }
 	];
 	
-	// 如果有选中的大运、小运、流月、流日，添加列
+	// 如果有选中的大运、流年、流月、流日，添加列
 	if (selectedDayun.value || selectedYear.value || selectedMonth.value || selectedDay.value) {
 		if (selectedDayun.value) {
 			headers.push({ title: '大运', key: 'dayun', width: width });
 		}
 		if (selectedYear.value) {
-			headers.push({ title: '小运', key: 'year_yun', width: width });
+			headers.push({ title: '流年', key: 'year_yun', width: width });
 		}
 		if (selectedMonth.value) {
 			headers.push({ title: '流月', key: 'month_yun', width: width });
@@ -135,7 +135,7 @@ function formatCellData(value: string | string[], isEvenRow: boolean, isDayun: b
 const tableData = computed(() => {
 	const baseTable = baziStore.table || [];
 	
-	// 如果没有选中的大运、小运、流月、流日，直接返回原表格并应用样式
+	// 如果没有选中的大运、流年、流月、流日，直接返回原表格并应用样式
 	if (!selectedDayun.value && !selectedYear.value && !selectedMonth.value && !selectedDay.value) {
 		return baseTable.map((row, index) => {
 			const isEvenRow = index % 2 === 0;
@@ -162,7 +162,7 @@ const tableData = computed(() => {
 		});
 	}
 	
-	// 为每一行添加选中的大运、小运、流月、流日数据
+		// 为每一行添加选中的大运、流年、流月、流日数据
 	return baseTable.map((row, index) => {
 		const isEvenRow = index % 2 === 0;
 		const newRow = { ...row };
@@ -183,13 +183,15 @@ const tableData = computed(() => {
 		
 		// 获取日干和原四柱地支（用于计算神煞）
 		const dayGan = baziStore.tiangan?.day || '';
+		const yearZhi = baziStore.dizhi?.year || '';
+		const monthZhi = baziStore.dizhi?.month || '';
 		const originalZhiList: string[] = [];
 		if (baziStore.dizhi?.year) originalZhiList.push(baziStore.dizhi.year);
 		if (baziStore.dizhi?.month) originalZhiList.push(baziStore.dizhi.month);
 		if (baziStore.dizhi?.day) originalZhiList.push(baziStore.dizhi.day);
 		if (baziStore.dizhi?.time) originalZhiList.push(baziStore.dizhi.time);
 		
-		// 添加大运、小运、流月、流日列
+		// 添加大运、流年、流月、流日列
 		if (selectedDayun.value) {
 			let dayunValue: string | string[] = '';
 			if (row.data.name === '天干') {
@@ -210,7 +212,7 @@ const tableData = computed(() => {
 				const zhi = selectedDayun.value[1] || '';
 				dayunValue = getDiShiForGanZhi(dayGan, zhi);
 			} else if (row.data.name === '神煞') {
-				dayunValue = calculateShenShaForGanZhi(dayGan, selectedDayun.value, originalZhiList);
+				dayunValue = calculateShenShaForGanZhi(dayGan, selectedDayun.value, originalZhiList, yearZhi, monthZhi);
 			}
 			newData.dayun = formatCellData(dayunValue, isEvenRow, true, row.data.name === '神煞');
 		}
@@ -235,7 +237,7 @@ const tableData = computed(() => {
 				const zhi = selectedYear.value[1] || '';
 				yearValue = getDiShiForGanZhi(dayGan, zhi);
 			} else if (row.data.name === '神煞') {
-				yearValue = calculateShenShaForGanZhi(dayGan, selectedYear.value, originalZhiList);
+				yearValue = calculateShenShaForGanZhi(dayGan, selectedYear.value, originalZhiList, yearZhi, monthZhi);
 			}
 			newData.year_yun = formatCellData(yearValue, isEvenRow, false, row.data.name === '神煞');
 		}
@@ -260,7 +262,7 @@ const tableData = computed(() => {
 				const zhi = selectedMonth.value[1] || '';
 				monthValue = getDiShiForGanZhi(dayGan, zhi);
 			} else if (row.data.name === '神煞') {
-				monthValue = calculateShenShaForGanZhi(dayGan, selectedMonth.value, originalZhiList);
+				monthValue = calculateShenShaForGanZhi(dayGan, selectedMonth.value, originalZhiList, yearZhi, monthZhi);
 			}
 			newData.month_yun = formatCellData(monthValue, isEvenRow, false, row.data.name === '神煞');
 		}
@@ -285,7 +287,7 @@ const tableData = computed(() => {
 				const zhi = selectedDay.value[1] || '';
 				dayValue = getDiShiForGanZhi(dayGan, zhi);
 			} else if (row.data.name === '神煞') {
-				dayValue = calculateShenShaForGanZhi(dayGan, selectedDay.value, originalZhiList);
+				dayValue = calculateShenShaForGanZhi(dayGan, selectedDay.value, originalZhiList, yearZhi, monthZhi);
 			}
 			newData.day_yun = formatCellData(dayValue, isEvenRow, false, row.data.name === '神煞');
 		}

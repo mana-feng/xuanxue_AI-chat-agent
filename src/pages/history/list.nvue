@@ -197,8 +197,8 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useUserStore } from '@/store/user.ts';
 import { useBaziStore } from '@/store/bazi.ts';
-import { API_BASE_URL } from '@/common/config.ts';
-import utils from '@/tool/utils.ts';
+import { API_BASE_URL } from '@/config/config.ts';
+import utils from '@/utils/utils.ts';
 
 interface ChartItem {
 	id: number;
@@ -312,7 +312,6 @@ function fetchCharts() {
 									createdAtLabel: formatDateTime(it.createdAt || '')
 								};
 							} catch (e) {
-								console.error('Error mapping chart item:', e, it);
 								return {
 									...it,
 									createdAtLabel: ''
@@ -329,7 +328,6 @@ function fetchCharts() {
 									createdAtLabel: formatDateTime(it.createdAt || '')
 								};
 							} catch (e) {
-								console.error('Error mapping chart item:', e, it);
 								return {
 									...it,
 									createdAtLabel: ''
@@ -351,7 +349,6 @@ function fetchCharts() {
 					error.value = (res.data && res.data.error) || '获取失败，请稍后重试';
 				}
 			} catch (e) {
-				console.error('fetchCharts success handler error:', e);
 				error.value = '数据处理失败，请稍后重试';
 			}
 		},
@@ -374,7 +371,6 @@ function formatDateTime(iso: string) {
 		const result = utils.HideSecond(d.getTime());
 		return result || '';
 	} catch (e) {
-		console.error('formatDateTime error:', e);
 		return '';
 	}
 }
@@ -389,21 +385,12 @@ function formatBirth(item: ChartItem) {
 		const result = utils.HideSecond(d.getTime());
 		return result ? '出生：' + result : '';
 	} catch (e) {
-		console.error('formatBirth error:', e);
 		return '';
 	}
 }
 
 function openChart(item: ChartItem) {
 	try {
-		console.log('openChart called with item:', {
-			id: item.id,
-			title: item.title,
-			hasRawPayload: !!item.rawPayload,
-			birthDatetime: item.birthDatetime,
-			gender: item.gender
-		});
-		
 		// 验证 rawPayload 数据完整性
 		let useRawPayload = false;
 		if (item.rawPayload && item.rawPayload.user && item.rawPayload.bazi) {
@@ -415,21 +402,6 @@ function openChart(item: ChartItem) {
 				b.solar && b.solar.year && b.sizhu && b.sizhu.year && 
 				b.yinli && b.xinzuo && b.table && Array.isArray(b.table) && b.table.length > 0) {
 				useRawPayload = true;
-				console.log('使用 rawPayload 恢复数据');
-			} else {
-				console.warn('rawPayload 数据不完整，将重新计算', {
-					hasUser: !!u,
-					hasTimestamp: !!u.timestamp,
-					hasGender: u.gender !== undefined && u.gender !== null,
-					hasBazi: !!b,
-					hasSolar: !!b.solar,
-					hasSizhu: !!b.sizhu,
-					hasYinli: !!b.yinli,
-					hasXinzuo: !!b.xinzuo,
-					hasTable: !!b.table,
-					tableIsArray: Array.isArray(b.table),
-					tableLength: b.table ? b.table.length : 0
-				});
 			}
 		}
 		
@@ -467,7 +439,6 @@ function openChart(item: ChartItem) {
 			const date = new Date(item.birthDatetime);
 			timestamp = date.getTime();
 			if (isNaN(timestamp)) {
-				console.error('时间戳转换失败:', item.birthDatetime);
 				uni.showToast({
 					title: '出生时间格式错误，无法解析',
 					icon: 'none',
@@ -478,7 +449,6 @@ function openChart(item: ChartItem) {
 		} else if (typeof item.birthDatetime === 'number') {
 			timestamp = item.birthDatetime;
 			if (isNaN(timestamp) || timestamp <= 0) {
-				console.error('时间戳无效:', item.birthDatetime);
 				uni.showToast({
 					title: '出生时间无效',
 					icon: 'none',
@@ -487,7 +457,6 @@ function openChart(item: ChartItem) {
 				return;
 			}
 		} else {
-			console.error('出生时间类型错误:', typeof item.birthDatetime, item.birthDatetime);
 			uni.showToast({
 				title: '出生时间格式错误',
 				icon: 'none',
@@ -501,14 +470,11 @@ function openChart(item: ChartItem) {
 		let gender: number;
 		if (item.gender === null || item.gender === undefined) {
 			gender = 0; // 默认值（女）
-			console.warn('性别为空，使用默认值（女）');
 		} else if (typeof item.gender === 'string') {
 			gender = item.gender === '1' ? 1 : 0; // '1'=男=1, '0'=女=0
 		} else {
 			gender = item.gender === 1 ? 1 : 0; // 1=男=1, 0=女=0
 		}
-		
-		console.log('准备重新计算八字盘:', { timestamp, gender, realname: item.title });
 		
 		// 显示加载提示
 		uni.showLoading({
@@ -528,9 +494,7 @@ function openChart(item: ChartItem) {
 				timestamp: timestamp,
 				gender: gender
 			});
-			console.log('八字盘计算完成');
 		} catch (pullError) {
-			console.error('八字盘计算失败:', pullError);
 			uni.hideLoading();
 			uni.showToast({
 				title: '排盘计算失败：' + (pullError.message || '未知错误'),
@@ -545,7 +509,6 @@ function openChart(item: ChartItem) {
 			uni.hideLoading();
 			// 验证关键数据是否存在
 			if (!bazi_store.solar || !bazi_store.solar.year) {
-				console.error('八字盘数据不完整，跳转可能失败');
 				uni.showToast({
 					title: '排盘数据不完整，请重试',
 					icon: 'none',
@@ -558,7 +521,6 @@ function openChart(item: ChartItem) {
 			});
 		}, 200); // 增加延迟时间，确保异步计算完成
 	} catch (e) {
-		console.error('openChart error:', e);
 		uni.hideLoading();
 		uni.showToast({
 			title: '打开排盘记录失败：' + (e.message || '未知错误'),

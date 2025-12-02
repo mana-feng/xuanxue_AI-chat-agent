@@ -2,7 +2,7 @@
  * 邮箱验证码工具方法
  */
 
-import { API_BASE_URL } from './config';
+import { API_BASE_URL } from '@/config/config';
 
 export interface SendCodeResult {
 	success: boolean;

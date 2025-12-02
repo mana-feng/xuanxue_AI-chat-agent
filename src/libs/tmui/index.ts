@@ -4,7 +4,7 @@ import preview, * as util from './tool/function/util';
 import { language, languageByGlobal } from "./tool/lib/language"
 import { share } from "./tool/lib/share"
 import { App, nextTick } from "vue"
-import PageJsonInit from "../pages.json"
+import PageJsonInit from "@/pages.json"
 
 let pages = [];
 PageJsonInit.pages.forEach(el => {

@@ -1,6 +1,6 @@
 import { useBaziStore } from '@/store/bazi.ts';
 import { Solar } from 'lunar-javascript';
-import config from "@/common/config.ts"
+import config from "@/config/config.ts"
 
 export default {
 	// 获取十神
@@ -13,7 +13,7 @@ export default {
 
 		let gan = null;
 		let zhi = null;
-		if (ganzhi == "小运") {
+		if (ganzhi == "流年") {
 			gan = bazi_store.tiangan.year
 			zhi = bazi_store.dizhi.year
 		} else {
@@ -91,7 +91,6 @@ export default {
 			}
 			return date || '';
 		} catch (e) {
-			console.error('HideSecond error:', e);
 			return '';
 		}
 	}

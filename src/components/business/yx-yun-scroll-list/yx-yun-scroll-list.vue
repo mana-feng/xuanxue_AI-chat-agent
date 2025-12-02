@@ -44,7 +44,7 @@
 						</view>
 					</scroll-view>
 					
-					<!-- 在选中项下方显示神煞和关系（仅对大运、小运、流月、流日） -->
+					<!-- 在选中项下方显示神煞和关系（仅对大运、流年、流月、流日） -->
 					<view v-if="mindex < 4 && (yun_store as any)[mitem.index] >= 0" class="selected-info">
 						<!-- 显示选中项的神煞 -->
 						<view v-if="getSelectedShenSha(mitem.index, mitem.list).length > 0" class="px-20 py-10">
@@ -117,14 +117,6 @@
 										color="orange-darken-1"
 									></tm-text>
 								</view>
-								<!-- 五行生克 -->
-								<view v-if="getRelationArray(mitem.index, mitem.list, 'wuxingShengKe').length > 0" class="mb-6">
-									<tm-text 
-										:label="'生克：' + getRelationArray(mitem.index, mitem.list, 'wuxingShengKe').join('、')" 
-										:font-size="30" 
-										color="grey-darken-1"
-									></tm-text>
-								</view>
 							</view>
 						</view>
 					</view>
@@ -135,9 +127,10 @@
 </template>
 
 <script lang="ts" setup>
+import { onMounted, watch, nextTick } from 'vue';
 import { useYunStore } from '@/store/yun';
 import { useBaziStore } from '@/store/bazi';
-import { calculateShenShaForGanZhi, calculateGanZhiRelations } from '@/tool/bazi-enhanced';
+import { calculateShenShaForGanZhi, calculateGanZhiRelations } from '@/utils/bazi-enhanced';
 
 const yun_store = useYunStore();
 const bazi_store = useBaziStore();
@@ -149,7 +142,7 @@ const map_list: Array<{ title: string; list: string; index: string }> = [
 		index: 'current_index'
 	},
 	{
-		title: '小运',
+		title: '流年',
 		list: 'year_list',
 		index: 'year_index'
 	},
@@ -199,7 +192,10 @@ function getSelectedShenSha(indexKey: string, listKey: string): string[] {
 	if (bazi_store.dizhi?.day) originalZhiList.push(bazi_store.dizhi.day);
 	if (bazi_store.dizhi?.time) originalZhiList.push(bazi_store.dizhi.time);
 	
-	return calculateShenShaForGanZhi(bazi_store.tiangan.day, ganzhi, originalZhiList);
+	const yearZhi = bazi_store.dizhi?.year || '';
+	const monthZhi = bazi_store.dizhi?.month || '';
+	
+	return calculateShenShaForGanZhi(bazi_store.tiangan.day, ganzhi, originalZhiList, yearZhi, monthZhi);
 }
 
 function getSelectedRelations(indexKey: string, listKey: string) {
@@ -239,8 +235,7 @@ function hasRelations(indexKey: string, listKey: string): boolean {
 		relations.zhiSanHui ||
 		(relations.zhiLiuChong && relations.zhiLiuChong.length > 0) ||
 		(relations.zhiXing && relations.zhiXing.length > 0) ||
-		(relations.zhiHai && relations.zhiHai.length > 0) ||
-		(relations.wuxingShengKe && relations.wuxingShengKe.length > 0)
+		(relations.zhiHai && relations.zhiHai.length > 0)
 	);
 }
 
@@ -249,10 +244,116 @@ function getRelationValue(indexKey: string, listKey: string, key: 'ganHe' | 'zhi
 	return relations?.[key] || '';
 }
 
-function getRelationArray(indexKey: string, listKey: string, key: 'zhiLiuChong' | 'zhiXing' | 'zhiHai' | 'wuxingShengKe'): string[] {
+function getRelationArray(indexKey: string, listKey: string, key: 'zhiLiuChong' | 'zhiXing' | 'zhiHai'): string[] {
 	const relations = getSelectedRelations(indexKey, listKey);
 	return relations?.[key] || [];
 }
+
+// 自动定位到当前系统时间
+function autoLocateToCurrentTime() {
+	const now = new Date();
+	const currentYear = now.getFullYear();
+	const currentMonth = now.getMonth() + 1; // 1-12
+	const currentDay = now.getDate();
+	
+	// 定位大运：找到 start_year <= 当前年份的最大索引
+	if (yun_store.dayun_list && yun_store.dayun_list.length > 0) {
+		let dayunIndex = 0;
+		for (let i = 0; i < yun_store.dayun_list.length; i++) {
+			const item = yun_store.dayun_list[i] as any;
+			if (item.start_year && parseInt(item.start_year) <= currentYear) {
+				dayunIndex = i;
+			} else {
+				break;
+			}
+		}
+		if (yun_store.current_index !== dayunIndex) {
+			yun_store.current_index = dayunIndex;
+			yun_store.resolveLiuYear();
+		}
+	}
+	
+	// 等待流年数据加载完成后再定位流年
+	nextTick(() => {
+		// 定位流年：找到匹配当前年份的索引
+		if (yun_store.year_list && yun_store.year_list.length > 0) {
+			const yearIndex = yun_store.year_list.findIndex((item: any) => item.year == currentYear);
+			if (yearIndex >= 0 && yun_store.year_index !== yearIndex) {
+				yun_store.year_index = yearIndex;
+				yun_store.resolveLiuMonth();
+			}
+		}
+		
+		// 等待流月数据加载完成后再定位流月
+		nextTick(() => {
+			// 定位流月：找到包含当前月份的流月
+			if (yun_store.month_list && yun_store.month_list.length > 0) {
+				let monthIndex = 0;
+				for (let i = 0; i < yun_store.month_list.length; i++) {
+					const item = yun_store.month_list[i] as any;
+					if (item.date) {
+						const [monthStr] = item.date.split('/');
+						const month = parseInt(monthStr);
+						// 如果当前月份大于等于流月月份，更新索引
+						if (month <= currentMonth) {
+							monthIndex = i;
+						} else {
+							break;
+						}
+					}
+				}
+				if (yun_store.month_index !== monthIndex) {
+					yun_store.month_index = monthIndex;
+					yun_store.resolveLiuDay();
+				}
+			}
+			
+			// 等待流日数据加载完成后再定位流日
+			nextTick(() => {
+				// 定位流日：找到匹配当前日期的索引
+				if (yun_store.day_list && yun_store.day_list.length > 0) {
+					// 格式化当前日期为 YYYY/M/D 或 YYYY/MM/DD 格式
+					const currentDateStr1 = `${currentYear}/${currentMonth}/${currentDay}`;
+					const currentDateStr2 = `${currentYear}/${currentMonth.toString().padStart(2, '0')}/${currentDay.toString().padStart(2, '0')}`;
+					
+					const dayIndex = yun_store.day_list.findIndex((item: any) => {
+						if (item.date) {
+							// 格式化日期字符串进行比较（统一格式）
+							const itemDate = item.date.replace(/-/g, '/');
+							// 尝试多种格式匹配
+							return itemDate === currentDateStr1 || 
+							       itemDate === currentDateStr2 ||
+							       itemDate.startsWith(currentDateStr1) ||
+							       itemDate.startsWith(currentDateStr2);
+						}
+						return false;
+					});
+					if (dayIndex >= 0 && yun_store.day_index !== dayIndex) {
+						yun_store.day_index = dayIndex;
+					}
+				}
+			});
+		});
+	});
+}
+
+// 监听数据变化，自动定位
+watch(
+	() => yun_store.dayun_list.length,
+	(newLen) => {
+		if (newLen > 0) {
+			autoLocateToCurrentTime();
+		}
+	},
+	{ immediate: true }
+);
+
+// 组件挂载时也尝试定位
+onMounted(() => {
+	if (yun_store.dayun_list && yun_store.dayun_list.length > 0) {
+		autoLocateToCurrentTime();
+	}
+});
 </script>
 
 <style lang="scss" scoped>

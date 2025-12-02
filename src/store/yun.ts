@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { Solar, Lunar } from 'lunar-javascript';
-import utils from '@/tool/utils.ts';
+import utils from '@/utils/utils';
 
 export const useYunStore = defineStore('yun', {
 	state: () => {
@@ -42,12 +42,12 @@ export const useYunStore = defineStore('yun', {
 
 			for (let i = 0; i < original.length; i++) {
 				const item = original[i];
-				const ganzhi = item.getGanZhi() || '小运';
+				const ganzhi = item.getGanZhi() || '流年';
 				dayun_list.push({
 					start_year: item.getStartYear(),
 					start_age: item.getStartAge(),
 					ganzhi: ganzhi,
-					shishen: ganzhi == '小运' ? '小运' : utils.GetShiShen(ganzhi)
+					shishen: ganzhi == '流年' ? '流年' : utils.GetShiShen(ganzhi)
 				});
 			}
 
@@ -62,7 +62,7 @@ export const useYunStore = defineStore('yun', {
 			this.time_list = [];
 			this.resolveLiuYear();
 		},
-		// 小运（流年）
+		// 流年
 		async resolveLiuYear() {
 			const original = this.original;
 			const current_index = this.current_index;
@@ -120,7 +120,6 @@ export const useYunStore = defineStore('yun', {
 					date: _jieqi.getMonth() + '/' + _jieqi.getDay(),
 					ganzhi: ganzhi,
 					shishen: utils.GetShiShen(ganzhi)
-					// month: item.getMonthInChinese()
 				});
 			}
 
@@ -129,8 +128,6 @@ export const useYunStore = defineStore('yun', {
 			this.time_index = 0;
 			this.day_list = [];
 			this.time_list = [];
-
-			// this.resolveLiuDay()
 		},
 		async resolveLiuDay() {
 			const year_list = this.year_list;
@@ -173,8 +170,6 @@ export const useYunStore = defineStore('yun', {
 			this.day_list = day_list;
 			this.time_index = 0;
 			this.time_list = [];
-
-			// this.resolveLiuTime()
 		},
 		resolveLiuTime() {
 			const day_list = this.day_list;

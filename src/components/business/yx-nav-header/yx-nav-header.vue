@@ -26,7 +26,7 @@
 </template>
 
 <script lang="ts" setup>
-import { useTmpiniaStore } from '@/tmui/tool/lib/tmpinia';
+import { useTmpiniaStore } from '@/libs/tmui/tool/lib/tmpinia';
 
 const store = useTmpiniaStore();
 const emit = defineEmits<{

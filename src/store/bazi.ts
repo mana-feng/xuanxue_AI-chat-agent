@@ -1,100 +1,165 @@
 import { defineStore } from 'pinia';
-import { useYunStore } from './yun.ts';
-import { Solar } from 'lunar-javascript';
-import utils from '@/tool/utils.ts';
-import { enhanceBaziAnalysis, BaziEnhancedData, calculateShenShaForGanZhi } from '@/tool/bazi-enhanced.ts';
+import { useYunStore } from '@/store/yun';
+import { Solar, Yun } from 'lunar-javascript';
+import utils from '@/utils/utils';
+import { enhanceBaziAnalysis, BaziEnhancedData, calculateShenShaForGanZhi } from '@/utils/bazi-enhanced';
+
+interface PullData {
+	timestamp: number;
+	gender: number;
+}
+
+interface DateTimeFields {
+	year: string | null;
+	month: string | null;
+	day: string | null;
+	time: string | null;
+}
+
+interface SolarFields {
+	year: number | null;
+	month: number | null;
+	day: number | null;
+	time: string | null;
+}
+
+interface StartYunFields {
+	year: number | null;
+	month: number | null;
+	day: number | null;
+	hour: number | null;
+	solar: string | null;
+}
+
+interface CangganFields {
+	year: string[] | null;
+	month: string[] | null;
+	day: string[] | null;
+	time: string[] | null;
+}
+
+interface FuxingFields {
+	year: string[] | null;
+	month: string[] | null;
+	day: string[] | null;
+	time: string[] | null;
+}
+
+interface LunarFields {
+	year: number;
+	month: number;
+	day: number;
+	time: string;
+	hour: number;
+	minute: number;
+	_year: string;
+	_month: string;
+	_day: string;
+	_time: string;
+}
+
+interface TableRow {
+	data: {
+		name: string;
+		year: any;
+		month: any;
+		day: any;
+		time: any;
+	};
+}
 
 export const useBaziStore = defineStore('bazi', {
 	state: () => {
 		return {
-			yun: null,
-			yinli: null,
-			yangli: null,
-			xinzuo: null,
+			yun: null as Yun | null,
+			yinli: null as string | null,
+			yangli: null as string | null,
+			xinzuo: null as string | null,
+			lunar: null as LunarFields | null,
 			// 四柱
 			sizhu: {
 				year: null,
 				month: null,
 				day: null,
 				time: null
-			},
+			} as DateTimeFields,
 			// 阳历
 			solar: {
 				year: null,
 				month: null,
 				day: null,
 				time: null
-			},
+			} as SolarFields,
 			// 天干
 			tiangan: {
 				year: null,
 				month: null,
 				day: null,
 				time: null
-			},
+			} as DateTimeFields,
 			// 地支
 			dizhi: {
 				year: null,
 				month: null,
 				day: null,
 				time: null
-			},
+			} as DateTimeFields,
 			// 五行
 			wuxing: {
 				year: null,
 				month: null,
 				day: null,
 				time: null
-			},
+			} as DateTimeFields,
 			// 纳音
 			nayin: {
 				year: null,
 				month: null,
 				day: null,
 				time: null
-			},
+			} as DateTimeFields,
 			// 地势
 			dishi: {
 				year: null,
 				month: null,
 				day: null,
 				time: null
-			},
+			} as DateTimeFields,
 			// 藏干
 			canggan: {
 				year: null,
 				month: null,
 				day: null,
 				time: null
-			},
+			} as CangganFields,
 			// 主星
 			zhuxing: {
 				year: null,
 				month: null,
 				day: null,
 				time: null
-			},
+			} as DateTimeFields,
 			// 副星
 			fuxing: {
 				year: null,
 				month: null,
 				day: null,
 				time: null
-			},
+			} as FuxingFields,
 			start_yun: {
 				year: null,
 				month: null,
 				day: null,
 				hour: null,
 				solar: null
-			},
-			table: [],
+			} as StartYunFields,
+			table: [] as TableRow[],
 			// 增强分析数据
 			enhanced: null as BaziEnhancedData | null
 		};
 	},
 	actions: {
-		pull(data) {
+		pull(data: PullData) {
 			const { timestamp, gender } = data;
 
 			const solar = Solar.fromDate(new Date(timestamp));
@@ -212,18 +277,24 @@ export const useBaziStore = defineStore('bazi', {
 				enhanced = enhanceBaziAnalysis(bazi, solar, shishen);
 				this.enhanced = enhanced;
 			} catch (e) {
-				console.error('增强分析计算失败:', e);
 				this.enhanced = null;
 			}
 
 			// 计算每个四柱的神煞
 			const dayGan = bazi.getDayGan();
-			const allZhi = [this.dizhi.year, this.dizhi.month, this.dizhi.day, this.dizhi.time];
+			const yearZhi = this.dizhi.year || '';
+			const monthZhi = this.dizhi.month || '';
+			const allZhi = [
+				yearZhi,
+				monthZhi,
+				this.dizhi.day || '',
+				this.dizhi.time || ''
+			];
 			const shensha = {
-				year: calculateShenShaForGanZhi(dayGan, this.sizhu.year, allZhi),
-				month: calculateShenShaForGanZhi(dayGan, this.sizhu.month, allZhi),
-				day: calculateShenShaForGanZhi(dayGan, this.sizhu.day, allZhi),
-				time: calculateShenShaForGanZhi(dayGan, this.sizhu.time, allZhi)
+				year: calculateShenShaForGanZhi(dayGan, this.sizhu.year || '', allZhi, yearZhi, monthZhi),
+				month: calculateShenShaForGanZhi(dayGan, this.sizhu.month || '', allZhi, yearZhi, monthZhi),
+				day: calculateShenShaForGanZhi(dayGan, this.sizhu.day || '', allZhi, yearZhi, monthZhi),
+				time: calculateShenShaForGanZhi(dayGan, this.sizhu.time || '', allZhi, yearZhi, monthZhi)
 			};
 
 			const table = [];
