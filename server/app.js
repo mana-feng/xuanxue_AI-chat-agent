@@ -15,10 +15,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'CHANGE_ME_TO_A_RANDOM_SECRET';
 const DB_FILE = path.join(__dirname, 'bazi.db');
 
 // 邮件配置（生产环境请改为环境变量）
-const EMAIL_HOST = process.env.EMAIL_HOST || 'smtp.yeah.net';
-const EMAIL_PORT = process.env.EMAIL_PORT || 465;
-const EMAIL_USER = process.env.EMAIL_USER || 'manafeng@yeah.net'; // 发送邮件的邮箱账号
-const EMAIL_PASS = process.env.EMAIL_PASS || 'SS2pBWd3K2th9dFa'; // 邮箱授权码（不是登录密码）
+const EMAIL_HOST = process.env.EMAIL_HOST || '';
+const EMAIL_PORT = process.env.EMAIL_PORT || ;
+const EMAIL_USER = process.env.EMAIL_USER || ''; // 发送邮件的邮箱账号
+const EMAIL_PASS = process.env.EMAIL_PASS || ''; // 邮箱授权码（不是登录密码）
 const EMAIL_FROM = process.env.EMAIL_FROM || EMAIL_USER; // 发件人显示名称
 
 // 创建邮件传输器（如果配置了邮箱信息）
