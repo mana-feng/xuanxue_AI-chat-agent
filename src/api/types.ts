@@ -4,5 +4,4 @@
 
 export * from '@/api/auth';
 export * from '@/api/bazi';
-export * from '@/api/email';
 

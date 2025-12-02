@@ -72,7 +72,7 @@
             "mode" : "hash",
             "base" : "./"
         },
-        "title" : "阿轩的Bug",
+        "title" : "",
         "devServer" : {
             "https" : false
         },

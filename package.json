@@ -3,7 +3,7 @@
 	"version": "1.0.0",
 	"description": "八字排盘",
 	"main": "main.js",
-	"author": "阿轩.",
+	"author": "",
 	"license": "ISC",
 	"scripts": {
 		"dev": "npx vite",

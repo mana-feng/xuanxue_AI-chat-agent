@@ -4,13 +4,19 @@
 			<tm-sheet v-if="(yun_store as any)[mitem.list].length" class="my-20" :round="3" :shadow="2" :margin="[20, 0]">
 				<tm-text _class="font-weight-b" :label="mitem.title"></tm-text>
 				<tm-divider></tm-divider>
-				<view class="scroll-container">
-					<scroll-view class="scroll-view" scroll-x="true">
-						<view class="scroll-view-item" v-for="(ditem, dindex) in (yun_store as any)[mitem.list]">
+				<view class="scroll-container" :class="{ 'scroll-container-liuri': mindex == 3 }">
+					<scroll-view 
+						class="scroll-view" 
+						:class="{ 'scroll-view-liuri': mindex == 3 }"
+						scroll-x="true"
+						:show-scrollbar="mindex == 3"
+						:enable-flex="true"
+					>
+						<view class="scroll-view-item" v-for="(ditem, dindex) in (mindex == 3 ? limitedDayList : (yun_store as any)[mitem.list])" :key="mindex == 3 ? dindex : dindex">
 							<view
 								class="scroll-view-item-default"
-								:class="{ 'scroll-view-item-active': (yun_store as any)[mitem.index] == dindex && mindex < 4 }"
-								@click="ScrollItemClick(mindex, dindex)"
+								:class="{ 'scroll-view-item-active': (mindex == 3 ? (yun_store as any)[mitem.index] == getOriginalDayIndex(dindex) : (yun_store as any)[mitem.index] == dindex) && mindex < 4 }"
+								@click="ScrollItemClick(mindex, mindex == 3 ? getOriginalDayIndex(dindex) : dindex)"
 							>
 								<view v-if="mindex == 0">
 									<view><tm-text :label="ditem.start_year"></tm-text></view>
@@ -31,6 +37,7 @@
 									<view><tm-text :label="ditem.shishen"></tm-text></view>
 								</view>
 								<view v-if="mindex == 3">
+									<view><tm-text :label="formatSolarDate(ditem.date)"></tm-text></view>
 									<view><tm-text :label="ditem.nongli"></tm-text></view>
 									<view><tm-text :label="ditem.ganzhi"></tm-text></view>
 									<view><tm-text :label="ditem.shishen"></tm-text></view>
@@ -127,13 +134,171 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, watch, nextTick } from 'vue';
+import { onMounted, watch, nextTick, computed } from 'vue';
 import { useYunStore } from '@/store/yun';
 import { useBaziStore } from '@/store/bazi';
 import { calculateShenShaForGanZhi, calculateGanZhiRelations } from '@/utils/bazi-enhanced';
 
 const yun_store = useYunStore();
 const bazi_store = useBaziStore();
+
+// 限制流日显示数量，只显示当前流月中的每一天
+const limitedDayList = computed(() => {
+	const dayList = yun_store.day_list || [];
+	const monthList = yun_store.month_list || [];
+	const monthIndex = yun_store.month_index;
+	
+	// 如果没有流月数据或索引无效，返回全部流日
+	if (!monthList.length || monthIndex < 0 || monthIndex >= monthList.length) {
+		return dayList;
+	}
+	
+	// 获取当前流月的数据
+	const currentMonth = monthList[monthIndex] as any;
+	if (!currentMonth || !currentMonth.date) {
+		return dayList;
+	}
+	
+	// 获取当前流年的年份
+	const yearList = yun_store.year_list || [];
+	const yearIndex = yun_store.year_index;
+	if (!yearList.length || yearIndex < 0 || yearIndex >= yearList.length) {
+		return dayList;
+	}
+	const currentYear = (yearList[yearIndex] as any).year;
+	
+	// 计算当前流月的日期范围
+	// currentMonth.date 格式如 "2/4"，表示月/日
+	// currentMonth.next_jieqi_date 格式如 "3/5"，表示下一个节气的月/日
+	
+	// 特殊处理：小寒流月（索引为11）应该是下一年的1月6号到2月3号
+	let startYear, startMonth, startDay, endYear, endMonth, endDay;
+	if (monthIndex === 11) {
+		// 小寒流月：起始日期为下一年的1月6号，结束日期为下一年的2月3号（包含）
+		startYear = currentYear + 1;
+		startMonth = 1;
+		startDay = 6;
+		endYear = currentYear + 1;
+		endMonth = 2;
+		endDay = 3;
+	} else {
+		// 其他流月：使用当前节气的日期作为起始
+		const [month, day] = currentMonth.date.split('/').map(Number);
+		startYear = currentYear;
+		startMonth = month;
+		startDay = day;
+		
+		// 结束日期：使用下一个节气的日期
+		// 如果流月索引>=10，说明下一个节气是下一年的
+		endYear = monthIndex < 10 ? currentYear : currentYear + 1;
+		const [nextMonth, nextDay] = currentMonth.next_jieqi_date.split('/').map(Number);
+		endMonth = nextMonth;
+		endDay = nextDay;
+	}
+	
+	// 构建日期范围字符串用于比较（格式：YYYY/M/D）
+	const startDateStr = `${startYear}/${startMonth}/${startDay}`;
+	const endDateStr = `${endYear}/${endMonth}/${endDay}`;
+	
+	// 解析日期对象（用于比较，只比较年月日，忽略时间部分）
+	const parseDate = (dateStr: string): Date => {
+		// 统一格式为 YYYY/M/D
+		const normalized = dateStr.replace(/-/g, '/');
+		const parts = normalized.split('/');
+		if (parts.length === 3) {
+			const year = parseInt(parts[0]);
+			const month = parseInt(parts[1]) - 1; // Date 对象的月份是 0-11
+			const day = parseInt(parts[2]);
+			return new Date(year, month, day);
+		}
+		return new Date(normalized);
+	};
+	
+	const startDate = parseDate(startDateStr);
+	const endDate = parseDate(endDateStr);
+	
+	// 过滤流日：只保留在当前流月日期范围内的
+	// 对于小寒流月：包含起始日期和结束日期（2月3号）
+	// 对于其他流月：包含起始日期，不包含结束日期（因为结束日期是下一个流月的起始日期）
+	const filteredDays = dayList.filter((day: any) => {
+		if (!day.date) return false;
+		
+		const dayDate = parseDate(day.date);
+		
+		// 比较日期（只比较年月日，忽略时间部分）
+		if (monthIndex === 11) {
+			// 小寒流月：包含2月3号
+			return dayDate >= startDate && dayDate <= endDate;
+		} else {
+			// 其他流月：不包含结束日期
+			return dayDate >= startDate && dayDate < endDate;
+		}
+	});
+	
+	return filteredDays.length > 0 ? filteredDays : dayList;
+});
+
+// 获取流日列表的起始索引偏移量（用于索引映射）
+const dayListStartOffset = computed(() => {
+	const dayList = yun_store.day_list || [];
+	const limitedList = limitedDayList.value;
+	
+	// 如果过滤后的列表等于原列表，偏移量为0
+	if (limitedList.length === dayList.length) {
+		return 0;
+	}
+	
+	// 找到过滤后列表的第一个元素在原列表中的索引
+	if (limitedList.length > 0 && dayList.length > 0) {
+		const firstLimitedDay = limitedList[0] as any;
+		const originalIndex = dayList.findIndex((day: any) => {
+			return day.date === firstLimitedDay.date;
+		});
+		return originalIndex >= 0 ? originalIndex : 0;
+	}
+	
+	return 0;
+});
+
+// 将显示索引转换为原始索引（仅用于流日）
+function getOriginalDayIndex(displayIndex: number): number {
+	const dayList = yun_store.day_list || [];
+	const limitedList = limitedDayList.value;
+	
+	// 如果过滤后的列表等于原列表，直接返回显示索引
+	if (limitedList.length === dayList.length) {
+		return displayIndex;
+	}
+	
+	// 获取显示列表中对应索引的日期
+	if (displayIndex >= 0 && displayIndex < limitedList.length) {
+		const displayDay = limitedList[displayIndex] as any;
+		const originalIndex = dayList.findIndex((day: any) => {
+			return day.date === displayDay.date;
+		});
+		return originalIndex >= 0 ? originalIndex : displayIndex;
+	}
+	
+	return displayIndex;
+}
+
+// 格式化阳历日期显示
+function formatSolarDate(dateStr: string | undefined): string {
+	if (!dateStr) return '';
+	
+	// 日期格式可能是 "2024/2/4" 或 "2024/02/04"
+	const date = new Date(dateStr.replace(/-/g, '/'));
+	if (isNaN(date.getTime())) {
+		// 如果解析失败，返回原始字符串
+		return dateStr;
+	}
+	
+	const month = date.getMonth() + 1;
+	const day = date.getDate();
+	
+	// 格式化为 "2月4日" 的格式
+	return `${month}月${day}日`;
+}
 
 const map_list: Array<{ title: string; list: string; index: string }> = [
 	{
@@ -286,23 +451,69 @@ function autoLocateToCurrentTime() {
 		
 		// 等待流月数据加载完成后再定位流月
 		nextTick(() => {
-			// 定位流月：找到包含当前月份的流月
+			// 定位流月：找到包含当前日期的流月（使用完整的日期范围比较）
 			if (yun_store.month_list && yun_store.month_list.length > 0) {
-				let monthIndex = 0;
-				for (let i = 0; i < yun_store.month_list.length; i++) {
-					const item = yun_store.month_list[i] as any;
-					if (item.date) {
-						const [monthStr] = item.date.split('/');
-						const month = parseInt(monthStr);
-						// 如果当前月份大于等于流月月份，更新索引
-						if (month <= currentMonth) {
-							monthIndex = i;
+				let monthIndex = -1;
+				const currentYear = now.getFullYear();
+				const currentMonthNum = now.getMonth() + 1;
+				const currentDayNum = now.getDate();
+				
+				// 获取当前流年的年份
+				const yearList = yun_store.year_list || [];
+				const yearIndex = yun_store.year_index;
+				if (yearList.length && yearIndex >= 0 && yearIndex < yearList.length) {
+					const year = (yearList[yearIndex] as any).year;
+					
+					for (let i = 0; i < yun_store.month_list.length; i++) {
+						const item = yun_store.month_list[i] as any;
+						if (!item.date || !item.next_jieqi_date) continue;
+						
+						// 计算流月的日期范围
+						let startYear, startMonth, startDay, endYear, endMonth, endDay;
+						if (i === 11) {
+							// 小寒流月：下一年的1月6号到2月3号
+							startYear = year + 1;
+							startMonth = 1;
+							startDay = 6;
+							endYear = year + 1;
+							endMonth = 2;
+							endDay = 3;
 						} else {
-							break;
+							// 其他流月：使用节气的日期范围
+							const [month, day] = item.date.split('/').map(Number);
+							startYear = year;
+							startMonth = month;
+							startDay = day;
+							
+							endYear = i < 10 ? year : year + 1;
+							const [nextMonth, nextDay] = item.next_jieqi_date.split('/').map(Number);
+							endMonth = nextMonth;
+							endDay = nextDay;
+						}
+						
+						// 判断当前日期是否在这个流月范围内
+						const currentDate = new Date(currentYear, currentMonthNum - 1, currentDayNum);
+						const startDate = new Date(startYear, startMonth - 1, startDay);
+						const endDate = new Date(endYear, endMonth - 1, endDay);
+						
+						// 对于非小寒流月，结束日期不包含（因为结束日期是下一个流月的起始日期）
+						if (i === 11) {
+							// 小寒流月：包含结束日期
+							if (currentDate >= startDate && currentDate <= endDate) {
+								monthIndex = i;
+								break;
+							}
+						} else {
+							// 其他流月：不包含结束日期
+							if (currentDate >= startDate && currentDate < endDate) {
+								monthIndex = i;
+								break;
+							}
 						}
 					}
 				}
-				if (yun_store.month_index !== monthIndex) {
+				
+				if (monthIndex >= 0 && yun_store.month_index !== monthIndex) {
 					yun_store.month_index = monthIndex;
 					yun_store.resolveLiuDay();
 				}
@@ -359,12 +570,38 @@ onMounted(() => {
 <style lang="scss" scoped>
 .scroll-container {
 	width: 100%;
+	
+	&.scroll-container-liuri {
+		// 流日滚动容器特殊样式
+		max-height: 400rpx;
+		overflow: hidden;
+	}
 }
 
 .scroll-view {
 	white-space: nowrap;
 	width: 100%;
 	margin-bottom: 20rpx;
+	
+	&.scroll-view-liuri {
+		// 流日滚动视图特殊样式，确保滚动条可见
+		::-webkit-scrollbar {
+			display: block;
+			height: 8rpx;
+		}
+		::-webkit-scrollbar-track {
+			background: #f1f1f1;
+			border-radius: 4rpx;
+		}
+		::-webkit-scrollbar-thumb {
+			background: #888;
+			border-radius: 4rpx;
+			&:hover {
+				background: #555;
+			}
+		}
+	}
+	
 	&-item {
 		display: inline-block;
 		text-align: center;

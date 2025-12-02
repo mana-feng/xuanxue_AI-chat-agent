@@ -214,8 +214,6 @@
 					<tm-button block label="开始排盘" @tap="Sumbit"></tm-button>
 				</tm-sheet>
 
-				<yx-friend></yx-friend>
-
 				<yxn-pillar-picker
 					v-model:show="pillar_select_show"
 					:default-value="pillar_default_value"
@@ -303,6 +301,10 @@ onLoad(() =>{
 		} catch (e) {
 			uni.removeStorageSync('info');
 		}
+	} else {
+		// 如果没有缓存，默认设置为当前日期时间
+		timestamp.value = new Date().getTime();
+		PullDatatimeLabel();
 	}
 })
 
