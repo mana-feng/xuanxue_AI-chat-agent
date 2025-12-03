@@ -11,12 +11,21 @@
 						:bold="true"
 						label="管理员后台"
 					></tm-text>
-					<tm-button
-						size="small"
-						type="danger"
-						label="退出登录"
-						@tap="handleLogout"
-					></tm-button>
+					<view class="header-buttons">
+						<tm-button
+							size="small"
+							type="primary"
+							label="返回首页"
+							:margin="[0, 10, 0, 0]"
+							@tap="goToHome"
+						></tm-button>
+						<tm-button
+							size="small"
+							type="danger"
+							label="退出登录"
+							@tap="handleLogout"
+						></tm-button>
+					</view>
 				</view>
 				
 				<!-- 统计卡片 -->
@@ -208,6 +217,12 @@ function goToRecords() {
 	});
 }
 
+function goToHome() {
+	uni.reLaunch({
+		url: '/pages/index/index'
+	});
+}
+
 function handleLogout() {
 	uni.showModal({
 		title: '确认退出',
@@ -240,6 +255,12 @@ function handleLogout() {
 	justify-content: space-between;
 	align-items: center;
 	margin-bottom: 30rpx;
+}
+
+.header-buttons {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
 }
 
 .stats-grid {

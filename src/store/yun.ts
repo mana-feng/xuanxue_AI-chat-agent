@@ -59,7 +59,9 @@ export const useYunStore = defineStore('yun', {
 			year_index: 0,
 			month_index: 0,
 			day_index: 0,
-			time_index: 0
+			time_index: 0,
+			// 是否已完成初始自动定位（用于防止用户手动选择后被重置）
+			autoLocated: false
 		};
 	},
 	actions: {
@@ -75,6 +77,7 @@ export const useYunStore = defineStore('yun', {
 			this.month_list = [];
 			this.day_list = [];
 			this.time_list = [];
+			this.autoLocated = false; // 重置自动定位标志
 			this.resolveDaYun();
 		},
 		// 大运
@@ -195,10 +198,12 @@ export const useYunStore = defineStore('yun', {
 			this.time_list = [];
 			
 			// 自动定位到当前系统时间（延迟执行，确保数据已更新）
-			// 使用 false 参数，允许定位大运和流年，但 resolve 方法会传递 true 避免递归
-			setTimeout(() => {
-				this.autoLocateToCurrentDate(false);
-			}, 0);
+			// 只在未完成初始自动定位时执行
+			if (!this.autoLocated) {
+				setTimeout(() => {
+					this.autoLocateToCurrentDate(false);
+				}, 0);
+			}
 		},
 		async resolveLiuDay() {
 			const year_list = this.year_list;
@@ -310,6 +315,11 @@ export const useYunStore = defineStore('yun', {
 		},
 		// 自动定位到当前系统时间
 		async autoLocateToCurrentDate(skipAutoLocate = false): Promise<void> {
+			// 如果已经完成自动定位，且不是递归调用，不再执行（防止用户手动选择后被重置）
+			if (this.autoLocated && !skipAutoLocate) {
+				return;
+			}
+			
 			const now = new Date();
 			const currentYear = now.getFullYear();
 			const currentMonth = now.getMonth() + 1; // 1-12
@@ -440,6 +450,15 @@ export const useYunStore = defineStore('yun', {
 					this.day_index = dayIndex;
 				}
 			}
+			
+			// 标记已完成自动定位
+			if (!skipAutoLocate) {
+				this.autoLocated = true;
+			}
+		},
+		// 标记用户已手动选择时间，禁用自动定位
+		markManualSelection() {
+			this.autoLocated = true;
 		}
 	}
 });

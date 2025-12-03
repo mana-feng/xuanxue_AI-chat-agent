@@ -114,6 +114,46 @@
 							<tm-text :label="'忌用：' + bazi_store.enhanced.yongshen.avoid.join('、')" :font-size="30" color="red"></tm-text>
 						</view>
 					</view>
+					
+					<!-- 天干地支关系 -->
+					<view v-if="bazi_store.enhanced.ganzhiRelations" class="px-20 pb-10">
+						<tm-text label="天干地支关系：" :font-size="34" font-weight="bold"></tm-text>
+						
+						<!-- 三合 -->
+						<view v-if="bazi_store.enhanced.ganzhiRelations.sanHe && bazi_store.enhanced.ganzhiRelations.sanHe.length > 0" class="mt-6">
+							<tm-text :label="'三合：' + bazi_store.enhanced.ganzhiRelations.sanHe.join('、')" :font-size="30" color="primary"></tm-text>
+						</view>
+						
+						<!-- 三刑 -->
+						<view v-if="bazi_store.enhanced.ganzhiRelations.sanXing && bazi_store.enhanced.ganzhiRelations.sanXing.length > 0" class="mt-6">
+							<tm-text :label="'三刑：' + bazi_store.enhanced.ganzhiRelations.sanXing.join('、')" :font-size="30" color="orange"></tm-text>
+						</view>
+						
+						<!-- 三会 -->
+						<view v-if="bazi_store.enhanced.ganzhiRelations.sanHui && bazi_store.enhanced.ganzhiRelations.sanHui.length > 0" class="mt-6">
+							<tm-text :label="'三会：' + bazi_store.enhanced.ganzhiRelations.sanHui.join('、')" :font-size="30" color="primary"></tm-text>
+						</view>
+						
+						<!-- 天干合化 -->
+						<view v-if="bazi_store.enhanced.ganzhiRelations.ganHe && bazi_store.enhanced.ganzhiRelations.ganHe.length > 0" class="mt-6">
+							<tm-text :label="'天干合化：' + bazi_store.enhanced.ganzhiRelations.ganHe.join('、')" :font-size="30" color="green"></tm-text>
+						</view>
+						
+						<!-- 地支六合 -->
+						<view v-if="bazi_store.enhanced.ganzhiRelations.zhiHe && bazi_store.enhanced.ganzhiRelations.zhiHe.length > 0" class="mt-6">
+							<tm-text :label="'地支六合：' + bazi_store.enhanced.ganzhiRelations.zhiHe.join('、')" :font-size="30" color="green"></tm-text>
+						</view>
+						
+						<!-- 冲 -->
+						<view v-if="bazi_store.enhanced.ganzhiRelations.chong && bazi_store.enhanced.ganzhiRelations.chong.length > 0" class="mt-6">
+							<tm-text :label="'冲：' + bazi_store.enhanced.ganzhiRelations.chong.join('、')" :font-size="30" color="red"></tm-text>
+						</view>
+						
+						<!-- 害 -->
+						<view v-if="bazi_store.enhanced.ganzhiRelations.hai && bazi_store.enhanced.ganzhiRelations.hai.length > 0" class="mt-6">
+							<tm-text :label="'害：' + bazi_store.enhanced.ganzhiRelations.hai.join('、')" :font-size="30" color="orange"></tm-text>
+						</view>
+					</view>
 				</tm-sheet>
 
 				<yx-yun-scroll-list></yx-yun-scroll-list>

@@ -279,6 +279,16 @@ export interface BaziEnhancedData {
 		avoid?: string[]; // 忌神
 		description?: string; // 用神说明
 	};
+	// 天干地支关系
+	ganzhiRelations?: {
+		sanHe?: string[]; // 三合，如 ["申子辰合水"]
+		sanXing?: string[]; // 三刑，如 ["子卯刑", "寅巳申刑"]
+		sanHui?: string[]; // 三会，如 ["寅卯辰会木"]
+		ganHe?: string[]; // 天干合化，如 ["甲己合化土"]
+		zhiHe?: string[]; // 地支六合，如 ["子丑合"]
+		chong?: string[]; // 冲，如 ["子午冲"]
+		hai?: string[]; // 害，如 ["子未害"]
+	};
 }
 
 /**
@@ -844,6 +854,7 @@ export function enhanceBaziAnalysis(bazi: any, solar: Solar, shishen: any): Bazi
 
 	result.rizhuQiangruo = calculateRizhuQiangruo(bazi, result.wuxingWangshuai);
 	result.yongshen = calculateYongShen(result.rizhuQiangruo, result.wuxingWangshuai);
+	result.ganzhiRelations = calculateOriginalGanZhiRelations(bazi);
 
 	return result;
 }
@@ -1211,6 +1222,209 @@ export function calculateGanZhiRelations(ganzhi: string, originalGanZhi: string[
 		}
 	}
 	
+	return relations;
+}
+
+/**
+ * 计算原局四柱内部的天干地支关系
+ * @param bazi 八字对象（来自 lunar-javascript）
+ * @returns 关系对象
+ */
+export function calculateOriginalGanZhiRelations(bazi: any): BaziEnhancedData['ganzhiRelations'] {
+	const relations: BaziEnhancedData['ganzhiRelations'] = {
+		sanHe: [],
+		sanXing: [],
+		sanHui: [],
+		ganHe: [],
+		zhiHe: [],
+		chong: [],
+		hai: []
+	};
+
+	if (!bazi) {
+		return relations;
+	}
+
+	// 获取原局四柱的干支
+	const ganzhiList = [
+		bazi.getYear() || '',
+		bazi.getMonth() || '',
+		bazi.getDay() || '',
+		bazi.getTime() || ''
+	].filter(gz => gz && gz.length >= 2);
+
+	if (ganzhiList.length < 4) {
+		return relations;
+	}
+
+	// 提取天干和地支
+	const gans: string[] = [];
+	const zhis: string[] = [];
+	ganzhiList.forEach(gz => {
+		if (gz.length >= 2) {
+			gans.push(gz[0]);
+			zhis.push(gz[1]);
+		}
+	});
+
+	// 1. 检查三合（需要3个地支）
+	if (zhis.length >= 3) {
+		const foundSanHe = new Set<string>();
+		for (let i = 0; i < zhis.length - 2; i++) {
+			for (let j = i + 1; j < zhis.length - 1; j++) {
+				for (let k = j + 1; k < zhis.length; k++) {
+					const sanHe = checkZhiSanHe([zhis[i], zhis[j], zhis[k]]);
+					if (sanHe && !foundSanHe.has(sanHe)) {
+						foundSanHe.add(sanHe);
+						relations.sanHe!.push(sanHe);
+					}
+				}
+			}
+		}
+	}
+
+	// 2. 检查三刑
+	if (zhis.length >= 2) {
+		const foundXing = new Set<string>();
+		
+		// 先检查三刑组合（需要3个地支）
+		if (zhis.length >= 3) {
+			// 检查寅巳申三刑
+			if (zhis.includes('寅') && zhis.includes('巳') && zhis.includes('申')) {
+				const sanXingStr = '寅巳申刑';
+				if (!foundXing.has(sanXingStr)) {
+					foundXing.add(sanXingStr);
+					relations.sanXing!.push(sanXingStr);
+				}
+			}
+			// 检查丑未戌三刑
+			if (zhis.includes('丑') && zhis.includes('未') && zhis.includes('戌')) {
+				const sanXingStr = '丑未戌刑';
+				if (!foundXing.has(sanXingStr)) {
+					foundXing.add(sanXingStr);
+					relations.sanXing!.push(sanXingStr);
+				}
+			}
+		}
+		
+		// 检查单个相刑关系（子卯刑等）
+		for (let i = 0; i < zhis.length; i++) {
+			for (let j = i + 1; j < zhis.length; j++) {
+				const zhi1 = zhis[i];
+				const zhi2 = zhis[j];
+				
+				// 跳过已经包含在三刑组合中的地支对
+				const isInSanXing = 
+					((zhi1 === '寅' || zhi1 === '巳' || zhi1 === '申') && 
+					 (zhi2 === '寅' || zhi2 === '巳' || zhi2 === '申') &&
+					 zhis.includes('寅') && zhis.includes('巳') && zhis.includes('申')) ||
+					((zhi1 === '丑' || zhi1 === '未' || zhi1 === '戌') && 
+					 (zhi2 === '丑' || zhi2 === '未' || zhi2 === '戌') &&
+					 zhis.includes('丑') && zhis.includes('未') && zhis.includes('戌'));
+				
+				if (!isInSanXing && checkZhiXing(zhi1, zhi2)) {
+					const xing = `${zhi1}${zhi2}刑`;
+					if (!foundXing.has(xing)) {
+						foundXing.add(xing);
+						relations.sanXing!.push(xing);
+					}
+				}
+			}
+		}
+		
+		// 检查自刑（辰辰、午午、酉酉、亥亥）
+		const zhiCount: { [key: string]: number } = {};
+		zhis.forEach(zhi => {
+			zhiCount[zhi] = (zhiCount[zhi] || 0) + 1;
+		});
+		
+		['辰', '午', '酉', '亥'].forEach(zhi => {
+			if (zhiCount[zhi] && zhiCount[zhi] >= 2) {
+				const xing = `${zhi}自刑`;
+				if (!foundXing.has(xing)) {
+					foundXing.add(xing);
+					relations.sanXing!.push(xing);
+				}
+			}
+		});
+	}
+
+	// 3. 检查三会（需要3个地支）
+	if (zhis.length >= 3) {
+		const foundSanHui = new Set<string>();
+		for (let i = 0; i < zhis.length - 2; i++) {
+			for (let j = i + 1; j < zhis.length - 1; j++) {
+				for (let k = j + 1; k < zhis.length; k++) {
+					const sanHui = checkZhiSanHui([zhis[i], zhis[j], zhis[k]]);
+					if (sanHui && !foundSanHui.has(sanHui)) {
+						foundSanHui.add(sanHui);
+						relations.sanHui!.push(sanHui);
+					}
+				}
+			}
+		}
+	}
+
+	// 4. 检查天干合化
+	if (gans.length >= 2) {
+		const foundGanHe = new Set<string>();
+		for (let i = 0; i < gans.length; i++) {
+			for (let j = i + 1; j < gans.length; j++) {
+				const ganHe = checkGanHe(gans[i], gans[j]);
+				if (ganHe && !foundGanHe.has(ganHe)) {
+					foundGanHe.add(ganHe);
+					relations.ganHe!.push(ganHe);
+				}
+			}
+		}
+	}
+
+	// 5. 检查地支六合
+	if (zhis.length >= 2) {
+		const foundZhiHe = new Set<string>();
+		for (let i = 0; i < zhis.length; i++) {
+			for (let j = i + 1; j < zhis.length; j++) {
+				const zhiHe = checkZhiLiuHe(zhis[i], zhis[j]);
+				if (zhiHe && !foundZhiHe.has(zhiHe)) {
+					foundZhiHe.add(zhiHe);
+					relations.zhiHe!.push(zhiHe);
+				}
+			}
+		}
+	}
+
+	// 6. 检查冲
+	if (zhis.length >= 2) {
+		const foundChong = new Set<string>();
+		for (let i = 0; i < zhis.length; i++) {
+			for (let j = i + 1; j < zhis.length; j++) {
+				if (checkZhiLiuChong(zhis[i], zhis[j])) {
+					const chong = `${zhis[i]}${zhis[j]}冲`;
+					if (!foundChong.has(chong)) {
+						foundChong.add(chong);
+						relations.chong!.push(chong);
+					}
+				}
+			}
+		}
+	}
+
+	// 7. 检查害
+	if (zhis.length >= 2) {
+		const foundHai = new Set<string>();
+		for (let i = 0; i < zhis.length; i++) {
+			for (let j = i + 1; j < zhis.length; j++) {
+				if (checkZhiHai(zhis[i], zhis[j])) {
+					const hai = `${zhis[i]}${zhis[j]}害`;
+					if (!foundHai.has(hai)) {
+						foundHai.add(hai);
+						relations.hai!.push(hai);
+					}
+				}
+			}
+		}
+	}
+
 	return relations;
 }
 

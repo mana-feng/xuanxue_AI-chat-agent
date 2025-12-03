@@ -403,7 +403,7 @@ function formatBirth(item: ChartItem) {
 
 function openChart(item: ChartItem) {
 	try {
-		// 验证 rawPayload 数据完整性
+		// 验证 rawPayload 数据完整性，并检查是否与数据库中的基本字段一致
 		let useRawPayload = false;
 		if (item.rawPayload && item.rawPayload.user && item.rawPayload.bazi) {
 			const u = item.rawPayload.user;
@@ -413,7 +413,45 @@ function openChart(item: ChartItem) {
 			if (u.timestamp && u.gender !== undefined && u.gender !== null &&
 				b.solar && b.solar.year && b.sizhu && b.sizhu.year && 
 				b.yinli && b.xinzuo && b.table && Array.isArray(b.table) && b.table.length > 0) {
-				useRawPayload = true;
+				
+				// 检查 rawPayload 中的性别是否与数据库中的性别一致
+				// 数据库：'1'=男, '0'=女；rawPayload：1=男, 0=女
+				// 统一转换为数字进行比较：1=男, 0=女
+				let rawPayloadGender: number;
+				if (u.gender === null || u.gender === undefined) {
+					rawPayloadGender = 0; // 默认值（女）
+				} else if (typeof u.gender === 'string') {
+					rawPayloadGender = u.gender === '1' ? 1 : 0;
+				} else {
+					rawPayloadGender = u.gender === 1 ? 1 : 0;
+				}
+				
+				let dbGender: number;
+				if (item.gender === null || item.gender === undefined) {
+					dbGender = 0; // 默认值（女）
+				} else if (typeof item.gender === 'string') {
+					dbGender = item.gender === '1' ? 1 : 0;
+				} else {
+					dbGender = item.gender === 1 ? 1 : 0;
+				}
+				
+				// 检查 rawPayload 中的时间戳是否与数据库中的出生时间一致
+				let dbTimestamp: number;
+				if (typeof item.birthDatetime === 'string') {
+					const date = new Date(item.birthDatetime);
+					dbTimestamp = date.getTime();
+				} else if (typeof item.birthDatetime === 'number') {
+					dbTimestamp = item.birthDatetime;
+				} else {
+					dbTimestamp = 0;
+				}
+				
+				// 如果性别或时间戳不一致，说明数据已更新，需要重新计算
+				// 注意：时间戳比较允许1秒的误差（因为可能存在精度问题）
+				const timestampDiff = Math.abs((u.timestamp || 0) - dbTimestamp);
+				if (rawPayloadGender === dbGender && timestampDiff < 1000) {
+					useRawPayload = true;
+				}
 			}
 		}
 		

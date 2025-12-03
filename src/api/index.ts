@@ -53,7 +53,16 @@ export function request<T = any>(
 			},
 			success(res: any) {
 				if (res.statusCode >= 200 && res.statusCode < 300) {
-					resolve(res.data);
+					// 如果后端已经返回了 success 字段，直接返回
+					// 否则包装成统一格式
+					if (res.data && typeof res.data === 'object' && 'success' in res.data) {
+						resolve(res.data);
+					} else {
+						resolve({
+							success: true,
+							data: res.data
+						});
+					}
 				} else if (res.statusCode === 401) {
 					// 未授权，清除登录信息
 					uni.removeStorageSync('auth');

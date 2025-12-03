@@ -334,6 +334,8 @@ function ScrollItemClick(e: number, index: number) {
 	const methods_list = ['resolveLiuYear', 'resolveLiuMonth', 'resolveLiuDay', 'resolveLiuTime'];
 	(yun_store as any)[key_list[e]] = index;
 	(yun_store as any)[key_list[e + 1]] = 0;
+	// 标记用户已手动选择时间，禁用自动定位
+	yun_store.markManualSelection();
 	(yun_store as any)[methods_list[e]]();
 }
 
@@ -414,8 +416,13 @@ function getRelationArray(indexKey: string, listKey: string, key: 'zhiLiuChong' 
 	return relations?.[key] || [];
 }
 
-// 自动定位到当前系统时间
+// 自动定位到当前系统时间（只在初始加载时执行）
 function autoLocateToCurrentTime() {
+	// 如果已经完成自动定位，不再执行（防止用户手动选择后被重置）
+	if (yun_store.autoLocated) {
+		return;
+	}
+	
 	const now = new Date();
 	const currentYear = now.getFullYear();
 	const currentMonth = now.getMonth() + 1; // 1-12
@@ -548,20 +555,24 @@ function autoLocateToCurrentTime() {
 	});
 }
 
-// 监听数据变化，自动定位
+// 监听数据变化，自动定位（只在首次加载时执行）
+let hasAutoLocated = false;
 watch(
 	() => yun_store.dayun_list.length,
 	(newLen) => {
-		if (newLen > 0) {
+		// 只在首次加载且未完成自动定位时执行
+		if (newLen > 0 && !hasAutoLocated && !yun_store.autoLocated) {
+			hasAutoLocated = true;
 			autoLocateToCurrentTime();
 		}
 	},
 	{ immediate: true }
 );
 
-// 组件挂载时也尝试定位
+// 组件挂载时也尝试定位（只在首次加载时执行）
 onMounted(() => {
-	if (yun_store.dayun_list && yun_store.dayun_list.length > 0) {
+	if (yun_store.dayun_list && yun_store.dayun_list.length > 0 && !hasAutoLocated && !yun_store.autoLocated) {
+		hasAutoLocated = true;
 		autoLocateToCurrentTime();
 	}
 });

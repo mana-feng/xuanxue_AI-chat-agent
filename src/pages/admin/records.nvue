@@ -75,7 +75,7 @@
 							<tm-text
 								font-size="22"
 								color="#666"
-								:label="'性别：' + (record.gender === '0' ? '男' : record.gender === '1' ? '女' : '未知')"
+								:label="'性别：' + (record.gender === '1' || record.gender === 1 ? '男' : record.gender === '0' || record.gender === 0 ? '女' : '未知')"
 							></tm-text>
 							<tm-text
 								class="mt-8"
@@ -156,8 +156,8 @@
 							label="性别"
 						></tm-text>
 						<tm-radio-group v-model="recordForm.gender" model="button">
-							<tm-radio label="男" value="0"></tm-radio>
-							<tm-radio label="女" value="1"></tm-radio>
+							<tm-radio label="男" value="1"></tm-radio>
+							<tm-radio label="女" value="0"></tm-radio>
 						</tm-radio-group>
 					</view>
 					
@@ -225,7 +225,7 @@
 					</view>
 					<view class="detail-item">
 						<tm-text font-size="24" color="#666" label="性别"></tm-text>
-						<tm-text :label="recordDetail.gender === '0' ? '男' : recordDetail.gender === '1' ? '女' : '未知'"></tm-text>
+						<tm-text :label="recordDetail.gender === '1' || recordDetail.gender === 1 ? '男' : recordDetail.gender === '0' || recordDetail.gender === 0 ? '女' : '未知'"></tm-text>
 					</view>
 					<view class="detail-item">
 						<tm-text font-size="24" color="#666" label="出生时间"></tm-text>
@@ -386,7 +386,7 @@ function handleCreateRecord() {
 	recordForm.value = {
 		userId: null,
 		name: '',
-		gender: '0',
+		gender: '1',
 		birthDatetime: '',
 		calendarType: 'solar'
 	};
@@ -399,7 +399,7 @@ function handleEditRecord(record: BaziRecordInfo) {
 	recordForm.value = {
 		userId: record.userId,
 		name: record.name || '',
-		gender: record.gender || '0',
+		gender: record.gender || '1',
 		birthDatetime: record.birthDatetime || '',
 		calendarType: record.calendarType || 'solar'
 	};
@@ -430,12 +430,22 @@ async function handleSubmitRecord() {
 	try {
 		if (editingRecord.value) {
 			// 编辑记录
+			// 检查是否修改了会影响八字计算的字段
+			const birthDatetimeChanged = editingRecord.value.birthDatetime !== recordForm.value.birthDatetime;
+			const genderChanged = editingRecord.value.gender !== recordForm.value.gender;
+			const calendarTypeChanged = editingRecord.value.calendarType !== recordForm.value.calendarType;
+			
+			// 如果修改了关键字段，需要清除 rawPayload，让历史页面重新计算
+			const shouldClearRawPayload = birthDatetimeChanged || genderChanged || calendarTypeChanged;
+			
 			const result = await updateRecord(editingRecord.value.id, {
 				userId: recordForm.value.userId,
 				name: recordForm.value.name || null,
 				gender: recordForm.value.gender,
 				birthDatetime: recordForm.value.birthDatetime,
-				calendarType: recordForm.value.calendarType || null
+				calendarType: recordForm.value.calendarType || null,
+				// 如果关键字段被修改，清除 rawPayload
+				rawPayload: shouldClearRawPayload ? null : undefined
 			});
 			if (result.success) {
 				uni.showToast({
