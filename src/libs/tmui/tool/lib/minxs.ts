@@ -218,7 +218,15 @@ export const computedTheme = (props: any, dark:boolean,store:any):cssstyle => {
 		defaultColorName = store.color;
 	}
 	
-	var theme = new colors.themeColors(store.colorList);
+	// 确保 colorList 不为空，如果为空则使用默认的全局 colors
+	// 注意：如果 store.colorList 为空数组，使用全局默认 colors
+	let colorListToUse = store.colorList;
+	if (!colorListToUse || colorListToUse.length === 0) {
+		// 使用全局默认颜色数组
+		const defaultThemeObj = new colors.themeColors();
+		colorListToUse = defaultThemeObj.colors;
+	}
+	var theme = new colors.themeColors(colorListToUse);
 	let c = theme.getTheme({
 		colorname: defaultColorName,
 		dark: dark,

@@ -1,176 +1,222 @@
 <template>
 	<tm-app>
 		<view class="page-wrapper">
-			<view class="page-content-scale">
-				<yx-nav-header @open-auth="openAuth"></yx-nav-header>
-
-				<!-- 欢迎 & 说明（使用普通卡片，避免特殊渐变样式导致兼容问题） -->
+			<yx-nav-header @open-auth="openAuth"></yx-nav-header>
+			
+			<view class="page-content">
+				<!-- 欢迎 & 说明 -->
 				<tm-sheet
-					:round="4"
-					:shadow="1"
-					:margin="[0, 10]"
-					:padding="[18, 18]"
+					:round="16"
+					:shadow="3"
+					:margin="[0, 20]"
+					:padding="[32, 28]"
+					class="welcome-card"
 				>
-					<view class="flex flex-row items-center">
-						<view class="flex-1">
-							<tm-text
-								font-size="34"
-								label="欢迎使用八字排盘"
-								:bold="true"
-							></tm-text>
-							<tm-text
-								class="mt-6"
-								font-size="24"
-								color="#666666"
-								:label="isLoggedIn ? '已登录账号，可随时保存与查看排盘记录' : '登录后可保存排盘到账号，在多设备间同步与管理历史记录'"
-							></tm-text>
-						</view>
+					<view class="welcome-content">
+						<tm-text
+							:font-size="38"
+							label="欢迎使用八字排盘"
+							:bold="true"
+							color="#2d3748"
+						></tm-text>
+						<tm-text
+							class="mt-8"
+							:font-size="26"
+							color="#718096"
+							:label="isLoggedIn ? '已登录账号，可随时保存与查看排盘记录' : '登录后可保存排盘到账号，在多设备间同步与管理历史记录'"
+						></tm-text>
 					</view>
 				</tm-sheet>
 
 				<!-- 登录 / 注册区域（卡片） -->
 				<tm-sheet
-					:round="4"
-					:shadow="3"
-					:margin="[0, 12]"
-					:padding="[18, 18]"
+					:round="16"
+					:shadow="4"
+					:margin="[0, 20]"
+					:padding="[32, 28]"
+					class="auth-card"
 				>
-					<view class="flex flex-row items-center justify-between mb-16">
-						<view>
-							<tm-text
-								v-if="isLoggedIn"
-								font-size="28"
-								:bold="true"
-								:label="'您好，' + (user_store.email || '已登录用户')"
-							></tm-text>
-							<tm-text
-								v-else
-								font-size="28"
-								:bold="true"
-								label="账号登录 / 注册"
-							></tm-text>
-							<tm-text
-								class="mt-4"
-								font-size="22"
-								color="#999999"
-								:label="isLoggedIn ? '当前登录账号将自动保存您的排盘记录' : '只需邮箱和密码，即可轻松管理您的八字排盘历史'"
-							></tm-text>
+					<!-- 已登录状态 -->
+					<view v-if="isLoggedIn" class="auth-logged-in">
+						<view class="auth-header">
+							<view class="auth-avatar">
+								<tm-icon name="account-circle" :font-size="60" color="#667eea"></tm-icon>
+							</view>
+							<view class="auth-info">
+								<tm-text
+									:font-size="32"
+									:bold="true"
+									color="#2d3748"
+									:label="'您好，' + (user_store.email || '已登录用户')"
+								></tm-text>
+								<tm-text
+									class="mt-6"
+									:font-size="24"
+									color="#718096"
+									label="当前登录账号将自动保存您的排盘记录"
+								></tm-text>
+							</view>
 						</view>
-
-						<view class="flex flex-row flex-center">
+						<view class="auth-actions">
 							<tm-button
-								v-if="isLoggedIn"
 								size="small"
 								type="primary"
-								:margin="[10, 6]"
-								:padding="[20, 16]"
-								shape="round"
+								:margin="[0, 8, 0, 0]"
+								:padding="[24, 32]"
+								:round="12"
 								label="历史查询"
 								@tap="goToHistory"
 							></tm-button>
 							<tm-button
-								v-if="isLoggedIn && user_store.isAdmin"
+								v-if="user_store.isAdmin"
 								size="small"
 								type="warning"
-								:margin="[10, 6]"
-								:padding="[20, 16]"
-								shape="round"
+								:margin="[0, 8, 0, 0]"
+								:padding="[24, 32]"
+								:round="12"
 								label="管理员后台"
 								@tap="goToAdmin"
 							></tm-button>
 							<tm-button
-								v-if="isLoggedIn"
 								size="small"
 								type="danger"
-								:margin="[10, 0]"
-								:padding="[20, 6]"
-								shape="round"
+								:margin="[0, 0]"
+								:padding="[24, 32]"
+								:round="12"
 								label="退出登录"
 								@tap="user_store.logout()"
 							></tm-button>
 						</view>
 					</view>
 
+					<!-- 未登录状态 -->
+					<view v-else class="auth-not-logged-in">
+						<view class="auth-header">
+							<tm-text
+								:font-size="32"
+								:bold="true"
+								color="#2d3748"
+								label="账号登录 / 注册"
+							></tm-text>
+							<tm-text
+								class="mt-6"
+								:font-size="24"
+								color="#718096"
+								label="只需邮箱和密码，即可轻松管理您的八字排盘历史"
+							></tm-text>
+						</view>
+						<tm-button
+							type="primary"
+							block
+							:round="12"
+							:height="88"
+							:font-size="30"
+							:bold="true"
+							label="登录 / 注册"
+							@tap="showAuthForm = true"
+						></tm-button>
+					</view>
+
+					<!-- 登录/注册表单（未登录时显示） -->
 					<view
-						v-if="showAuthForm"
-						class="mt-4"
+						v-if="!isLoggedIn && showAuthForm"
+						class="auth-form-container"
 					>
 						<!-- 登录 / 注册切换 -->
-						<view class="flex flex-row mb-16">
-							<tm-button
-								:plain="authMode !== 'login'"
-								:type="authMode === 'login' ? 'primary' : 'grey'"
-								size="small"
-								:margin="[0, 0]"
-								:padding="[22, 8]"
-								shape="round"
-								label="登录"
+						<view class="auth-tabs">
+							<view 
+								class="auth-tab"
+								:class="{ active: authMode === 'login' }"
 								@tap="authMode = 'login'; authError = ''"
-							></tm-button>
-							<tm-button
-								class="ml-10"
-								:plain="authMode !== 'register'"
-								:type="authMode === 'register' ? 'primary' : 'grey'"
-								size="small"
-								:margin="[0, 0]"
-								:padding="[22, 8]"
-								shape="round"
-								label="注册"
+							>
+								<tm-text
+									:font-size="30"
+									:bold="authMode === 'login'"
+									:color="authMode === 'login' ? '#667eea' : '#718096'"
+									label="登录"
+								></tm-text>
+							</view>
+							<view 
+								class="auth-tab"
+								:class="{ active: authMode === 'register' }"
 								@tap="authMode = 'register'; authError = ''"
-							></tm-button>
+							>
+								<tm-text
+									:font-size="30"
+									:bold="authMode === 'register'"
+									:color="authMode === 'register' ? '#667eea' : '#718096'"
+									label="注册"
+								></tm-text>
+							</view>
 						</view>
 
 						<!-- 表单输入 -->
-						<tm-input
-							v-model="authEmail"
-							:margin="[0, 12]"
-							prefix="tmicon-md-mail"
-							type="text"
-							placeholder="请输入常用邮箱，用于登录与找回账号"
-						></tm-input>
-						<tm-input
-							v-model="authPassword"
-							:margin="[0, 12]"
-							prefix="tmicon-md-lock"
-							type="password"
-							placeholder="设置登录密码（建议不少于 6 位，包含字母和数字）"
-						></tm-input>
+						<view class="auth-form-fields">
+							<tm-input
+								v-model="authEmail"
+								:margin="[0, 0, 20, 0]"
+								prefix="tmicon-md-mail"
+								type="text"
+								:round="12"
+								:border="1"
+								placeholder="请输入常用邮箱，用于登录与找回账号"
+							></tm-input>
+							<tm-input
+								v-model="authPassword"
+								:margin="[0, 0, 20, 0]"
+								prefix="tmicon-md-lock"
+								type="password"
+								:round="12"
+								:border="1"
+								placeholder="设置登录密码（建议不少于 6 位，包含字母和数字）"
+							></tm-input>
+						</view>
 
-						<view class="flex flex-row items-center justify-between mt-6">
+						<view class="auth-form-hint">
 							<tm-text
-								font-size="20"
-								color="#bbbbbb"
+								:font-size="22"
+								color="#a0aec0"
 								:label="authMode === 'login' ? '为保障安全，请在私人环境下登录账号' : '注册即表示同意相关服务条款'"
 							></tm-text>
 							<tm-text
 								v-if="authMode === 'login'"
-								font-size="20"
-								color="#409EFF"
+								:font-size="22"
+								color="#667eea"
 								label="忘记密码？"
 							></tm-text>
 						</view>
 
-						<view v-if="authError" class="mt-8">
+						<view v-if="authError" class="auth-error">
+							<tm-icon name="close-circle" :font-size="24" color="#f56565" :margin="[0, 8, 0, 0]"></tm-icon>
 							<tm-text
 								:label="authError"
-								color="#ff4d4f"
+								color="#f56565"
+								:font-size="24"
 							></tm-text>
 						</view>
 
-						<view class="flex flex-row mt-14">
+						<view class="auth-form-actions">
 							<tm-button
 								block
 								:loading="authLoading"
 								:disabled="authLoading"
 								:margin="[0, 0]"
 								:type="authMode === 'login' ? 'primary' : 'success'"
+								:round="12"
+								:height="88"
+								:font-size="30"
+								:bold="true"
 								:label="authMode === 'login' ? '登录' : '注册并登录'"
 								@tap="submitAuth"
 							></tm-button>
 							<tm-button
-								class="ml-10"
+								class="mt-16"
 								type="grey"
+								block
 								:margin="[0, 0]"
+								:round="12"
+								:height="88"
+								:font-size="30"
 								label="取消"
 								@tap="showAuthForm = false"
 							></tm-button>
@@ -178,57 +224,186 @@
 					</view>
 				</tm-sheet>
 
-				<tm-sheet :round="3" :shadow="2" :margin="[0, 30]">
-					<tm-input
-						v-model="realname"
-						:margin="[0, 24]"
-						placeholder="请输入姓名"
-						prefix="tmicon-md-person"
-					></tm-input>
-
-					<view class="flex flex-wrap items-center">
-						<view class="flex-3 mb-10">
-							<tm-radio-group v-model="gender">
-								<tm-radio label="男" :value="0"></tm-radio>
-								<tm-radio label="女" :value="1"></tm-radio>
-							</tm-radio-group>
+				<!-- 排盘表单 -->
+				<tm-sheet :round="16" :shadow="4" :margin="[0, 20]" :padding="[32, 28]" class="form-card">
+					<view class="form-header">
+						<view class="form-header-icon">
+							<tm-icon name="calendar-alt" :font-size="44" color="#667eea"></tm-icon>
 						</view>
-						<view class="flex-9">
-							<tm-segtab
-								:margin="[20, 10]"
-								v-model="model"
-								:default-value="0"
-								:list="[{ text: '阴历' }, { text: '四柱' }]"
-							></tm-segtab>
+						<view class="form-header-text">
+							<tm-text
+								:font-size="38"
+								:bold="true"
+								color="#2d3748"
+								label="排盘信息"
+							></tm-text>
+							<tm-text
+								:font-size="24"
+								color="#a0aec0"
+								label="请填写以下信息进行八字排盘"
+								:margin="[8, 0, 0, 0]"
+							></tm-text>
+						</view>
+					</view>
+					
+					<!-- 基本信息区块 -->
+					<view class="form-section form-section-card">
+						<view class="section-title">
+							<tm-icon name="tmicon-md-person" :font-size="28" color="#667eea" :margin="[0, 8, 0, 0]"></tm-icon>
+							<tm-text
+								:font-size="28"
+								color="#2d3748"
+								:bold="true"
+								label="基本信息"
+							></tm-text>
+						</view>
+						
+						<view class="section-content">
+							<tm-input
+								v-model="realname"
+								:margin="[0, 0, 24, 0]"
+								placeholder="请输入姓名（可选）"
+								prefix="tmicon-md-person"
+								:round="12"
+								:border="1"
+								:padding="[24, 20]"
+							></tm-input>
+
+							<view class="form-group-single">
+								<view class="form-label">
+									<tm-icon name="tmicon-md-people" :font-size="24" color="#718096" :margin="[0, 6, 0, 0]"></tm-icon>
+									<tm-text
+										:font-size="26"
+										color="#718096"
+										label="性别"
+									></tm-text>
+								</view>
+								<view class="form-control">
+									<tm-radio-group v-model="gender">
+										<tm-radio label="男" :value="0" :margin="[0, 16, 0, 0]"></tm-radio>
+										<tm-radio label="女" :value="1"></tm-radio>
+									</tm-radio-group>
+								</view>
+							</view>
 						</view>
 					</view>
 
-					<tm-input
-						disabled
-						placeholder="请选择出生日期和时间（精确到分钟）"
-						prefix="tmicon-calendar-alt"
-						suffix="tmicon-angle-right"
-						v-model="datetime_label"
-						:margin="[0, 12]"
-						@tap="SelectTime"
-					></tm-input>
+					<!-- 出生时间区块 -->
+					<view class="form-section form-section-card">
+						<view class="section-title">
+							<tm-icon name="tmicon-time" :font-size="28" color="#667eea" :margin="[0, 8, 0, 0]"></tm-icon>
+							<tm-text
+								:font-size="28"
+								color="#2d3748"
+								:bold="true"
+								label="出生时间"
+							></tm-text>
+						</view>
+						
+						<view class="section-content">
+							<!-- 日历类型选择 -->
+							<view class="form-group-single calendar-type-selector">
+								<view class="form-label">
+									<tm-icon name="tmicon-calendar-alt" :font-size="24" color="#718096" :margin="[0, 6, 0, 0]"></tm-icon>
+									<tm-text
+										:font-size="26"
+										color="#718096"
+										label="日历类型"
+									></tm-text>
+								</view>
+								<view class="form-control segtab-wrapper">
+									<tm-segtab
+										v-model="model"
+										:default-value="0"
+										:list="[{ text: '阳历' }, { text: '阴历' }]"
+										:margin="[0, 0]"
+										:width="300"
+									></tm-segtab>
+								</view>
+							</view>
+							
+							<!-- 日期时间选择 -->
+							<tm-input
+								:placeholder="model === 0 ? '请选择阳历出生日期和时间（精确到分钟）' : '请选择阴历出生日期和时间（精确到分钟）'"
+								prefix="tmicon-calendar-alt"
+								suffix="tmicon-angle-right"
+								v-model="datetime_label"
+								:margin="[0, 0, 20, 0]"
+								:round="12"
+								:border="1"
+								:padding="[24, 20]"
+								@tap="SelectTime"
+							></tm-input>
 
-					<tm-input
-						:margin="[0, 12]"
-						prefix="tmicon-integral"
-						disabled
-						v-if="lunar_label"
-						v-model="lunar_label"
-					></tm-input>
+							<!-- 显示信息卡片组 -->
+							<view v-if="lunar_label || bazi_label" class="info-cards">
+								<view v-if="lunar_label" class="info-card">
+									<view class="info-card-header">
+										<tm-icon name="tmicon-integral" :font-size="32" color="#48bb78"></tm-icon>
+										<tm-text
+											:font-size="24"
+											color="#718096"
+											label="对应阴历"
+											:margin="[0, 0, 0, 12]"
+										></tm-text>
+									</view>
+									<tm-text
+										:font-size="28"
+										color="#2d3748"
+										:bold="true"
+										:label="lunar_label"
+									></tm-text>
+								</view>
+								
+								<view v-if="bazi_label" class="info-card">
+									<view class="info-card-header">
+										<tm-icon name="tmicon-calendar" :font-size="32" color="#667eea"></tm-icon>
+										<tm-text
+											:font-size="24"
+											color="#718096"
+											label="四柱八字"
+											:margin="[0, 0, 0, 12]"
+										></tm-text>
+									</view>
+									<view class="bazi-display">
+										<tm-tag
+											v-for="(item, index) in bazi_label.split(' ')"
+											:key="index"
+											:label="item"
+											type="primary"
+											:round="8"
+											:margin="[0, 8, 0, 0]"
+											:font-size="26"
+											:bold="true"
+										></tm-tag>
+									</view>
+								</view>
+							</view>
+						</view>
+					</view>
 
-					<tm-button block label="开始排盘" @tap="Sumbit"></tm-button>
+					<!-- 提交按钮 -->
+					<view class="form-submit">
+						<view class="submit-button-wrapper">
+							<tm-button 
+								block 
+								label="开始排盘" 
+								type="primary"
+								:round="16"
+								:height="108"
+								:font-size="36"
+								:bold="true"
+								:linear="true"
+								:linearDeep="'accent'"
+								:shadow="8"
+								icon="tmicon-calendar-alt"
+								@tap="Sumbit"
+								class="submit-button"
+							></tm-button>
+							<view class="submit-button-glow"></view>
+						</view>
+					</view>
 				</tm-sheet>
-
-				<yxn-pillar-picker
-					v-model:show="pillar_select_show"
-					:default-value="pillar_default_value"
-					@Confirm="PillarConfirm"
-				></yxn-pillar-picker>
 
 				<tm-time-picker
 					v-model:show="solar_select_show"
@@ -238,7 +413,19 @@
 					:end="time_pick.end"
 					:format="time_pick.format"
 					:showDetail="time_pick.detail"
+					:showSuffix="time_suffix.solar"
 					@confirm="SolarConfirm"
+				></tm-time-picker>
+				<tm-time-picker
+					v-model:show="lunar_select_show"
+					:round="6"
+					:default-value="lunar_default_value"
+					:start="time_pick.start"
+					:end="time_pick.end"
+					:format="time_pick.format"
+					:showDetail="time_pick.detail"
+					:showSuffix="time_suffix.lunar"
+					@confirm="LunarConfirm"
 				></tm-time-picker>
 			</view>
 		</view>
@@ -251,7 +438,7 @@ import { onLoad } from '@dcloudio/uni-app';
 import { Solar, Lunar } from 'lunar-javascript';
 import {useUserStore} from '@/store/user.ts'
 import {useBaziStore} from '@/store/bazi.ts'
-import utils from '@/utils/utils.ts';
+import utils from '@/shared/utils/utils.ts';
 import { API_BASE_URL } from '@/config/config.ts';
 
 let realname = ref('');
@@ -260,6 +447,7 @@ let model = ref(0);
 let timestamp = ref(null);
 let datetime_label = ref('');
 let lunar_label = ref(null);
+let bazi_label = ref('');
 
 const user_store = useUserStore();
 const bazi_store = useBaziStore();
@@ -274,15 +462,16 @@ const authError = ref('');
 const isLoggedIn = computed(() => user_store.isLoggedIn);
 
 let solar_select_show = ref(false);
-let pillar_select_show = ref(false);
+let lunar_select_show = ref(false);
 
 let solar_default_value = ref("")
-let pillar_default_value = ref("");
+let lunar_default_value = ref("");
 
 const time_pick = {
 	start: '1900/01/01 00:00',
 	end: '2099/12/30 00:00',
-	format: 'YYYY/MM/DD hh:MM',
+	// 使用24小时制与分钟，避免月份/分钟混淆
+	format: 'YYYY/MM/DD HH:mm',
 	detail: {
 		year: true,
 		month: true,
@@ -290,6 +479,25 @@ const time_pick = {
 		hour: true,
 		minute: true,
 		second: false
+	}
+};
+
+const time_suffix = {
+	solar: {
+		year: '年',
+		month: '月',
+		day: '日',
+		hour: '时',
+		minute: '分',
+		second: '秒'
+	},
+	lunar: {
+		year: '年',
+		month: '月',
+		day: '日',
+		hour: '时辰',
+		minute: '分',
+		second: '秒'
 	}
 };
 
@@ -332,7 +540,7 @@ function goToHistory() {
 
 function goToAdmin() {
 	uni.navigateTo({
-		url: '/pages/admin/login'
+		url: '/pages/auth/auth'
 	});
 }
 
@@ -368,6 +576,10 @@ function submitAuth() {
 				});
 				showAuthForm.value = false;
 				authPassword.value = '';
+				// 登录成功后，延迟刷新页面以更新登录状态显示
+				setTimeout(() => {
+					// 页面会自动刷新显示登录状态，无需跳转
+				}, 500);
 			} else {
 				authError.value = res.data?.error || '请求失败，请稍后重试';
 			}
@@ -382,22 +594,18 @@ function submitAuth() {
 }
 
 function SelectTime  ()  {
-	const type = model.value;
 	uni.hideKeyboard();
 	setTimeout(()=>{
-		if (type === 0) {
+		if (model.value === 0) {
 			solar_select_show.value = true;
-		} else if (type === 1) {
-			pillar_select_show.value = true;
+		} else {
+			lunar_select_show.value = true;
 		}
 	},400)
 };
 
 const SolarConfirm = time => timestamp.value = new Date(time).getTime();
-const PillarConfirm = e => {
-	timestamp.value = e.value;
-	pillar_select_show.value = false;
-}
+const LunarConfirm = time => timestamp.value = new Date(time).getTime();
 
 function PullDatatimeLabel  ()  {
 	const time = timestamp.value;
@@ -405,25 +613,30 @@ function PullDatatimeLabel  ()  {
 	const index = model.value;
 	const solar = Solar.fromDate(new Date(time));
 	const lunar = solar.getLunar();
-	lunar_label.value = `${lunar.toString()} ${lunar.getTimeZhi()}时`;
+	
+	// 计算四柱
+	const bazi = lunar.getEightChar();
+	const baziList = [bazi.getYear(), bazi.getMonth(), bazi.getDay(), bazi.getTime()];
+	bazi_label.value = baziList.join(' ');
+	
 	if (index === 0) {
+		// 阳历模式：显示阳历日期时间
 		let date = utils.HideSecond(time);
 		datetime_label.value = date;
-		solar_default_value.value = date
+		solar_default_value.value = date;
+		lunar_default_value.value = date;
+		// 显示对应的阴历信息
+		lunar_label.value = `${lunar.toString()} ${lunar.getTimeZhi()}时`;
 	} else {
-		const bazi = lunar.getEightChar();
-		const list = [bazi.getYear(), bazi.getMonth(), bazi.getDay(), bazi.getTime()];
-		datetime_label.value = list.join(' ');
-		pillar_default_value.value = [
-			bazi.getYear()[0],
-			bazi.getMonth()[0],
-			bazi.getDay()[0],
-			bazi.getTime()[0],
-			bazi.getYear()[1],
-			bazi.getMonth()[1],
-			bazi.getDay()[1],
-			bazi.getTime()[1],
-		].join('');
+		// 阴历模式：显示阴历日期时间
+		const lunarStr = `${lunar.toString()} ${lunar.getTimeZhi()}时`;
+		datetime_label.value = lunarStr;
+		// 设置默认值为对应的阳历时间（用于时间选择器）
+		let date = utils.HideSecond(time);
+		solar_default_value.value = date;
+		lunar_default_value.value = date;
+		// 显示对应的阳历信息
+		lunar_label.value = date;
 	}
 };
 
@@ -458,3 +671,373 @@ function Sumbit ()  {
 	},0)
 };
 </script>
+
+<style scoped>
+.page-wrapper {
+	min-height: 100vh;
+	width: 100%;
+	background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+	padding-bottom: 40rpx;
+	box-sizing: border-box;
+}
+
+.page-content {
+	width: 100%;
+	max-width: 100%;
+	padding: 30rpx;
+	box-sizing: border-box;
+	margin: 0 auto;
+}
+
+/* 响应式容器 */
+@media screen and (min-width: 750px) {
+	.page-content {
+		max-width: 750rpx;
+		padding: 30rpx 40rpx;
+	}
+}
+
+.welcome-card {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.welcome-content {
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+.welcome-card :deep(.tm-text) {
+	color: #ffffff !important;
+}
+
+.auth-card {
+	background: #ffffff;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+/* 已登录状态样式 */
+.auth-logged-in {
+	display: flex;
+	flex-direction: column;
+	gap: 24rpx;
+	width: 100%;
+}
+
+.auth-header {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 20rpx;
+	width: 100%;
+	flex-wrap: wrap;
+}
+
+.auth-avatar {
+	width: 80rpx;
+	height: 80rpx;
+	min-width: 80rpx;
+	border-radius: 50%;
+	background: rgba(102, 126, 234, 0.1);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.auth-info {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.auth-actions {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 12rpx;
+	width: 100%;
+}
+
+/* 未登录状态样式 */
+.auth-not-logged-in {
+	display: flex;
+	flex-direction: column;
+	gap: 20rpx;
+	width: 100%;
+}
+
+/* 登录/注册表单样式 */
+.auth-form-container {
+	margin-top: 24rpx;
+	padding-top: 24rpx;
+	border-top: 1rpx solid #e2e8f0;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.auth-tabs {
+	display: flex;
+	flex-direction: row;
+	border-bottom: 2rpx solid #e2e8f0;
+	margin-bottom: 24rpx;
+	width: 100%;
+}
+
+.auth-tab {
+	flex: 1;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	padding: 20rpx 0;
+	border-bottom: 4rpx solid transparent;
+	transition: all 0.3s;
+	min-width: 0;
+}
+
+.auth-tab.active {
+	border-bottom-color: #667eea;
+}
+
+.auth-form-fields {
+	margin-bottom: 20rpx;
+	width: 100%;
+}
+
+.auth-form-hint {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 20rpx;
+	width: 100%;
+	flex-wrap: wrap;
+	gap: 8rpx;
+}
+
+.auth-error {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	padding: 16rpx 20rpx;
+	background: rgba(245, 101, 101, 0.1);
+	border-radius: 12rpx;
+	border-left: 4rpx solid #f56565;
+	margin-bottom: 20rpx;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.auth-form-actions {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+}
+
+.form-card {
+	background: #ffffff;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.form-header {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-start;
+	margin-bottom: 32rpx;
+	padding-bottom: 28rpx;
+	border-bottom: 2rpx solid #e2e8f0;
+	width: 100%;
+	gap: 20rpx;
+}
+
+.form-header-icon {
+	width: 80rpx;
+	height: 80rpx;
+	min-width: 80rpx;
+	border-radius: 16rpx;
+	background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.form-header-text {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.form-section {
+	margin-bottom: 32rpx;
+	width: 100%;
+}
+
+.form-section-card {
+	background: #f7fafc;
+	border-radius: 16rpx;
+	padding: 28rpx 24rpx;
+	border: 1rpx solid #e2e8f0;
+}
+
+.form-section:last-of-type {
+	margin-bottom: 0;
+}
+
+.section-title {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	margin-bottom: 24rpx;
+	padding-bottom: 16rpx;
+	border-bottom: 1rpx solid #e2e8f0;
+}
+
+.section-content {
+	width: 100%;
+}
+
+.form-row {
+	display: flex;
+	flex-direction: row;
+	gap: 24rpx;
+	width: 100%;
+	flex-wrap: wrap;
+}
+
+.form-group {
+	flex: 1;
+	min-width: 240rpx;
+	display: flex;
+	flex-direction: column;
+	gap: 12rpx;
+}
+
+.form-group-single {
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	gap: 12rpx;
+	margin-bottom: 20rpx;
+}
+
+.form-group-single.calendar-type-selector {
+	margin-bottom: 24rpx;
+}
+
+.form-label {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+.form-control {
+	width: 100%;
+	min-width: 0;
+	box-sizing: border-box;
+}
+
+.segtab-wrapper {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	overflow: hidden;
+}
+
+.segtab-wrapper :deep(.tm-segtab) {
+	max-width: 100%;
+	width: auto !important;
+}
+
+.info-cards {
+	display: flex;
+	flex-direction: column;
+	gap: 16rpx;
+	margin-top: 8rpx;
+}
+
+.info-card {
+	background: #ffffff;
+	border-radius: 12rpx;
+	padding: 20rpx 24rpx;
+	border: 1rpx solid #e2e8f0;
+	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+}
+
+.info-card-header {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	margin-bottom: 12rpx;
+}
+
+.bazi-display {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8rpx;
+}
+
+.form-submit {
+	margin-top: 40rpx;
+	width: 100%;
+	padding: 0 8rpx;
+}
+
+.submit-button-wrapper {
+	position: relative;
+	width: 100%;
+}
+
+.submit-button {
+	position: relative;
+	z-index: 2;
+	transition: all 0.3s ease;
+}
+
+.submit-button:active {
+	transform: scale(0.98);
+}
+
+.submit-button-glow {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(135deg, rgba(102, 126, 234, 0.4) 0%, rgba(118, 75, 162, 0.4) 100%);
+	border-radius: 16rpx;
+	filter: blur(20rpx);
+	z-index: 1;
+	opacity: 0.6;
+	animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+	0%, 100% {
+		opacity: 0.4;
+		transform: translate(-50%, -50%) scale(1);
+	}
+	50% {
+		opacity: 0.8;
+		transform: translate(-50%, -50%) scale(1.05);
+	}
+}
+
+.error-container {
+	padding: 16rpx 20rpx;
+	background: rgba(245, 101, 101, 0.1);
+	border-radius: 12rpx;
+	border-left: 4rpx solid #f56565;
+	width: 100%;
+	box-sizing: border-box;
+}
+</style>

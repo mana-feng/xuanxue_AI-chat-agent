@@ -28,18 +28,18 @@
 			>
 				<view class="statusHeight" :style="{height:statusBarHeight+'px'}"></view>
 				
-				<view class="flex flex-row flex-1 flex-row flex-row-center-betweent ">
-					<view class="flex-row flex flex-row-center-start pl-24" :style="{width:_leftWidth+'rpx'}">
+				<view class="navbar-content-wrapper">
+					<view class="navbar-left-section">
 						<tm-icon :unit="props.unit" :font-size="props.iconFontSize" _class="pointer" :color="_homeColor" @click="goback" v-if="_pages>1&&props.hideBack" name="tmicon-angle-left"></tm-icon>
 						<tm-icon :unit="props.unit" _class="pointer" @click="backhome" v-if="_pages==1&&!hideHome" :color="_homeColor" :font-size="props.iconFontSize" name="tmicon-md-home"></tm-icon>
 						<slot name="left"></slot>
 					</view>
-					<view class=" flex flex-row-center-center" :style="{width:contentwidth+'px'}">
+					<view class="navbar-center-section">
 						<slot>
 							<tm-text :unit="props.unit" _class="text-weight-b text-overflow-1" :color="_fontColor" :font-size="props.fontSize" :label="_title"></tm-text>
 						</slot>
 					</view>
-					<view class="flex-row flex flex-row-center-end  pr-24" :style="{width:_rightWidth+'rpx'}">
+					<view class="navbar-right-section">
 						<slot name="right"></slot>
 					</view>
 				</view>
@@ -227,6 +227,43 @@
 <style scoped>
 .statusHeightTop{
 	z-index: 400;
+}
+
+.navbar-content-wrapper {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	width: 100%;
+	min-width: 0;
+}
+
+.navbar-left-section {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: flex-start;
+	flex-shrink: 0;
+	padding-left: 24rpx;
+}
+
+.navbar-center-section {
+	flex: 1;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	min-width: 0;
+	padding: 0 12rpx;
+	overflow: hidden;
+}
+
+.navbar-right-section {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: flex-end;
+	flex-shrink: 0;
+	padding-right: 24rpx;
 }
 
 </style>

@@ -1,5 +1,34 @@
+# dependencies and builds
+node_modules/
+dist/
+unpackage/
+
+# environment
+.env
+.env.*
+
+# logs and coverage
+logs/
+*.log
+coverage/
+
+# editor
+.DS_Store
+.vscode/
+.idea/
+
+# temp
+*.local
+*.tmp
+*.swp
+*.swo
 /node_modules/
 /unpackage/
 /.idea/
 /dist/
 server/bazi.db
+bazi-*.json
+analysis-results/
+*.bak
+*.orig
+*.rej

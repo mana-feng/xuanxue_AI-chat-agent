@@ -1,44 +1,51 @@
 @echo off
-REM 简化版启动脚本：一个窗口起前端，一个窗口起后端，然后自动打开网页。
-REM 为避免亂碼問題，腳本內容僅使用基礎 ASCII 字符。
-
-REM 切到當前腳本所在目錄
 cd /d "%~dp0"
 
-REM ======================= 配置區 =======================
-REM 前端啟動命令（本項目：Vite / Uni H5 開發服務）
-set FRONT_CMD=npm run dev
-
-REM 後端啟動命令：通過 npm script 啟動（保持在項目根目錄下）
-REM 對應 package.json 中的 "dev:server": "node server/app.js"
-set BACK_CMD=npm run dev:server
-
-REM 開發訪問 URL：前端端口（uni-app H5 默認為 3000），如果你改了端口，這裡也要一起改
-set DEV_URL=http://localhost:3000
-REM =====================================================
-
 echo.
-echo [INFO] Starting frontend and backend...
+echo ========================================
+echo   Starting Development Environment
+echo ========================================
+echo.
 
-REM 啟動前端（新窗口，窗口標題 Frontend）
-if not "%FRONT_CMD%"=="" (
-    start "Frontend" cmd /k "%FRONT_CMD%"
-) else (
-    echo [WARN] FRONT_CMD is empty, frontend will not be started.
+if not exist ".env" (
+    echo [INFO] .env file not found.
+    if exist "env.example" (
+        echo [INFO] Creating .env from env.example...
+        copy /Y env.example .env >nul 2>&1
+        if errorlevel 1 (
+            echo [WARN] Failed to create .env file.
+        ) else (
+            echo [OK] .env file created.
+        )
+    )
+    echo.
 )
 
-REM 啟動後端（新窗口，窗口標題 Backend）
-if not "%BACK_CMD%"=="" (
-    start "Backend" cmd /k "%BACK_CMD%"
-) else (
-    echo [INFO] BACK_CMD is empty, backend is not configured in this script.
+if exist ".env" (
+    echo [INFO] Using MySQL database.
+    echo.
 )
 
-REM 打開默認瀏覽器訪問頁面
-echo.
-echo [INFO] Opening browser: %DEV_URL%
-start "" "%DEV_URL%"
+echo [INFO] Starting frontend...
+start "Frontend" cmd /k "cd /d %~dp0 && npm run dev"
+timeout /t 2 /nobreak >nul 2>&1
+
+echo [INFO] Starting backend...
+start "Backend" cmd /k "cd /d %~dp0 && npm run dev:server"
+timeout /t 2 /nobreak >nul 2>&1
+
+echo [INFO] Waiting for services to start...
+timeout /t 3 /nobreak >nul 2>&1
+
+echo [INFO] Opening browser...
+start "" "http://localhost:3000" 2>nul
 
 echo.
-echo Done. You can close this window.
-pause >nul
+echo ========================================
+echo   Services started!
+echo   Frontend: http://localhost:3000
+echo   Backend:  http://localhost:3001
+echo ========================================
+echo.
+echo Press any key to close this window...
+pause

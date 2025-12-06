@@ -2,284 +2,324 @@
 	<tm-app>
 		<view class="page-wrapper">
 			<view class="page-content-scale">
-				<yx-nav-header></yx-nav-header>
-
-				<!-- 顶部标题，模拟淘宝登录/注册文案结构 -->
-				<view class="flex flex-column mb-16" v-if="!isLoggedIn">
-					<tm-text
-						font-size="30"
-						:bold="true"
-						label="欢迎登录八字排盘账号"
-					></tm-text>
-					<tm-text
-						class="mt-4"
-						font-size="22"
-						color="#999999"
-						label="登录后可在多设备同步查看您的排盘历史，像淘宝订单一样随时翻查"
-					></tm-text>
-				</view>
-
 				<!-- 已登录状态 -->
-				<tm-sheet
-					v-if="isLoggedIn"
-					:round="4"
-					:shadow="3"
-					:margin="[0, 18]"
-					:padding="[18, 18]"
-				>
-					<view class="flex flex-row items-center justify-between mb-16">
-						<view>
+				<view v-if="isLoggedIn" class="login-container">
+					<tm-sheet
+						:round="12"
+						:shadow="8"
+						:margin="[0, 0, 0, 0]"
+						:padding="[50, 40]"
+						class="user-info-card"
+					>
+						<view class="user-header">
+							<view class="user-avatar">
+								<tm-icon name="account-circle" :font-size="80" color="#667eea"></tm-icon>
+							</view>
 							<tm-text
-								font-size="28"
+								:font-size="36"
 								:bold="true"
-								:label="'您好，' + (user_store.email || '已登录用户')"
+								:label="'您好，' + (user_store.username || user_store.email || '已登录用户')"
+								:margin="[20, 0, 10, 0]"
 							></tm-text>
 							<tm-text
-								class="mt-4"
-								font-size="22"
+								:font-size="24"
 								color="#999999"
 								label="当前登录账号将自动保存您的排盘记录"
 							></tm-text>
 						</view>
-						<view class="flex flex-row flex-center">
+
+						<view class="user-actions">
 							<tm-button
-								size="small"
+								v-if="user_store.isAdmin"
+								type="warning"
+								block
+								:margin="[30, 0, 0, 0]"
+								:round="8"
+								:height="88"
+								:font-size="32"
+								label="管理员后台"
+								@tap="goToAdmin"
+							></tm-button>
+							<tm-button
+								type="primary"
+								block
+								:margin="[20, 0, 0, 0]"
+								:round="8"
+								:height="88"
+								:font-size="32"
+								label="返回上一页"
+								@tap="goBack"
+							></tm-button>
+							<tm-button
 								type="danger"
-								:margin="[10, 0]"
-								:padding="[20, 6]"
-								shape="round"
+								block
+								:margin="[20, 0, 0, 0]"
+								:round="8"
+								:height="88"
+								:font-size="32"
 								label="退出登录"
 								@tap="logout"
 							></tm-button>
 						</view>
-					</view>
+					</tm-sheet>
+				</view>
 
-					<view class="flex flex-row mt-14" v-if="user_store.isAdmin">
-						<tm-button
-							type="warning"
-							block
-							:margin="[0, 0]"
-							label="管理员后台"
-							@tap="goToAdmin"
-						></tm-button>
-					</view>
-
-					<view class="flex flex-row mt-14">
-						<tm-button
-							type="primary"
-							block
-							:margin="[0, 0]"
-							label="返回上一页"
-							@tap="goBack"
-						></tm-button>
-					</view>
-				</tm-sheet>
-
-				<!-- 未登录：登录 / 注册两个独立框体 -->
-				<view v-else>
-					<!-- 登录框体 -->
-					<tm-sheet
-						:round="4"
-						:shadow="3"
-						:margin="[0, 18]"
-						:padding="[18, 18]"
-					>
-						<view class="flex flex-row items-center justify-between">
-							<tm-text
-								font-size="28"
-								:bold="true"
-								label="账号登录"
-							></tm-text>
-							<tm-text
-								font-size="22"
-								color="#409EFF"
-								label="免费注册"
-								@tap="scrollToRegister"
-							></tm-text>
+				<!-- 未登录：登录/注册界面 -->
+				<view v-else class="login-container">
+					<!-- Logo/标题区域 -->
+					<view class="header-section">
+						<view class="logo-wrapper">
+							<tm-icon name="account-circle" :font-size="80" color="#FFFFFF"></tm-icon>
 						</view>
 						<tm-text
-							class="mt-4"
-							font-size="22"
-							color="#999999"
-							label="可使用已注册邮箱或用户名登录账号"
+							:font-size="44"
+							:bold="true"
+							color="#FFFFFF"
+							label="八字排盘"
+							:margin="[30, 0, 10, 0]"
 						></tm-text>
+						<tm-text
+							:font-size="24"
+							color="rgba(255, 255, 255, 0.8)"
+							label="登录后可在多设备同步查看您的排盘历史"
+							:margin="[0, 0, 60, 0]"
+						></tm-text>
+					</view>
 
-						<tm-input
-							v-model="loginIdentifier"
-							@input="loginError = ''"
-							:margin="[0, 12]"
-							prefix="tmicon-md-mail"
-							type="text"
-							placeholder="请输入邮箱 / 用户名"
-						></tm-input>
-						<tm-input
-							v-model="loginPassword"
-							@input="loginError = ''"
-							:margin="[0, 12]"
-							prefix="tmicon-md-lock"
-							type="password"
-							placeholder="请输入登录密码"
-						></tm-input>
-
-						<view class="flex flex-row items-center justify-between mt-6">
-							<tm-text
-								font-size="20"
-								color="#bbbbbb"
-								label="为保障安全，请在私人环境下登录账号"
-							></tm-text>
-							<tm-text
-								font-size="20"
-								color="#409EFF"
-								label="忘记密码？"
-							></tm-text>
+					<!-- 登录/注册切换标签 -->
+					<tm-sheet
+						:round="12"
+						:shadow="8"
+						:margin="[0, 0, 0, 0]"
+						:padding="[50, 40]"
+						class="login-card"
+					>
+						<view class="tab-switcher">
+							<view 
+								class="tab-item" 
+								:class="{ active: currentTab === 'login' }"
+								@tap="currentTab = 'login'"
+							>
+								<tm-text
+									:font-size="32"
+									:bold="currentTab === 'login'"
+									:color="currentTab === 'login' ? '#667eea' : '#999999'"
+									label="登录"
+								></tm-text>
+							</view>
+							<view 
+								class="tab-item" 
+								:class="{ active: currentTab === 'register' }"
+								@tap="currentTab = 'register'"
+							>
+								<tm-text
+									:font-size="32"
+									:bold="currentTab === 'register'"
+									:color="currentTab === 'register' ? '#667eea' : '#999999'"
+									label="注册"
+								></tm-text>
+							</view>
 						</view>
 
-						<view v-if="loginError" class="mt-8">
-							<tm-text
-								:label="loginError"
-								color="#ff4d4f"
-							></tm-text>
-						</view>
+						<!-- 登录表单 -->
+						<view v-if="currentTab === 'login'" class="form-content">
+							<view class="input-wrapper">
+								<tm-input
+									v-model="loginIdentifier"
+									@input="loginError = ''"
+									placeholder="请输入邮箱或用户名"
+									prefix="account"
+									clearable
+									:border="1"
+									:round="8"
+									:padding="[20, 20]"
+									class="login-input"
+								></tm-input>
+							</view>
+							
+							<view class="input-wrapper">
+								<tm-input
+									v-model="loginPassword"
+									@input="loginError = ''"
+									type="password"
+									placeholder="请输入密码"
+									prefix="lock"
+									clearable
+									:border="1"
+									:round="8"
+									:padding="[20, 20]"
+									class="login-input"
+								></tm-input>
+							</view>
 
-						<view class="flex flex-row mt-14">
+							<!-- 错误提示 -->
+							<view v-if="loginError" class="error-message">
+								<tm-icon name="close-circle" :font-size="20" color="#F56C6C" :margin="[0, 8, 0, 0]"></tm-icon>
+								<tm-text
+									:font-size="22"
+									color="#F56C6C"
+									:label="loginError"
+								></tm-text>
+							</view>
+
 							<tm-button
+								:margin="[40, 0, 0, 0]"
+								type="primary"
 								block
 								:loading="loginLoading"
 								:disabled="loginLoading || !loginIdentifier || !loginPassword"
-								:margin="[0, 0]"
-								type="primary"
 								label="登录"
+								:round="8"
+								:height="88"
+								:font-size="32"
+								:bold="true"
 								@tap="submitLogin"
 							></tm-button>
-							<tm-button
-								class="ml-10"
-								type="grey"
-								:margin="[0, 0]"
-								label="返回"
-								@tap="goBack"
-							></tm-button>
 						</view>
-					</tm-sheet>
 
-					<!-- 注册框体 -->
-					<tm-sheet
-						id="registerBox"
-						:round="4"
-						:shadow="1"
-						:margin="[0, 18]"
-						:padding="[18, 18]"
-					>
-						<tm-text
-							font-size="28"
-							:bold="true"
-							label="新用户注册"
-						></tm-text>
-						<tm-text
-							class="mt-4"
-							font-size="22"
-							color="#999999"
-							label="只需邮箱和密码，即可开始管理您的八字排盘历史"
-						></tm-text>
+						<!-- 注册表单 -->
+						<view v-if="currentTab === 'register'" class="form-content">
+							<!-- 注册提示 -->
+							<view class="register-tip">
+								<tm-icon name="information-circle" :font-size="24" color="#667eea" :margin="[0, 10, 0, 0]"></tm-icon>
+								<tm-text
+									:font-size="24"
+									color="#666666"
+									label="填写以下信息完成注册"
+								></tm-text>
+							</view>
 
-						<tm-input
-							v-model="registerUsername"
-							@input="registerError = ''"
-							:margin="[0, 12]"
-							prefix="tmicon-ios-person"
-							type="text"
-							placeholder="设置用户名（2-20 个字符，可用于登录）"
-						></tm-input>
-
-						<tm-input
-							v-model="registerEmail"
-							@input="registerError = ''"
-							:margin="[0, 12]"
-							prefix="tmicon-md-mail"
-							type="text"
-							placeholder="请输入常用邮箱，用于登录与找回账号"
-						></tm-input>
-						
-						<!-- 验证码输入区域 -->
-						<view class="flex flex-row items-center" style="margin-top: 12px; margin-bottom: 12px;">
-							<view style="flex: 1; margin-right: 12px;">
+							<view class="input-wrapper">
 								<tm-input
-									v-model="registerVerificationCode"
+									v-model="registerUsername"
 									@input="registerError = ''"
-									:margin="[0, 0]"
-									prefix="tmicon-md-key"
-									type="number"
-									placeholder="请输入邮箱验证码"
+									placeholder="设置用户名（2-20个字符）"
+									prefix="account"
+									clearable
+									:border="1"
+									:round="8"
+									:padding="[20, 20]"
+									class="login-input"
 								></tm-input>
 							</view>
-							<tm-button
-								:disabled="codeCountdown > 0 || !registerEmail || sendCodeLoading"
-								:loading="sendCodeLoading"
-								:margin="[0, 0]"
-								:padding="[20, 16]"
-								size="small"
-								type="primary"
-								shape="round"
-								:label="codeCountdown > 0 ? `${codeCountdown}秒` : '发送验证码'"
-								@tap="sendVerificationCode"
-							></tm-button>
-						</view>
-						
-						<tm-input
-							v-model="registerPassword"
-							@input="registerError = ''"
-							:margin="[0, 12]"
-							prefix="tmicon-md-lock"
-							type="password"
-							placeholder="设置登录密码（不少于 6 位，包含字母和数字更安全）"
-						></tm-input>
-						<tm-input
-							v-model="registerPasswordConfirm"
-							@input="registerError = ''"
-							:margin="[0, 12]"
-							prefix="tmicon-md-lock"
-							type="password"
-							placeholder="请再次输入密码确认"
-						></tm-input>
 
-						<view class="flex flex-row items-center justify-between mt-6">
-							<view class="flex flex-row flex-wrap">
+							<view class="input-wrapper">
+								<tm-input
+									v-model="registerEmail"
+									@input="registerError = ''"
+									placeholder="请输入常用邮箱"
+									prefix="mail"
+									clearable
+									:border="1"
+									:round="8"
+									:padding="[20, 20]"
+									class="login-input"
+								></tm-input>
+							</view>
+							
+							<!-- 验证码输入区域 -->
+							<view class="input-wrapper">
+								<view class="verification-code-container">
+									<view class="code-input-wrapper">
+										<tm-input
+											v-model="registerVerificationCode"
+											@input="registerError = ''"
+											placeholder="请输入邮箱验证码"
+											prefix="key"
+											type="number"
+											clearable
+											:border="1"
+											:round="8"
+											:padding="[20, 20]"
+											class="login-input"
+										></tm-input>
+									</view>
+									<tm-button
+										:disabled="codeCountdown > 0 || !registerEmail || sendCodeLoading"
+										:loading="sendCodeLoading"
+										:round="8"
+										:height="88"
+										:font-size="26"
+										type="primary"
+										:label="codeCountdown > 0 ? `${codeCountdown}秒` : '发送验证码'"
+										@tap="sendVerificationCode"
+										class="code-button"
+									></tm-button>
+								</view>
+							</view>
+							
+							<view class="input-wrapper">
+								<tm-input
+									v-model="registerPassword"
+									@input="registerError = ''"
+									type="password"
+									placeholder="设置密码（不少于6位）"
+									prefix="lock"
+									clearable
+									:border="1"
+									:round="8"
+									:padding="[20, 20]"
+									class="login-input"
+								></tm-input>
+							</view>
+
+							<view class="input-wrapper">
+								<tm-input
+									v-model="registerPasswordConfirm"
+									@input="registerError = ''"
+									type="password"
+									placeholder="请再次输入密码确认"
+									prefix="lock"
+									clearable
+									:border="1"
+									:round="8"
+									:padding="[20, 20]"
+									class="login-input"
+								></tm-input>
+							</view>
+
+							<!-- 协议提示 -->
+							<view class="protocol-hint">
+								<tm-icon name="checkmark-circle" :font-size="20" color="#999999" :margin="[0, 8, 0, 0]"></tm-icon>
+								<view class="protocol-text-wrapper">
+									<tm-text
+										:font-size="22"
+										color="#999999"
+										label="注册即表示同意"
+									></tm-text>
+									<tm-text
+										:font-size="22"
+										color="#667eea"
+										label="《用户服务协议》"
+										@tap="openProtocol('user')"
+									></tm-text>
+									<tm-text
+										:font-size="22"
+										color="#999999"
+										label="和"
+									></tm-text>
+									<tm-text
+										:font-size="22"
+										color="#667eea"
+										label="《隐私权政策》"
+										@tap="openProtocol('privacy')"
+									></tm-text>
+								</view>
+							</view>
+
+							<!-- 错误提示 -->
+							<view v-if="registerError" class="error-message">
+								<tm-icon name="close-circle" :font-size="20" color="#F56C6C" :margin="[0, 8, 0, 0]"></tm-icon>
 								<tm-text
-									font-size="20"
-									color="#bbbbbb"
-									label="注册即表示同意"
-								></tm-text>
-								<tm-text
-									class="ml-4"
-									font-size="20"
-									color="#409EFF"
-									label="《用户服务协议》"
-									@tap="openProtocol('user')"
-								></tm-text>
-								<tm-text
-									class="ml-4"
-									font-size="20"
-									color="#409EFF"
-									label="《隐私权政策》"
-									@tap="openProtocol('privacy')"
+									:font-size="22"
+									color="#F56C6C"
+									:label="registerError"
 								></tm-text>
 							</view>
-							<tm-text
-								v-if="false"
-								font-size="20"
-								color="#bbbbbb"
-								label=" "
-							></tm-text>
-						</view>
 
-						<view v-if="registerError" class="mt-8">
-							<tm-text
-								:label="registerError"
-								color="#ff4d4f"
-							></tm-text>
-						</view>
-
-						<view class="flex flex-row mt-14">
 							<tm-button
+								:margin="[40, 0, 0, 0]"
+								type="success"
 								block
 								:loading="registerLoading"
 								:disabled="
@@ -291,9 +331,11 @@
 									!registerPasswordConfirm ||
 									registerPasswordConfirm !== registerPassword
 								"
-								:margin="[0, 0]"
-								type="success"
 								label="注册并登录"
+								:round="8"
+								:height="88"
+								:font-size="32"
+								:bold="true"
 								@tap="submitRegister"
 							></tm-button>
 						</view>
@@ -305,7 +347,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useUserStore } from '@/store/user.ts';
 import { API_BASE_URL } from '@/config/config.ts';
 import { sendEmailVerificationCode, verifyEmailCode } from '@/config/emailVerification.ts';
@@ -313,6 +355,9 @@ import { sendEmailVerificationCode, verifyEmailCode } from '@/config/emailVerifi
 const user_store = useUserStore();
 
 const isLoggedIn = computed(() => user_store.isLoggedIn);
+
+// 标签页切换
+const currentTab = ref<'login' | 'register'>('login');
 
 // 登录表单（支持邮箱或用户名）
 const loginIdentifier = ref('');
@@ -334,17 +379,17 @@ const sendCodeLoading = ref(false);
 const codeCountdown = ref(0);
 let countdownTimer: any = null;
 
-function scrollToRegister() {
-	// 在 nvue 中可以用 dom 模块滚动，这里做一个兼容占位实现
-	// 实际滚动体验由容器决定，不影响功能使用
-	// @ts-ignore
-	if (uni.pageScrollTo) {
-		uni.pageScrollTo({
-			scrollTop: 400,
-			duration: 300
+onMounted(() => {
+	user_store.restoreAuth();
+	
+	// 如果已经登录了管理员账号，直接跳转到后台
+	if (user_store.isAdmin) {
+		uni.reLaunch({
+			url: '/pages/admin/dashboard'
 		});
+		return;
 	}
-}
+});
 
 function openProtocol(type: 'user' | 'privacy') {
 	const title = type === 'user' ? '用户服务协议' : '隐私权政策';
@@ -372,11 +417,12 @@ function submitLogin() {
 		},
 		success(res: any) {
 			if (res.statusCode >= 200 && res.statusCode < 300 && res.data?.token) {
+				const user = res.data.user;
 				user_store.setAuth({
-					username: res.data.user?.username || null,
-					email: res.data.user?.email,
+					username: user?.username || null,
+					email: user?.email,
 					token: res.data.token,
-					role: res.data.user?.role || 'user'
+					role: user?.role || 'user'
 				});
 				uni.showToast({
 					title: '登录成功',
@@ -384,7 +430,16 @@ function submitLogin() {
 					duration: 1500
 				});
 				setTimeout(() => {
-					uni.navigateBack();
+					// 如果是管理员，跳转到管理员后台；否则跳转到主页
+					if (user?.role === 'admin') {
+						uni.reLaunch({
+							url: '/pages/admin/dashboard'
+						});
+					} else {
+						uni.reLaunch({
+							url: '/pages/index/index'
+						});
+					}
 				}, 600);
 			} else {
 				loginError.value = res.data?.error || '登录失败，请稍后重试';
@@ -503,11 +558,12 @@ async function submitRegister() {
 		},
 		success(res: any) {
 			if (res.statusCode >= 200 && res.statusCode < 300 && res.data?.token) {
+				const user = res.data.user;
 				user_store.setAuth({
-					username: res.data.user?.username || registerUsername.value,
-					email: res.data.user?.email || registerEmail.value,
+					username: user?.username || registerUsername.value,
+					email: user?.email || registerEmail.value,
 					token: res.data.token,
-					role: res.data.user?.role || 'user'
+					role: user?.role || 'user'
 				});
 				uni.showToast({
 					title: '注册并登录成功',
@@ -515,7 +571,10 @@ async function submitRegister() {
 					duration: 1500
 				});
 				setTimeout(() => {
-					uni.navigateBack();
+					// 注册成功后自动跳转回主页
+					uni.reLaunch({
+						url: '/pages/index/index'
+					});
 				}, 600);
 			} else {
 				registerError.value = res.data?.error || '注册失败，请稍后重试';
@@ -535,9 +594,16 @@ function goBack() {
 }
 
 function goToAdmin() {
-	uni.navigateTo({
-		url: '/pages/admin/login'
-	});
+	if (isLoggedIn.value && user_store.isAdmin) {
+		uni.navigateTo({
+			url: '/pages/admin/dashboard'
+		});
+	} else {
+		// 跳转到登录页面
+		uni.navigateTo({
+			url: '/pages/auth/auth'
+		});
+	}
 }
 
 function logout() {
@@ -558,4 +624,233 @@ onUnmounted(() => {
 });
 </script>
 
+<style scoped>
+.page-wrapper {
+	min-height: 100vh;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	position: relative;
+	overflow: hidden;
+}
+
+.page-wrapper::before {
+	content: '';
+	position: absolute;
+	top: -50%;
+	right: -50%;
+	width: 200%;
+	height: 200%;
+	background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
+	animation: pulse 10s ease-in-out infinite;
+}
+
+.page-wrapper::after {
+	content: '';
+	position: absolute;
+	bottom: -30%;
+	left: -30%;
+	width: 160%;
+	height: 160%;
+	background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+	animation: pulse 12s ease-in-out infinite reverse;
+}
+
+@keyframes pulse {
+	0%, 100% {
+		transform: scale(1) rotate(0deg);
+		opacity: 0.6;
+	}
+	50% {
+		transform: scale(1.15) rotate(5deg);
+		opacity: 0.4;
+	}
+}
+
+.page-content-scale {
+	padding: 60rpx 40rpx;
+	position: relative;
+	z-index: 1;
+}
+
+.login-container {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: calc(100vh - 120rpx);
+}
+
+.header-section {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	margin-bottom: 60rpx;
+}
+
+.logo-wrapper {
+	width: 160rpx;
+	height: 160rpx;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.2);
+	backdrop-filter: blur(10px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 2px solid rgba(255, 255, 255, 0.3);
+	box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.1);
+}
+
+.login-card {
+	width: 100%;
+	max-width: 600rpx;
+	background: rgba(255, 255, 255, 0.98);
+	backdrop-filter: blur(10px);
+}
+
+.user-info-card {
+	width: 100%;
+	max-width: 600rpx;
+	background: rgba(255, 255, 255, 0.98);
+	backdrop-filter: blur(10px);
+}
+
+.user-header {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+}
+
+.user-avatar {
+	width: 160rpx;
+	height: 160rpx;
+	border-radius: 50%;
+	background: rgba(102, 126, 234, 0.1);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.user-actions {
+	width: 100%;
+	margin-top: 40rpx;
+}
+
+.tab-switcher {
+	display: flex;
+	flex-direction: row;
+	border-bottom: 2rpx solid #f0f0f0;
+	margin-bottom: 40rpx;
+}
+
+.tab-item {
+	flex: 1;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	padding: 20rpx 0;
+	border-bottom: 4rpx solid transparent;
+	transition: all 0.3s;
+}
+
+.tab-item.active {
+	border-bottom-color: #667eea;
+}
+
+.form-content {
+	width: 100%;
+}
+
+.input-wrapper {
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	margin-top: 30rpx;
+}
+
+.input-wrapper:first-child {
+	margin-top: 0;
+}
+
+.register-tip {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	margin-bottom: 30rpx;
+	padding: 20rpx;
+	background: rgba(102, 126, 234, 0.08);
+	border-radius: 8rpx;
+	border-left: 4rpx solid #667eea;
+}
+
+.verification-code-container {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 20rpx;
+	width: 100%;
+}
+
+.code-input-wrapper {
+	flex: 1;
+}
+
+.code-button {
+	flex-shrink: 0;
+	min-width: 180rpx;
+}
+
+.login-input {
+	width: 100% !important;
+	box-sizing: border-box;
+}
+
+.input-wrapper :deep(.tm-input) {
+	width: 100% !important;
+}
+
+.input-wrapper :deep(.tm-input__wrap) {
+	width: 100% !important;
+}
+
+.error-message {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	margin-top: 20rpx;
+	padding: 16rpx 20rpx;
+	background: rgba(245, 108, 108, 0.1);
+	border-radius: 8rpx;
+	border-left: 4rpx solid #F56C6C;
+}
+
+.protocol-hint {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-start;
+	justify-content: center;
+	margin-top: 30rpx;
+	padding: 20rpx;
+	background: rgba(0, 0, 0, 0.02);
+	border-radius: 8rpx;
+}
+
+.protocol-text-wrapper {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 4rpx;
+}
+
+.footer-hint {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	margin-top: 40rpx;
+	padding: 20rpx;
+	border-radius: 8rpx;
+	background: rgba(0, 0, 0, 0.02);
+}
+</style>
 

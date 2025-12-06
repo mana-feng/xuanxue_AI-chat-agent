@@ -4,154 +4,263 @@
 			<view class="page-content-scale">
 				<yx-nav-header></yx-nav-header>
 
-				<tm-sheet :round="3" :shadow="2" :margin="[20, 20]" :padding="[10, 10]">
-					<view class="flex flex-wrap px-20 py-10">
-						<view style="width: 100%; max-width: 360px;" class="mb-10">
-							<view>
+				<tm-sheet :round="16" :shadow="4" :margin="[20, 20]" :padding="[32, 28]" class="info-card">
+					<tm-text
+						:font-size="36"
+						:bold="true"
+						color="#2d3748"
+						label="基本信息"
+						:margin="[0, 0, 24, 0]"
+					></tm-text>
+					
+					<view class="flex flex-wrap px-0 py-0">
+						<view style="width: 100%; max-width: 360px;" class="mb-16">
+							<view class="info-item">
 								<tm-text
-									:label="'姓名：' + user_store.realname"
+									:font-size="28"
+									color="#718096"
+									label="姓名"
+								></tm-text>
+								<tm-text
+									:font-size="30"
+									color="#2d3748"
+									:bold="true"
+									:label="user_store.realname"
 									_class="text-overflow-1"
 								></tm-text>
 							</view>
-							<view>
+							<view class="info-item">
 								<tm-text
-									:label="'生肖：' + GetChineseZodiac(bazi_store.solar.year)"
+									:font-size="28"
+									color="#718096"
+									label="生肖"
+								></tm-text>
+								<tm-text
+									:font-size="30"
+									color="#2d3748"
+									:bold="true"
+									:label="GetChineseZodiac(bazi_store.solar.year)"
 								></tm-text>
 							</view>
-							<view>
+							<view class="info-item">
 								<tm-text
-									:label="'性别：' + (user_store.gender ? '元男' : '元女')"
+									:font-size="28"
+									color="#718096"
+									label="性别"
+								></tm-text>
+								<tm-text
+									:font-size="30"
+									color="#2d3748"
+									:bold="true"
+									:label="user_store.gender ? '元男' : '元女'"
 								></tm-text>
 							</view>
 						</view>
 						<view style="width: 100%; max-width: 360px;">
-							<view>
-								<tm-text :label="'阴历：' + bazi_store.yinli"></tm-text>
-							</view>
-							<view>
-								<tm-text
-									:label="'阳历：' + utils.HideSecond(user_store.timestamp)"
+							<view class="info-item">
+								<tm-text 
+									:font-size="28"
+									color="#718096"
+									label="阴历"
+								></tm-text>
+								<tm-text 
+									:font-size="30"
+									color="#2d3748"
+									:bold="true"
+									:label="bazi_store.yinli"
 								></tm-text>
 							</view>
-							<view>
-								<tm-text :label="'星座：' + bazi_store.xinzuo + '座'"></tm-text>
+							<view class="info-item">
+								<tm-text
+									:font-size="28"
+									color="#718096"
+									label="阳历"
+								></tm-text>
+								<tm-text
+									:font-size="30"
+									color="#2d3748"
+									:bold="true"
+									:label="utils.HideSecond(user_store.timestamp)"
+								></tm-text>
+							</view>
+							<view class="info-item">
+								<tm-text 
+									:font-size="28"
+									color="#718096"
+									label="星座"
+								></tm-text>
+								<tm-text 
+									:font-size="30"
+									color="#2d3748"
+									:bold="true"
+									:label="bazi_store.xinzuo + '座'"
+								></tm-text>
 							</view>
 						</view>
 					</view>
 
-					<view class="px-20 pb-10 mt-10">
+					<view class="px-0 pb-0 mt-24">
 						<tm-button
 							block
 							type="primary"
 							:loading="saving"
 							:disabled="saving"
+							:round="12"
+							:height="88"
+							:font-size="30"
+							:bold="true"
 							label="保存到账号"
 							@tap="saveToAccount"
 						></tm-button>
-						<view v-if="saveError" class="mt-6">
-							<tm-text :label="saveError" color="red"></tm-text>
+						<tm-button
+							class="mt-16"
+							block
+							type="grey"
+							:round="12"
+							:height="88"
+							:font-size="30"
+							label="导出为 JSON"
+							@tap="exportJson"
+						></tm-button>
+						<tm-button
+							class="mt-16"
+							block
+							type="success"
+							:round="12"
+							:height="88"
+							:font-size="30"
+							icon="tmicon-md-home"
+							label="返回主页"
+							@tap="goToHome"
+						></tm-button>
+						<view v-if="saveError" class="mt-12 error-message">
+							<tm-text :label="saveError" color="#f56565" :font-size="24"></tm-text>
+						</view>
+						<view v-if="exportError" class="mt-12 error-message">
+							<tm-text :label="exportError" color="#f56565" :font-size="24"></tm-text>
 						</view>
 					</view>
 				</tm-sheet>
 
-				<tm-sheet :round="3" :shadow="2" :margin="[20, 0]" :padding="[10, 10]">
+				<tm-sheet :round="16" :shadow="4" :margin="[20, 0]" :padding="[32, 28]" class="table-card">
 					<yx-detail-table></yx-detail-table>
-					<view class="px-20 py-30">
-						<tm-text :label="'起运：' + GetStartYunLabel()"></tm-text>
-						<tm-text :label="'起运公历：' + bazi_store.start_yun.solar"></tm-text>
+					<view class="px-0 py-24 mt-20 border-top">
+						<view class="info-item">
+							<tm-text :font-size="28" color="#718096" label="起运"></tm-text>
+							<tm-text :font-size="30" color="#2d3748" :bold="true" :label="GetStartYunLabel()"></tm-text>
+						</view>
+						<view class="info-item mt-12">
+							<tm-text :font-size="28" color="#718096" label="起运公历"></tm-text>
+							<tm-text :font-size="30" color="#2d3748" :bold="true" :label="bazi_store.start_yun.solar"></tm-text>
+						</view>
 					</view>
 				</tm-sheet>
 
 				<!-- 增强分析信息 -->
-				<tm-sheet v-if="bazi_store.enhanced" :round="3" :shadow="2" :margin="[20, 0]" :padding="[10, 10]">
-					<view class="px-20 py-20">
-						<tm-text :label="'增强分析'" :font-size="40" font-weight="bold" color="primary"></tm-text>
+				<tm-sheet v-if="bazi_store.enhanced" :round="16" :shadow="4" :margin="[20, 0]" :padding="[32, 28]" class="analysis-card">
+					<view class="px-0 py-0 mb-24">
+						<tm-text :label="'增强分析'" :font-size="38" :bold="true" color="#667eea"></tm-text>
 					</view>
 					
 					<!-- 神煞 -->
-					<view v-if="bazi_store.enhanced.shensha && bazi_store.enhanced.shensha.all && bazi_store.enhanced.shensha.all.length > 0" class="px-20 pb-10">
-						<tm-text :label="'神煞：' + bazi_store.enhanced.shensha.all.join('、')" :font-size="34"></tm-text>
+					<view v-if="bazi_store.enhanced.shensha && bazi_store.enhanced.shensha.all && bazi_store.enhanced.shensha.all.length > 0" class="px-0 pb-16 analysis-section">
+						<tm-text :font-size="30" color="#718096" label="神煞" :margin="[0, 0, 8, 0]"></tm-text>
+						<tm-text :label="bazi_store.enhanced.shensha.all.join('、')" :font-size="32" color="#2d3748" :bold="true"></tm-text>
 					</view>
 					
 					<!-- 格局 -->
-					<view v-if="bazi_store.enhanced.geju && bazi_store.enhanced.geju.type" class="px-20 pb-10">
-						<tm-text :label="'格局：' + bazi_store.enhanced.geju.type" :font-size="34"></tm-text>
-						<view v-if="bazi_store.enhanced.geju.description" class="mt-6">
-							<tm-text :label="bazi_store.enhanced.geju.description" :font-size="30" color="grey"></tm-text>
+					<view v-if="bazi_store.enhanced.geju && bazi_store.enhanced.geju.type" class="px-0 pb-16 analysis-section">
+						<tm-text :font-size="30" color="#718096" label="格局" :margin="[0, 0, 8, 0]"></tm-text>
+						<tm-text :label="bazi_store.enhanced.geju.type" :font-size="32" color="#2d3748" :bold="true"></tm-text>
+						<view v-if="bazi_store.enhanced.geju.description" class="mt-8">
+							<tm-text :label="bazi_store.enhanced.geju.description" :font-size="28" color="#718096"></tm-text>
 						</view>
 					</view>
 					
 					<!-- 日主强弱 -->
-					<view v-if="bazi_store.enhanced.rizhuQiangruo && bazi_store.enhanced.rizhuQiangruo.level" class="px-20 pb-10">
-						<tm-text :label="'日主强弱：' + bazi_store.enhanced.rizhuQiangruo.level" :font-size="34"></tm-text>
-						<view v-if="bazi_store.enhanced.rizhuQiangruo.description" class="mt-6">
-							<tm-text :label="bazi_store.enhanced.rizhuQiangruo.description" :font-size="30" color="grey"></tm-text>
+					<view v-if="bazi_store.enhanced.rizhuQiangruo && bazi_store.enhanced.rizhuQiangruo.level" class="px-0 pb-16 analysis-section">
+						<tm-text :font-size="30" color="#718096" label="日主强弱" :margin="[0, 0, 8, 0]"></tm-text>
+						<tm-text :label="bazi_store.enhanced.rizhuQiangruo.level" :font-size="32" color="#2d3748" :bold="true"></tm-text>
+						<view v-if="bazi_store.enhanced.rizhuQiangruo.description" class="mt-8">
+							<tm-text :label="bazi_store.enhanced.rizhuQiangruo.description" :font-size="28" color="#718096"></tm-text>
 						</view>
 					</view>
 					
 					<!-- 五行旺衰 -->
-					<view v-if="bazi_store.enhanced.wuxingWangshuai" class="px-20 pb-10">
-						<tm-text label="五行旺衰：" :font-size="34"></tm-text>
-						<view class="mt-6">
-							<tm-text 
+					<view v-if="bazi_store.enhanced.wuxingWangshuai" class="px-0 pb-16 analysis-section">
+						<tm-text label="五行旺衰" :font-size="30" color="#718096" :margin="[0, 0, 12, 0]"></tm-text>
+						<view class="mt-8 flex flex-wrap">
+							<view 
 								v-for="(value, key) in bazi_store.enhanced.wuxingWangshuai" 
 								:key="key"
-								:label="key + '：' + value" 
-								:font-size="30" 
-								color="grey"
-								class="mr-10"
-							></tm-text>
+								class="wuxing-tag"
+							>
+								<tm-text 
+									:label="key + '：' + value" 
+									:font-size="28" 
+									color="#2d3748"
+									:bold="true"
+								></tm-text>
+							</view>
 						</view>
 					</view>
 					
 					<!-- 用神建议 -->
-					<view v-if="bazi_store.enhanced.yongshen && bazi_store.enhanced.yongshen.description" class="px-20 pb-10">
-						<tm-text :label="'用神建议：' + bazi_store.enhanced.yongshen.description" :font-size="34"></tm-text>
-						<view v-if="bazi_store.enhanced.yongshen.suggested && bazi_store.enhanced.yongshen.suggested.length > 0" class="mt-6">
-							<tm-text :label="'宜用：' + bazi_store.enhanced.yongshen.suggested.join('、')" :font-size="30" color="green"></tm-text>
+					<view v-if="bazi_store.enhanced.yongshen && bazi_store.enhanced.yongshen.description" class="px-0 pb-16 analysis-section">
+						<tm-text :font-size="30" color="#718096" label="用神建议" :margin="[0, 0, 8, 0]"></tm-text>
+						<tm-text :label="bazi_store.enhanced.yongshen.description" :font-size="32" color="#2d3748" :bold="true"></tm-text>
+						<view v-if="bazi_store.enhanced.yongshen.suggested && bazi_store.enhanced.yongshen.suggested.length > 0" class="mt-12">
+							<tm-text :label="'宜用：' + bazi_store.enhanced.yongshen.suggested.join('、')" :font-size="28" color="#48bb78" :bold="true"></tm-text>
 						</view>
-						<view v-if="bazi_store.enhanced.yongshen.avoid && bazi_store.enhanced.yongshen.avoid.length > 0" class="mt-6">
-							<tm-text :label="'忌用：' + bazi_store.enhanced.yongshen.avoid.join('、')" :font-size="30" color="red"></tm-text>
+						<view v-if="bazi_store.enhanced.yongshen.avoid && bazi_store.enhanced.yongshen.avoid.length > 0" class="mt-8">
+							<tm-text :label="'忌用：' + bazi_store.enhanced.yongshen.avoid.join('、')" :font-size="28" color="#f56565" :bold="true"></tm-text>
 						</view>
 					</view>
 					
 					<!-- 天干地支关系 -->
-					<view v-if="bazi_store.enhanced.ganzhiRelations" class="px-20 pb-10">
-						<tm-text label="天干地支关系：" :font-size="34" font-weight="bold"></tm-text>
+					<view v-if="combinedGanZhiRelations" class="px-0 pb-16 analysis-section">
+						<tm-text label="天干地支关系" :font-size="30" color="#718096" :margin="[0, 0, 16, 0]"></tm-text>
 						
 						<!-- 三合 -->
-						<view v-if="bazi_store.enhanced.ganzhiRelations.sanHe && bazi_store.enhanced.ganzhiRelations.sanHe.length > 0" class="mt-6">
-							<tm-text :label="'三合：' + bazi_store.enhanced.ganzhiRelations.sanHe.join('、')" :font-size="30" color="primary"></tm-text>
+						<view v-if="combinedGanZhiRelations.sanHe && combinedGanZhiRelations.sanHe.length > 0" class="relation-item">
+							<tm-text :font-size="28" color="#718096" label="三合" :margin="[0, 12, 0, 0]"></tm-text>
+							<tm-text :label="combinedGanZhiRelations.sanHe.join('、')" :font-size="30" color="#667eea" :bold="true"></tm-text>
 						</view>
 						
 						<!-- 三刑 -->
-						<view v-if="bazi_store.enhanced.ganzhiRelations.sanXing && bazi_store.enhanced.ganzhiRelations.sanXing.length > 0" class="mt-6">
-							<tm-text :label="'三刑：' + bazi_store.enhanced.ganzhiRelations.sanXing.join('、')" :font-size="30" color="orange"></tm-text>
+						<view v-if="combinedGanZhiRelations.sanXing && combinedGanZhiRelations.sanXing.length > 0" class="relation-item">
+							<tm-text :font-size="28" color="#718096" label="三刑" :margin="[0, 12, 0, 0]"></tm-text>
+							<tm-text :label="combinedGanZhiRelations.sanXing.join('、')" :font-size="30" color="#ed8936" :bold="true"></tm-text>
 						</view>
 						
 						<!-- 三会 -->
-						<view v-if="bazi_store.enhanced.ganzhiRelations.sanHui && bazi_store.enhanced.ganzhiRelations.sanHui.length > 0" class="mt-6">
-							<tm-text :label="'三会：' + bazi_store.enhanced.ganzhiRelations.sanHui.join('、')" :font-size="30" color="primary"></tm-text>
+						<view v-if="combinedGanZhiRelations.sanHui && combinedGanZhiRelations.sanHui.length > 0" class="relation-item">
+							<tm-text :font-size="28" color="#718096" label="三会" :margin="[0, 12, 0, 0]"></tm-text>
+							<tm-text :label="combinedGanZhiRelations.sanHui.join('、')" :font-size="30" color="#667eea" :bold="true"></tm-text>
 						</view>
 						
 						<!-- 天干合化 -->
-						<view v-if="bazi_store.enhanced.ganzhiRelations.ganHe && bazi_store.enhanced.ganzhiRelations.ganHe.length > 0" class="mt-6">
-							<tm-text :label="'天干合化：' + bazi_store.enhanced.ganzhiRelations.ganHe.join('、')" :font-size="30" color="green"></tm-text>
+						<view v-if="combinedGanZhiRelations.ganHe && combinedGanZhiRelations.ganHe.length > 0" class="relation-item">
+							<tm-text :font-size="28" color="#718096" label="天干合化" :margin="[0, 12, 0, 0]"></tm-text>
+							<tm-text :label="combinedGanZhiRelations.ganHe.join('、')" :font-size="30" color="#48bb78" :bold="true"></tm-text>
 						</view>
 						
 						<!-- 地支六合 -->
-						<view v-if="bazi_store.enhanced.ganzhiRelations.zhiHe && bazi_store.enhanced.ganzhiRelations.zhiHe.length > 0" class="mt-6">
-							<tm-text :label="'地支六合：' + bazi_store.enhanced.ganzhiRelations.zhiHe.join('、')" :font-size="30" color="green"></tm-text>
+						<view v-if="combinedGanZhiRelations.zhiHe && combinedGanZhiRelations.zhiHe.length > 0" class="relation-item">
+							<tm-text :font-size="28" color="#718096" label="地支六合" :margin="[0, 12, 0, 0]"></tm-text>
+							<tm-text :label="combinedGanZhiRelations.zhiHe.join('、')" :font-size="30" color="#48bb78" :bold="true"></tm-text>
 						</view>
 						
 						<!-- 冲 -->
-						<view v-if="bazi_store.enhanced.ganzhiRelations.chong && bazi_store.enhanced.ganzhiRelations.chong.length > 0" class="mt-6">
-							<tm-text :label="'冲：' + bazi_store.enhanced.ganzhiRelations.chong.join('、')" :font-size="30" color="red"></tm-text>
+						<view v-if="combinedGanZhiRelations.chong && combinedGanZhiRelations.chong.length > 0" class="relation-item">
+							<tm-text :font-size="28" color="#718096" label="冲" :margin="[0, 12, 0, 0]"></tm-text>
+							<tm-text :label="combinedGanZhiRelations.chong.join('、')" :font-size="30" color="#f56565" :bold="true"></tm-text>
 						</view>
 						
 						<!-- 害 -->
-						<view v-if="bazi_store.enhanced.ganzhiRelations.hai && bazi_store.enhanced.ganzhiRelations.hai.length > 0" class="mt-6">
-							<tm-text :label="'害：' + bazi_store.enhanced.ganzhiRelations.hai.join('、')" :font-size="30" color="orange"></tm-text>
+						<view v-if="combinedGanZhiRelations.hai && combinedGanZhiRelations.hai.length > 0" class="relation-item">
+							<tm-text :font-size="28" color="#718096" label="害" :margin="[0, 12, 0, 0]"></tm-text>
+							<tm-text :label="combinedGanZhiRelations.hai.join('、')" :font-size="30" color="#ed8936" :bold="true"></tm-text>
 						</view>
 					</view>
 				</tm-sheet>
@@ -163,17 +272,38 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useBaziStore } from '@/store/bazi.ts';
+import { useYunStore } from '@/store/yun.ts';
 import { useUserStore } from '@/store/user.ts';
-import utils from '@/utils/utils.ts';
+import { calculateGanZhiRelationsForList } from '@/shared/utils/bazi-enhanced.ts';
+import utils from '@/shared/utils/utils.ts';
 import { API_BASE_URL } from '@/config/config.ts';
 
 const bazi_store = useBaziStore();
+const yun_store = useYunStore();
 const user_store = useUserStore();
+
+// 四柱 + 当前大运/流年联合计算天干地支关系（用于增强分析展示）
+const combinedGanZhiRelations = computed(() => {
+	const list: string[] = [];
+	if (bazi_store.sizhu?.year) list.push(bazi_store.sizhu.year);
+	if (bazi_store.sizhu?.month) list.push(bazi_store.sizhu.month);
+	if (bazi_store.sizhu?.day) list.push(bazi_store.sizhu.day);
+	if (bazi_store.sizhu?.time) list.push(bazi_store.sizhu.time);
+
+	const dayun = yun_store.dayun_list?.[yun_store.current_index]?.ganzhi;
+	const liunian = yun_store.year_list?.[yun_store.year_index]?.ganzhi;
+	if (dayun) list.push(dayun);
+	if (liunian) list.push(liunian);
+
+	if (list.length < 2) return null;
+	return calculateGanZhiRelationsForList(list);
+});
 
 const saving = ref(false);
 const saveError = ref('');
+const exportError = ref('');
 
 if (user_store.timestamp === null) {
 	uni.redirectTo({
@@ -265,6 +395,10 @@ function saveToAccount() {
 					duration: 1500
 				});
 				saveError.value = '';
+				// 保存成功后，延迟跳转回主页
+				setTimeout(() => {
+					goToHome();
+				}, 1500);
 			} else if (res.statusCode === 401) {
 				user_store.clearAuth();
 				uni.showToast({
@@ -294,6 +428,110 @@ function saveToAccount() {
 		},
 		complete() {
 			saving.value = false;
+		}
+	});
+}
+
+function buildExportPayload() {
+	const baseTime = user_store.timestamp;
+	const birthStr = baseTime ? utils.HideSecond(baseTime) : '';
+	return {
+		meta: {
+			exportedAt: new Date().toISOString()
+		},
+		user: {
+			name: user_store.realname || '不知名网友',
+			gender: user_store.gender ? '男' : '女',
+			timestamp: baseTime,
+			birthDatetime: birthStr
+		},
+		bazi: {
+			solar: bazi_store.solar,
+			lunar: bazi_store.lunar,
+			sizhu: bazi_store.sizhu,
+			tiangan: bazi_store.tiangan,
+			dizhi: bazi_store.dizhi,
+			wuxing: bazi_store.wuxing,
+			nayin: bazi_store.nayin,
+			dishi: bazi_store.dishi,
+			canggan: bazi_store.canggan,
+			zhuxing: bazi_store.zhuxing,
+			fuxing: bazi_store.fuxing,
+			start_yun: bazi_store.start_yun,
+			table: bazi_store.table,
+			enhanced: bazi_store.enhanced
+		},
+		yun: {
+			dayun_list: yun_store.dayun_list,
+			year_list: yun_store.year_list,
+			current_index: yun_store.current_index,
+			year_index: yun_store.year_index
+		}
+	};
+}
+
+function exportJson() {
+	exportError.value = '';
+	if (!user_store.timestamp) {
+		uni.showToast({
+			title: '缺少出生时间，无法导出',
+			icon: 'none',
+			duration: 2000
+		});
+		return;
+	}
+
+	let payload;
+	try {
+		payload = buildExportPayload();
+	} catch (e) {
+		exportError.value = '生成导出数据失败：' + (e?.message || e);
+		return;
+	}
+
+	let jsonStr = '';
+	try {
+		jsonStr = JSON.stringify(payload, null, 2);
+	} catch (e) {
+		exportError.value = 'JSON 序列化失败：' + (e?.message || e);
+		return;
+	}
+
+	const filename = `bazi-${(utils.HideSecond(user_store.timestamp) || '').replace(/[^0-9]/g, '') || 'export'}.json`;
+
+	// H5 优先下载文件
+	// #ifdef H5
+	try {
+		const blob = new Blob([jsonStr], { type: 'application/json' });
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement('a');
+		link.href = url;
+		link.download = filename;
+		link.click();
+		URL.revokeObjectURL(url);
+		uni.showToast({
+			title: '已下载 JSON 文件',
+			icon: 'none',
+			duration: 2000
+		});
+		return;
+	} catch (e) {
+		// 如果下载失败，继续走剪贴板兜底
+	}
+	// #endif
+
+	// 其他平台或兜底：复制到剪贴板
+	uni.setClipboardData({
+		data: jsonStr,
+		success() {
+			uni.showToast({
+				title: 'JSON 已复制，可粘贴保存',
+				icon: 'none',
+				duration: 2000
+			});
+		},
+		fail(err) {
+			exportError.value = '导出失败：' + (err?.errMsg || '剪贴板不可用');
 		}
 	});
 }

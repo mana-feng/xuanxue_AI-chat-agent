@@ -3,8 +3,8 @@
 		"autoscan": true,
 		"custom": {
 			"^tm-(.*)": "@/libs/tmui/components/tm-$1/tm-$1.vue",
-			"^yx-(.*)": "@/components/business/yx-$1/yx-$1.vue",
-			"^yxn-(.*)": "@/components/business/yxn-$1/yxn-$1.nvue"
+			"^yx-(.*)": "@/shared/components/yx-$1/yx-$1.vue",
+			"^yxn-(.*)": "@/shared/components/yxn-$1/yxn-$1.nvue"
 		}
 	},
 	"_comment_pages": "pages数组中第一项表示应用启动页，参考：https://uniapp.dcloud.io/collocation/pages",
@@ -42,14 +42,6 @@
 			}
 		},
 		{
-			"path": "pages/admin/login",
-			"style": {
-				"navigationBarTitleText": "管理员登录",
-				"enablePullDownRefresh": false,
-				"navigationStyle": "custom"
-			}
-		},
-		{
 			"path": "pages/admin/dashboard",
 			"style": {
 				"navigationBarTitleText": "管理员后台",
@@ -69,6 +61,14 @@
 			"path": "pages/admin/records",
 			"style": {
 				"navigationBarTitleText": "记录管理",
+				"enablePullDownRefresh": false,
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/admin/email-config",
+			"style": {
+				"navigationBarTitleText": "邮箱配置",
 				"enablePullDownRefresh": false,
 				"navigationStyle": "custom"
 			}

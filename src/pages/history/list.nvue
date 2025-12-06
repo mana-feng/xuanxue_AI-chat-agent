@@ -5,25 +5,37 @@
 				<yx-nav-header></yx-nav-header>
 
 				<tm-sheet
-					:round="3"
-					:shadow="2"
+					:round="16"
+					:shadow="4"
 					:margin="[20, 20]"
-					:padding="[16, 16]"
+					:padding="[32, 28]"
+					class="header-card"
 				>
-					<view class="flex flex-row items-center justify-between mb-10">
+					<view class="flex flex-row items-center justify-between mb-16">
 						<tm-text
-							font-size="28"
+							:font-size="38"
 							:bold="true"
+							color="#2d3748"
 							label="历史排盘记录"
 						></tm-text>
 						<view class="flex flex-row items-center">
 							<tm-button
+								size="small"
+								type="success"
+								:margin="[0, 8]"
+								:padding="[20, 20]"
+								:round="12"
+								icon="tmicon-md-home"
+								label="返回主页"
+								@tap="goToHome"
+							></tm-button>
+							<tm-button
 								v-if="isLoggedIn && user_store.isAdmin"
 								size="small"
 								type="warning"
-								:margin="[0, 6]"
-								:padding="[16, 12]"
-								shape="round"
+								:margin="[0, 8]"
+								:padding="[20, 20]"
+								:round="12"
 								label="管理员后台"
 								@tap="goToAdmin"
 							></tm-button>
@@ -31,21 +43,28 @@
 								size="small"
 								type="grey"
 								:margin="[0, 0]"
+								:padding="[20, 20]"
+								:round="12"
 								label="刷新"
 								@tap="fetchCharts"
 							></tm-button>
 						</view>
 					</view>
 
-					<view v-if="!isLoggedIn">
+					<view v-if="!isLoggedIn" class="empty-state">
+						<tm-icon name="account-circle" :font-size="80" color="#cbd5e0" :margin="[0, 0, 20, 0]"></tm-icon>
 						<tm-text
-							color="#999999"
-							label="登录后可查看和管理您保存的八字排盘记录。"
+							:font-size="28"
+							color="#718096"
+							label="登录后可查看和管理您保存的八字排盘记录"
+							:margin="[0, 0, 30, 0]"
 						></tm-text>
 						<tm-button
-							class="mt-10"
 							type="primary"
-							block
+							:round="12"
+							:height="88"
+							:font-size="30"
+							:bold="true"
 							label="去登录"
 							@tap="goLogin"
 						></tm-button>
@@ -54,21 +73,23 @@
 					<view v-else>
 						<!-- 搜索和筛选区域 -->
 						<view class="mb-12">
-							<!-- 搜索框 -->
-							<tm-input
-								v-model="searchKeyword"
-								:margin="[0, 8]"
-								prefix="tmicon-md-search"
-								placeholder="搜索姓名..."
-								@input="onSearchInput"
-								clearable
-							></tm-input>
+						<!-- 搜索框 -->
+						<tm-input
+							v-model="searchKeyword"
+							:margin="[0, 12]"
+							prefix="tmicon-md-search"
+							placeholder="搜索姓名..."
+							@input="onSearchInput"
+							clearable
+							:round="12"
+							:border="1"
+						></tm-input>
 							
 							<!-- 筛选和排序 -->
 							<view class="flex flex-row items-center mt-8">
 								<!-- 性别筛选 -->
 								<view class="flex-1 mr-8">
-									<tm-text font-size="22" color="#666666" label="性别：" class="mb-4"></tm-text>
+									<tm-text :font-size="22" color="#666666" label="性别：" class="mb-4"></tm-text>
 									<tm-radio-group v-model="genderFilter">
 										<tm-radio label="全部" :value="''"></tm-radio>
 										<tm-radio label="男" :value="'0'"></tm-radio>
@@ -78,7 +99,7 @@
 								
 								<!-- 排序方式 -->
 								<view class="flex-1">
-									<tm-text font-size="22" color="#666666" label="排序：" class="mb-4"></tm-text>
+									<tm-text :font-size="22" color="#666666" label="排序：" class="mb-4"></tm-text>
 									<tm-segtab
 										v-model="sortByIndex"
 										:list="[
@@ -116,7 +137,7 @@
 							<!-- 统计信息 -->
 							<view v-if="totalCount > 0" class="mt-8">
 								<tm-text
-									font-size="22"
+									:font-size="22"
 									color="#999999"
 									:label="`共找到 ${totalCount} 条记录`"
 								></tm-text>
@@ -137,55 +158,61 @@
 							<view
 								v-for="item in charts"
 								:key="item.id"
-								class="mb-10"
+								class="mb-12"
 							>
 								<tm-sheet
-									:round="3"
-									:shadow="1"
+									:round="16"
+									:shadow="3"
 									:margin="[0, 0]"
-									:padding="[12, 12]"
+									:padding="[28, 24]"
+									class="record-card"
 								>
 									<view class="flex flex-row items-center justify-between">
-										<view class="flex-1 mr-10">
+										<view class="flex-1 mr-16">
 											<tm-text
 												:bold="true"
-												font-size="24"
+												:font-size="30"
+												color="#2d3748"
 												:label="item.title || '未命名'"
 												_class="text-overflow-1"
 											></tm-text>
 											<tm-text
-												class="mt-4"
-												font-size="22"
-												color="#666666"
+												class="mt-8"
+												:font-size="26"
+												color="#718096"
 												:label="formatBirth(item) || ''"
 												_class="text-overflow-1"
 											></tm-text>
-											<view class="flex flex-row items-center mt-2">
+											<view class="flex flex-row items-center mt-8">
 												<tm-text
-													font-size="20"
-													color="#BBBBBB"
+													:font-size="22"
+													color="#a0aec0"
 													:label="'保存时间：' + (item.createdAtLabel || '')"
 												></tm-text>
 												<tm-text
 													v-if="item.gender !== null && item.gender !== undefined"
-													class="ml-8"
-													font-size="20"
-													color="#BBBBBB"
+													class="ml-12"
+													:font-size="22"
+													color="#a0aec0"
 													:label="item.gender === '1' || item.gender === 1 ? '男' : '女'"
 												></tm-text>
 											</view>
 										</view>
-										<view class="flex flex-column items-end">
+										<view class="flex flex-column items-end gap-8">
 											<tm-button
 												size="small"
 												type="primary"
-												:margin="[0, 4]"
+												:margin="[0, 0]"
+												:padding="[20, 24]"
+												:round="12"
 												label="查看"
 												@tap="openChart(item)"
 											></tm-button>
 											<tm-button
 												size="small"
 												type="danger"
+												:padding="[20, 24]"
+												:round="12"
 												:margin="[0, 4]"
 												label="删除"
 												@tap="removeChart(item)"
@@ -210,7 +237,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useUserStore } from '@/store/user.ts';
 import { useBaziStore } from '@/store/bazi.ts';
 import { API_BASE_URL } from '@/config/config.ts';
-import utils from '@/utils/utils.ts';
+import utils from '@/shared/utils/utils.ts';
 
 interface ChartItem {
 	id: number;
@@ -620,9 +647,15 @@ function doRemove(item: ChartItem) {
 	});
 }
 
+function goToHome() {
+	uni.reLaunch({
+		url: '/pages/index/index'
+	});
+}
+
 function goToAdmin() {
 	uni.navigateTo({
-		url: '/pages/admin/login'
+		url: '/pages/auth/auth'
 	});
 }
 
@@ -632,3 +665,37 @@ function goLogin() {
 	});
 }
 </script>
+
+<style scoped>
+.page-wrapper {
+	min-height: 100vh;
+	background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+	padding-bottom: 40rpx;
+}
+
+.page-content-scale {
+	padding: 30rpx 0;
+}
+
+.header-card {
+	background: #ffffff;
+}
+
+.empty-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 80rpx 40rpx;
+	text-align: center;
+}
+
+.record-card {
+	background: #ffffff;
+	transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.record-card:active {
+	transform: scale(0.98);
+}
+</style>

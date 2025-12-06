@@ -1,0 +1,14 @@
+node_modules
+dist
+unpackage
+*.log
+*.local
+*.lock
+coverage
+logs
+server/bazi.db
+
+analysis-results
+src/libs
+src/assets
+bazi-*.json

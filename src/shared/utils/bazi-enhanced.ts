@@ -192,7 +192,59 @@ const SHEN_SHA = {
 		'申': '子', '酉': '酉', '戌': '午', '亥': '卯'
 	},
 	// 魁罡（根据日柱干支）
-	kuigang: ['庚戌', '庚辰', '戊戌', '壬辰']
+	kuigang: ['庚戌', '庚辰', '戊戌', '壬辰'],
+	// 天医（根据月支）
+	tianyi_medical: {
+		'子': '亥', '丑': '子', '寅': '丑', '卯': '寅',
+		'辰': '卯', '巳': '辰', '午': '巳', '未': '午',
+		'申': '未', '酉': '申', '戌': '酉', '亥': '戌'
+	},
+	// 天赦（根据日柱）
+	tianshe: {
+		'春': ['戊寅'], // 春戊寅
+		'夏': ['甲午'], // 夏甲午
+		'秋': ['戊申'], // 秋戊申
+		'冬': ['甲子']  // 冬甲子
+	},
+	// 天德合（根据月支，天德贵人的合干）
+	tiandehe: {
+		'寅': '壬', '卯': '己', '辰': '丁', '巳': '丙',
+		'午': '甲', '未': '己', '申': '戊', '酉': '丁',
+		'戌': '辛', '亥': '庚', '子': '甲', '丑': '乙'
+	},
+	// 月德合（根据月支，月德贵人的合干）
+	yuedehe: {
+		'寅': '辛', '卯': '己', '辰': '丁', '巳': '乙',
+		'午': '辛', '未': '己', '申': '丁', '酉': '乙',
+		'戌': '辛', '亥': '己', '子': '丁', '丑': '乙'
+	},
+	// 孤辰（根据年支）
+	guchen: {
+		'子': '寅', '丑': '寅', '寅': '巳', '卯': '巳',
+		'辰': '巳', '巳': '申', '午': '申', '未': '申',
+		'申': '亥', '酉': '亥', '戌': '亥', '亥': '寅'
+	},
+	// 寡宿（根据年支）
+	guasu: {
+		'子': '戌', '丑': '戌', '寅': '丑', '卯': '丑',
+		'辰': '丑', '巳': '辰', '午': '辰', '未': '辰',
+		'申': '未', '酉': '未', '戌': '未', '亥': '戌'
+	},
+	// 空亡（根据日柱，甲子旬中戌亥空，甲戌旬中申酉空等）
+	kongwang: {
+		'甲子': ['戌', '亥'], '甲戌': ['申', '酉'], '甲申': ['午', '未'],
+		'甲午': ['辰', '巳'], '甲辰': ['寅', '卯'], '甲寅': ['子', '丑']
+	},
+	// 金神（根据日干和时支，乙丑、己巳、癸酉日见巳午未时）
+	jinshen: {
+		'乙': ['巳', '午', '未'],
+		'己': ['巳', '午', '未'],
+		'癸': ['巳', '午', '未']
+	},
+	// 日德（根据日干，甲寅、戊辰、丙辰、壬戌、庚辰）
+	ride: ['甲寅', '戊辰', '丙辰', '壬戌', '庚辰'],
+	// 日贵（根据日干，丁酉、丁亥、癸巳、癸卯）
+	rigui: ['丁酉', '丁亥', '癸巳', '癸卯']
 };
 
 // 格局判断
@@ -257,6 +309,16 @@ export interface BaziEnhancedData {
 		huagai?: string[]; // 华盖
 		jiangxing?: string[]; // 将星
 		kuigang?: boolean; // 魁罡
+		tianyi_medical?: string[]; // 天医
+		tianshe?: boolean; // 天赦
+		tiandehe?: string[]; // 天德合
+		yuedehe?: string[]; // 月德合
+		guchen?: string[]; // 孤辰
+		guasu?: string[]; // 寡宿
+		kongwang?: string[]; // 空亡
+		jinshen?: string[]; // 金神
+		ride?: boolean; // 日德
+		rigui?: boolean; // 日贵
 		all?: string[]; // 所有神煞汇总
 	};
 	// 格局
@@ -470,6 +532,52 @@ export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, origin
 		shenshaList.push(`魁罡(${ganzhi})`);
 	}
 	
+	// 天医（根据月支）
+	if (monthZhi) {
+		const tianyiMedicalMap = SHEN_SHA.tianyi_medical as { [key: string]: string };
+		if (tianyiMedicalMap[monthZhi] === zhi) {
+			shenshaList.push(`天医(${zhi})`);
+		}
+	}
+	
+	// 天德合（根据月支）
+	if (monthZhi) {
+		const tiandeheMap = SHEN_SHA.tiandehe as { [key: string]: string };
+		if (tiandeheMap[monthZhi] === gan) {
+			shenshaList.push(`天德合(${gan})`);
+		}
+	}
+	
+	// 月德合（根据月支）
+	if (monthZhi) {
+		const yuedeheMap = SHEN_SHA.yuedehe as { [key: string]: string };
+		if (yuedeheMap[monthZhi] === gan) {
+			shenshaList.push(`月德合(${gan})`);
+		}
+	}
+	
+	// 孤辰（根据年支）
+	if (yearZhi) {
+		const guchenMap = SHEN_SHA.guchen as { [key: string]: string };
+		if (guchenMap[yearZhi] === zhi) {
+			shenshaList.push(`孤辰(${zhi})`);
+		}
+	}
+	
+	// 寡宿（根据年支）
+	if (yearZhi) {
+		const guasuMap = SHEN_SHA.guasu as { [key: string]: string };
+		if (guasuMap[yearZhi] === zhi) {
+			shenshaList.push(`寡宿(${zhi})`);
+		}
+	}
+	
+	// 空亡（根据日柱，需要传入日柱干支）
+	// 注意：空亡的计算需要日柱，这里暂时跳过，在 calculateShenSha 中处理
+	
+	// 金神（根据日干和时支，需要传入时支）
+	// 注意：金神的计算需要时支，这里暂时跳过，在 calculateShenSha 中处理
+	
 	return shenshaList;
 }
 
@@ -679,6 +787,126 @@ function calculateShenSha(bazi: any): BaziEnhancedData['shensha'] {
 		shensha.kuigang = true;
 		if (shensha.all) {
 			shensha.all.push(`魁罡(${dayGanZhi})`);
+		}
+	}
+
+	// 天医（根据月支）
+	const tianyiMedicalMap = SHEN_SHA.tianyi_medical as { [key: string]: string };
+	if (tianyiMedicalMap[monthZhi] && allZhi.includes(tianyiMedicalMap[monthZhi])) {
+		shensha.tianyi_medical = [tianyiMedicalMap[monthZhi]];
+		if (shensha.all) {
+			shensha.all.push(`天医(${tianyiMedicalMap[monthZhi]})`);
+		}
+	}
+
+	// 天赦（根据日柱和季节）
+	// 需要判断季节：春（寅卯辰月）戊寅，夏（巳午未月）甲午，秋（申酉戌月）戊申，冬（亥子丑月）甲子
+	const month = bazi.getMonth();
+	let season = '';
+	if ([1, 2, 3].includes(month)) season = '春';
+	else if ([4, 5, 6].includes(month)) season = '夏';
+	else if ([7, 8, 9].includes(month)) season = '秋';
+	else season = '冬';
+	
+	const tiansheMap = SHEN_SHA.tianshe as { [key: string]: string[] };
+	if (tiansheMap[season] && tiansheMap[season].includes(dayGanZhi)) {
+		shensha.tianshe = true;
+		if (shensha.all) {
+			shensha.all.push(`天赦(${dayGanZhi})`);
+		}
+	}
+
+	// 天德合（根据月支）
+	const tiandeheMap = SHEN_SHA.tiandehe as { [key: string]: string };
+	if (tiandeheMap[monthZhi] && allGan.includes(tiandeheMap[monthZhi])) {
+		shensha.tiandehe = [tiandeheMap[monthZhi]];
+		if (shensha.all) {
+			shensha.all.push(`天德合(${tiandeheMap[monthZhi]})`);
+		}
+	}
+
+	// 月德合（根据月支）
+	const yuedeheMap = SHEN_SHA.yuedehe as { [key: string]: string };
+	if (yuedeheMap[monthZhi] && allGan.includes(yuedeheMap[monthZhi])) {
+		shensha.yuedehe = [yuedeheMap[monthZhi]];
+		if (shensha.all) {
+			shensha.all.push(`月德合(${yuedeheMap[monthZhi]})`);
+		}
+	}
+
+	// 孤辰（根据年支）
+	const guchenMap = SHEN_SHA.guchen as { [key: string]: string };
+	if (guchenMap[yearZhi] && allZhi.includes(guchenMap[yearZhi])) {
+		shensha.guchen = [guchenMap[yearZhi]];
+		if (shensha.all) {
+			shensha.all.push(`孤辰(${guchenMap[yearZhi]})`);
+		}
+	}
+
+	// 寡宿（根据年支）
+	const guasuMap = SHEN_SHA.guasu as { [key: string]: string };
+	if (guasuMap[yearZhi] && allZhi.includes(guasuMap[yearZhi])) {
+		shensha.guasu = [guasuMap[yearZhi]];
+		if (shensha.all) {
+			shensha.all.push(`寡宿(${guasuMap[yearZhi]})`);
+		}
+	}
+
+	// 空亡（根据日柱）
+	// 甲子旬中戌亥空，甲戌旬中申酉空，甲申旬中午未空，甲午旬中辰巳空，甲辰旬中寅卯空，甲寅旬中子丑空
+	const ganList = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+	const zhiList = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+	const dayGanIndex = ganList.indexOf(dayGan);
+	const dayZhiIndex = zhiList.indexOf(dayZhi);
+	
+	// 计算日柱在60甲子中的位置
+	const ganzhiIndex = (dayGanIndex * 12 + dayZhiIndex) % 60;
+	// 计算所在旬的起始位置（每10个为一旬）
+	const xunStartIndex = Math.floor(ganzhiIndex / 10) * 10;
+	// 计算旬首的干支索引
+	const xunStartGanIndex = xunStartIndex % 10;
+	const xunStartZhiIndex = (xunStartIndex - xunStartGanIndex * 12 + 60) % 12;
+	const xunStartGan = ganList[xunStartGanIndex];
+	const xunStartZhi = zhiList[xunStartZhiIndex];
+	const xunKey = xunStartGan + xunStartZhi;
+	
+	const kongwangMap = SHEN_SHA.kongwang as { [key: string]: string[] };
+	if (kongwangMap[xunKey]) {
+		const kongwangZhis = kongwangMap[xunKey];
+		const foundKongwang = allZhi.filter(zhi => kongwangZhis.includes(zhi));
+		if (foundKongwang.length > 0) {
+			shensha.kongwang = foundKongwang;
+			if (shensha.all) {
+				shensha.all.push(...foundKongwang.map(z => `空亡(${z})`));
+			}
+		}
+	}
+
+	// 金神（根据日干和时支，乙丑、己巳、癸酉日见巳午未时）
+	const jinshenMap = SHEN_SHA.jinshen as { [key: string]: string[] };
+	const jinshenRizhu = ['乙丑', '己巳', '癸酉'];
+	if (jinshenRizhu.includes(dayGanZhi) && jinshenMap[dayGan] && jinshenMap[dayGan].includes(timeZhi)) {
+		shensha.jinshen = [timeZhi];
+		if (shensha.all) {
+			shensha.all.push(`金神(${timeZhi})`);
+		}
+	}
+
+	// 日德（根据日柱干支）
+	const rideList = SHEN_SHA.ride as string[];
+	if (rideList.includes(dayGanZhi)) {
+		shensha.ride = true;
+		if (shensha.all) {
+			shensha.all.push(`日德(${dayGanZhi})`);
+		}
+	}
+
+	// 日贵（根据日柱干支）
+	const riguiList = SHEN_SHA.rigui as string[];
+	if (riguiList.includes(dayGanZhi)) {
+		shensha.rigui = true;
+		if (shensha.all) {
+			shensha.all.push(`日贵(${dayGanZhi})`);
 		}
 	}
 
@@ -1226,11 +1454,9 @@ export function calculateGanZhiRelations(ganzhi: string, originalGanZhi: string[
 }
 
 /**
- * 计算原局四柱内部的天干地支关系
- * @param bazi 八字对象（来自 lunar-javascript）
- * @returns 关系对象
+ * 给定干支列表，计算内部的天干地支关系（可用于四柱 + 大运/流年组合）
  */
-export function calculateOriginalGanZhiRelations(bazi: any): BaziEnhancedData['ganzhiRelations'] {
+function calculateGanZhiRelationsFromList(ganzhiList: string[]): BaziEnhancedData['ganzhiRelations'] {
 	const relations: BaziEnhancedData['ganzhiRelations'] = {
 		sanHe: [],
 		sanXing: [],
@@ -1241,30 +1467,18 @@ export function calculateOriginalGanZhiRelations(bazi: any): BaziEnhancedData['g
 		hai: []
 	};
 
-	if (!bazi) {
+	if (!ganzhiList || ganzhiList.length < 2) {
 		return relations;
 	}
 
-	// 获取原局四柱的干支
-	const ganzhiList = [
-		bazi.getYear() || '',
-		bazi.getMonth() || '',
-		bazi.getDay() || '',
-		bazi.getTime() || ''
-	].filter(gz => gz && gz.length >= 2);
-
-	if (ganzhiList.length < 4) {
-		return relations;
-	}
+	const validList = ganzhiList.filter(gz => gz && gz.length >= 2);
 
 	// 提取天干和地支
 	const gans: string[] = [];
 	const zhis: string[] = [];
-	ganzhiList.forEach(gz => {
-		if (gz.length >= 2) {
-			gans.push(gz[0]);
-			zhis.push(gz[1]);
-		}
+	validList.forEach(gz => {
+		gans.push(gz[0]);
+		zhis.push(gz[1]);
 	});
 
 	// 1. 检查三合（需要3个地支）
@@ -1429,6 +1643,46 @@ export function calculateOriginalGanZhiRelations(bazi: any): BaziEnhancedData['g
 }
 
 /**
+ * 计算原局四柱内部的天干地支关系，可附加额外干支
+ * @param bazi 八字对象（来自 lunar-javascript）
+ * @param extraGanZhi 追加的干支（如当前大运、流年）
+ * @returns 关系对象
+ */
+export function calculateOriginalGanZhiRelations(bazi: any, extraGanZhi: string[] = []): BaziEnhancedData['ganzhiRelations'] {
+	if (!bazi) {
+		return {
+			sanHe: [],
+			sanXing: [],
+			sanHui: [],
+			ganHe: [],
+			zhiHe: [],
+			chong: [],
+			hai: []
+		};
+	}
+
+	// 获取原局四柱的干支
+	const baseList = [
+		bazi.getYear() || '',
+		bazi.getMonth() || '',
+		bazi.getDay() || '',
+		bazi.getTime() || ''
+	].filter(gz => gz && gz.length >= 2);
+
+	const allGanZhi = [
+		...baseList,
+		...extraGanZhi.filter(gz => gz && gz.length >= 2)
+	];
+
+	return calculateGanZhiRelationsFromList(allGanZhi);
+}
+
+// 通用：直接使用干支列表计算关系（用于四柱 + 大运、流年组合）
+export function calculateGanZhiRelationsForList(ganzhiList: string[]): BaziEnhancedData['ganzhiRelations'] {
+	return calculateGanZhiRelationsFromList(ganzhiList);
+}
+
+/**
  * 地支藏干映射表（固定）
  */
 const ZHI_HIDE_GAN_MAP: { [key: string]: string[] } = {
@@ -1529,6 +1783,7 @@ export default {
 	calculateRizhuQiangruo,
 	calculateYongShen,
 	calculateGanZhiRelations,
+	calculateGanZhiRelationsForList,
 	getHideGanForGanZhi,
 	getFuXingForGanZhi,
 	getDiShiForGanZhi

@@ -15,12 +15,21 @@
 							@input="handleSearch"
 						></tm-input>
 					</view>
-					<tm-button
-						type="success"
-						label="创建用户"
-						@tap="handleCreateUser"
-						:margin="[0, 0, 0, 20]"
-					></tm-button>
+					<view class="top-bar-buttons">
+						<tm-button
+							type="success"
+							label="返回主页"
+							icon="tmicon-md-home"
+							@tap="goToHome"
+							:margin="[0, 12, 0, 0]"
+						></tm-button>
+						<tm-button
+							type="success"
+							label="创建用户"
+							@tap="handleCreateUser"
+							:margin="[0, 0, 0, 0]"
+						></tm-button>
+					</view>
 				</view>
 				
 				<!-- 用户列表 -->
@@ -36,7 +45,7 @@
 						<view class="user-header">
 							<view class="user-info">
 								<tm-text
-									font-size="28"
+									:font-size="28"
 									:bold="true"
 									:label="user.username || user.email"
 								></tm-text>
@@ -82,19 +91,19 @@
 						
 						<view class="user-details">
 							<tm-text
-								font-size="22"
+								:font-size="22"
 								color="#666"
 								:label="'邮箱：' + user.email"
 							></tm-text>
 							<tm-text
 								class="mt-8"
-								font-size="22"
+								:font-size="22"
 								color="#666"
 								:label="'注册时间：' + formatDate(user.created_at)"
 							></tm-text>
 							<tm-text
 								class="mt-8"
-								font-size="22"
+								:font-size="22"
 								color="#666"
 								:label="'记录数：' + (user.recordCount || 0)"
 							></tm-text>
@@ -104,7 +113,7 @@
 					<tm-text
 						v-if="userList.length === 0 && !loading"
 						class="empty-text"
-						font-size="24"
+						:font-size="24"
 						color="#999"
 						label="暂无用户数据"
 					></tm-text>
@@ -162,7 +171,7 @@
 					
 					<view class="form-item">
 						<tm-text
-							font-size="24"
+							:font-size="24"
 							:margin="[0, 0, 10, 0]"
 							label="角色"
 						></tm-text>
@@ -231,7 +240,7 @@ const userFormLoading = ref(false);
 onMounted(() => {
 	if (!userStore.isAdmin) {
 		uni.reLaunch({
-			url: '/pages/admin/login'
+			url: '/pages/auth/auth'
 		});
 		return;
 	}
@@ -342,6 +351,12 @@ async function handleDeleteUser(userId: number) {
 				}
 			}
 		}
+	});
+}
+
+function goToHome() {
+	uni.reLaunch({
+		url: '/pages/index/index'
 	});
 }
 
@@ -462,11 +477,21 @@ async function handleSubmitUser() {
 	flex-direction: row;
 	align-items: center;
 	margin-bottom: 20rpx;
+	flex-wrap: wrap;
+	gap: 12rpx;
 }
 
 .search-bar {
 	flex: 1;
-	margin-right: 20rpx;
+	min-width: 200rpx;
+}
+
+.top-bar-buttons {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 12rpx;
 }
 
 .user-form {

@@ -137,7 +137,7 @@
 import { onMounted, watch, nextTick, computed } from 'vue';
 import { useYunStore } from '@/store/yun';
 import { useBaziStore } from '@/store/bazi';
-import { calculateShenShaForGanZhi, calculateGanZhiRelations } from '@/utils/bazi-enhanced';
+import { calculateShenShaForGanZhi, calculateGanZhiRelations } from '@/shared/utils/bazi-enhanced';
 
 const yun_store = useYunStore();
 const bazi_store = useBaziStore();

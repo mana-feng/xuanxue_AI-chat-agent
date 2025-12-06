@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { Solar, Lunar, Yun } from 'lunar-javascript';
-import utils from '@/utils/utils';
+import utils from '@/shared/utils/utils';
 
 // 类型定义
 interface DayunItem {
@@ -196,7 +196,7 @@ export const useYunStore = defineStore('yun', {
 			this.time_index = 0;
 			this.day_list = [];
 			this.time_list = [];
-			
+
 			// 自动定位到当前系统时间（延迟执行，确保数据已更新）
 			// 只在未完成初始自动定位时执行
 			if (!this.autoLocated) {

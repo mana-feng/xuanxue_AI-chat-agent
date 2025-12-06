@@ -1,11 +1,11 @@
 <template>
 	<view class="flex flex-row" >
-		<timePanelVue v-if="showCol.year" :suffix="props.showSuffix.year" :height="props.height" :disabledDate="props.disabledDate" :time-type="timeDetailType.year" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
-		<timePanelVue v-if="showCol.month" :suffix="props.showSuffix.month" :height="props.height" :disabledDate="props.disabledDate" :time-type="timeDetailType.month" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
-		<timePanelVue v-if="showCol.day" :suffix="props.showSuffix.day" :height="props.height" :disabledDate="props.disabledDate" :time-type="timeDetailType.day" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
-		<timePanelVue v-if="showCol.hour" :suffix="props.showSuffix.hour" :height="props.height" :disabledDate="props.disabledDate" :time-type="timeDetailType.hour" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
-		<timePanelVue v-if="showCol.minute" :suffix="props.showSuffix.minute" :height="props.height" :disabledDate="props.disabledDate" :time-type="timeDetailType.minute" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
-		<timePanelVue v-if="showCol.second" :suffix="props.showSuffix.second" :height="props.height" :disabledDate="props.disabledDate" :time-type="timeDetailType.second" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
+		<timePanelVue v-if="showCol.year" :suffix="props.showSuffix.year" :showSuffix="props.showSuffix" :height="props.height" :disabledDate="props.disabledDate" :time-type="timeDetailType.year" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
+		<timePanelVue v-if="showCol.month" :suffix="props.showSuffix.month" :showSuffix="props.showSuffix" :height="props.height" :disabledDate="props.disabledDate" :time-type="timeDetailType.month" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
+		<timePanelVue v-if="showCol.day" :suffix="props.showSuffix.day" :showSuffix="props.showSuffix" :height="props.height" :disabledDate="props.disabledDate" :time-type="timeDetailType.day" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
+		<timePanelVue v-if="showCol.hour" :suffix="props.showSuffix.hour" :showSuffix="props.showSuffix" :height="props.height" :disabledDate="props.disabledDate" :time-type="timeDetailType.hour" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
+		<timePanelVue v-if="showCol.minute" :suffix="props.showSuffix.minute" :showSuffix="props.showSuffix" :height="props.height" :disabledDate="props.disabledDate" :time-type="timeDetailType.minute" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
+		<timePanelVue v-if="showCol.second" :suffix="props.showSuffix.second" :showSuffix="props.showSuffix" :height="props.height" :disabledDate="props.disabledDate" :time-type="timeDetailType.second" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
 	</view>
 </template>
 
@@ -112,7 +112,12 @@ function setNowtime(data:number,type:timeDetailType){
 	 let d= DayJs(toRaw(_nowtime.value));
 	 
 	 const old = _nowtimeValue.value;
-	_nowtime.value  =  DayJs(d[type](data))
+	 // dayjs 的 month 为 0-11，这里使用 1-12 的列值需要手动减 1
+	const next =
+		type === timeDetailType.month
+			? DayJs(d.month(Math.max(0, data - 1)))
+			: DayJs(d[type](data));
+	_nowtime.value  =  next
 	if(isDisabledDate(_nowtime.value.format())){
 		nextTick(()=>_nowtime.value  =  DayJs(old))
 		return;

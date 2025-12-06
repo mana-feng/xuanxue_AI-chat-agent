@@ -86,7 +86,8 @@ function getColor(colorName:string){
 class themeColors {
 	colors: Array<colorThemeType> = [];
 	constructor(c: Array<colorThemeType> = colors) {
-		this.colors = c;
+		// 如果传入的数组为空或未定义，使用默认的全局 colors 数组
+		this.colors = (c && c.length > 0) ? c : colors;
 	}
 	public add(colorName:string="",value:string="" ) {
 		let isHand: Array<colorThemeType> = this.colors.filter(function(el, index) {
@@ -145,10 +146,47 @@ class themeColors {
 			console.error('颜色名称必填');
 			config.colorname = 'primary';
 		}
+		
+		// 如果颜色列表为空，使用全局 colors 数组
+		if (!this.colors || this.colors.length === 0) {
+			this.colors = colors;
+		}
+		
 		let index = this.colors.findIndex(el => el.name == config.colorname);
+		const originalColorName = config.colorname;
+		
 		if(index==-1){
-			console.error('主题不存在，默认为primary');
-			config.colorname = 'primary';
+			// 静默处理：如果找不到指定颜色，尝试使用备用颜色
+			const fallbackColors = ['primary', 'white', 'grey-5'];
+			let foundIndex = -1;
+			let usedFallback = '';
+			
+			for (const fallbackColor of fallbackColors) {
+				foundIndex = this.colors.findIndex(el => el.name == fallbackColor);
+				if (foundIndex !== -1) {
+					config.colorname = fallbackColor;
+					index = foundIndex;
+					usedFallback = fallbackColor;
+					break;
+				}
+			}
+			
+			// 如果所有备用颜色都不存在，使用第一个可用颜色
+			if(index==-1 && this.colors.length > 0){
+				index = 0;
+				config.colorname = this.colors[0].name;
+				usedFallback = this.colors[0].name;
+			}
+			
+			// 只在开发环境且实际切换了不同颜色时显示警告（避免显示"primary"切换到"primary"）
+			if (process.env.NODE_ENV === 'development' && usedFallback && originalColorName !== usedFallback) {
+				console.warn(`主题 "${originalColorName}" 不存在，已切换到 "${usedFallback}"`);
+			}
+		}
+		// 如果仍然找不到有效的颜色，抛出错误
+		if(index==-1 || !this.colors[index]){
+			console.error('无法找到有效的主题颜色');
+			throw new Error('主题颜色配置错误：无法找到有效的主题颜色');
 		}
 		let isBlack = false;
 		let isWhite = false;
@@ -156,6 +194,19 @@ class themeColors {
 		let isGrey = false
 		//当前颜色对象。
 		let nowColor = { ...this.colors[index] };
+		
+		// 确保 nowColor 有必要的属性
+		if (!nowColor || !nowColor.hsla || typeof nowColor.hsla.h === 'undefined') {
+			console.error('主题颜色对象不完整，使用默认 primary 主题');
+			const primaryIndex = this.colors.findIndex(el => el.name == 'primary');
+			if(primaryIndex !== -1 && this.colors[primaryIndex]){
+				nowColor = { ...this.colors[primaryIndex] };
+			} else if(this.colors.length > 0 && this.colors[0]){
+				nowColor = { ...this.colors[0] };
+			} else {
+				throw new Error('主题颜色配置错误：无法初始化主题颜色');
+			}
+		}
 		
 		config.borderWidth = isNaN(parseInt(String(config['borderWidth']))) ? 0 : config['borderWidth'];
 		config.borderStyle = config['borderStyle'] ? config['borderStyle'] : 'solid';

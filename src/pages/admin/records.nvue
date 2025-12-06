@@ -15,12 +15,21 @@
 							@input="handleSearch"
 						></tm-input>
 					</view>
-					<tm-button
-						type="success"
-						label="创建记录"
-						@tap="handleCreateRecord"
-						:margin="[0, 0, 0, 20]"
-					></tm-button>
+					<view class="top-bar-buttons">
+						<tm-button
+							type="success"
+							label="返回主页"
+							icon="tmicon-md-home"
+							@tap="goToHome"
+							:margin="[0, 12, 0, 0]"
+						></tm-button>
+						<tm-button
+							type="success"
+							label="创建记录"
+							@tap="handleCreateRecord"
+							:margin="[0, 0, 0, 0]"
+						></tm-button>
+					</view>
 				</view>
 				
 				<!-- 记录列表 -->
@@ -36,13 +45,13 @@
 						<view class="record-header">
 							<view class="record-info">
 								<tm-text
-									font-size="28"
+									:font-size="28"
 									:bold="true"
 									:label="record.name || '未命名排盘'"
 								></tm-text>
 								<tm-text
 									class="mt-8"
-									font-size="22"
+									:font-size="22"
 									color="#666"
 									:label="'用户：' + (record.userUsername || record.userEmail)"
 								></tm-text>
@@ -73,25 +82,25 @@
 						
 						<view class="record-details">
 							<tm-text
-								font-size="22"
+								:font-size="22"
 								color="#666"
 								:label="'性别：' + (record.gender === '1' || record.gender === 1 ? '男' : record.gender === '0' || record.gender === 0 ? '女' : '未知')"
 							></tm-text>
 							<tm-text
 								class="mt-8"
-								font-size="22"
+								:font-size="22"
 								color="#666"
 								:label="'出生时间：' + record.birthDatetime"
 							></tm-text>
 							<tm-text
 								class="mt-8"
-								font-size="22"
+								:font-size="22"
 								color="#666"
 								:label="'历法：' + (record.calendarType === 'solar' ? '阳历' : '阴历')"
 							></tm-text>
 							<tm-text
 								class="mt-8"
-								font-size="22"
+								:font-size="22"
 								color="#666"
 								:label="'创建时间：' + formatDate(record.createdAt)"
 							></tm-text>
@@ -101,7 +110,7 @@
 					<tm-text
 						v-if="recordList.length === 0 && !loading"
 						class="empty-text"
-						font-size="24"
+						:font-size="24"
 						color="#999"
 						label="暂无记录数据"
 					></tm-text>
@@ -151,7 +160,7 @@
 					
 					<view class="form-item">
 						<tm-text
-							font-size="24"
+							:font-size="24"
 							:margin="[0, 0, 10, 0]"
 							label="性别"
 						></tm-text>
@@ -171,7 +180,7 @@
 					
 					<view class="form-item">
 						<tm-text
-							font-size="24"
+							:font-size="24"
 							:margin="[0, 0, 10, 0]"
 							label="历法类型"
 						></tm-text>
@@ -216,39 +225,39 @@
 			>
 				<view class="record-detail" v-if="recordDetail">
 					<view class="detail-item">
-						<tm-text font-size="24" color="#666" label="ID"></tm-text>
+						<tm-text :font-size="24" color="#666" label="ID"></tm-text>
 						<tm-text :label="recordDetail.id.toString()"></tm-text>
 					</view>
 					<view class="detail-item">
-						<tm-text font-size="24" color="#666" label="姓名"></tm-text>
+						<tm-text :font-size="24" color="#666" label="姓名"></tm-text>
 						<tm-text :label="recordDetail.name || '未命名'"></tm-text>
 					</view>
 					<view class="detail-item">
-						<tm-text font-size="24" color="#666" label="性别"></tm-text>
+						<tm-text :font-size="24" color="#666" label="性别"></tm-text>
 						<tm-text :label="recordDetail.gender === '1' || recordDetail.gender === 1 ? '男' : recordDetail.gender === '0' || recordDetail.gender === 0 ? '女' : '未知'"></tm-text>
 					</view>
 					<view class="detail-item">
-						<tm-text font-size="24" color="#666" label="出生时间"></tm-text>
+						<tm-text :font-size="24" color="#666" label="出生时间"></tm-text>
 						<tm-text :label="recordDetail.birthDatetime"></tm-text>
 					</view>
 					<view class="detail-item">
-						<tm-text font-size="24" color="#666" label="历法类型"></tm-text>
+						<tm-text :font-size="24" color="#666" label="历法类型"></tm-text>
 						<tm-text :label="recordDetail.calendarType === 'solar' ? '阳历' : '阴历'"></tm-text>
 					</view>
 					<view class="detail-item">
-						<tm-text font-size="24" color="#666" label="用户"></tm-text>
+						<tm-text :font-size="24" color="#666" label="用户"></tm-text>
 						<tm-text :label="(recordDetail.userUsername || recordDetail.userEmail) + ' (ID: ' + recordDetail.userId + ')'"></tm-text>
 					</view>
 					<view class="detail-item">
-						<tm-text font-size="24" color="#666" label="创建时间"></tm-text>
+						<tm-text :font-size="24" color="#666" label="创建时间"></tm-text>
 						<tm-text :label="formatDate(recordDetail.createdAt)"></tm-text>
 					</view>
 					<view class="detail-item" v-if="recordDetail.rawPayload">
-						<tm-text font-size="24" color="#666" label="原始数据"></tm-text>
+						<tm-text :font-size="24" color="#666" label="原始数据"></tm-text>
 						<view class="raw-payload">
 							<tm-text 
 								:label="JSON.stringify(recordDetail.rawPayload, null, 2)"
-								font-size="20"
+								:font-size="20"
 							></tm-text>
 						</view>
 					</view>
@@ -292,7 +301,7 @@ const recordDetail = ref<any>(null);
 onMounted(() => {
 	if (!userStore.isAdmin) {
 		uni.reLaunch({
-			url: '/pages/admin/login'
+			url: '/pages/auth/auth'
 		});
 		return;
 	}
@@ -372,6 +381,12 @@ async function handleDeleteRecord(recordId: number) {
 				}
 			}
 		}
+	});
+}
+
+function goToHome() {
+	uni.reLaunch({
+		url: '/pages/index/index'
 	});
 }
 
@@ -520,11 +535,21 @@ async function handleViewDetail(recordId: number) {
 	flex-direction: row;
 	align-items: center;
 	margin-bottom: 20rpx;
+	flex-wrap: wrap;
+	gap: 12rpx;
 }
 
 .search-bar {
 	flex: 1;
-	margin-right: 20rpx;
+	min-width: 200rpx;
+}
+
+.top-bar-buttons {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 12rpx;
 }
 
 .record-actions {

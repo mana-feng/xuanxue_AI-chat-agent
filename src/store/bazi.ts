@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia';
 import { useYunStore } from '@/store/yun';
 import { Solar, Yun } from 'lunar-javascript';
-import utils from '@/utils/utils';
-import { enhanceBaziAnalysis, BaziEnhancedData, calculateShenShaForGanZhi } from '@/utils/bazi-enhanced';
+import utils from '@/shared/utils/utils';
+import { enhanceBaziAnalysis, BaziEnhancedData, calculateShenShaForGanZhi } from '@/shared/utils/bazi-enhanced';
 
 interface PullData {
 	timestamp: number;

@@ -49,6 +49,15 @@ export interface RecordListResponse {
 	totalPages: number;
 }
 
+export interface EmailConfig {
+	configured: boolean;
+	host: string;
+	port: number;
+	user: string;
+	from: string;
+	fromName: string;
+}
+
 /**
  * 获取统计数据
  */
@@ -210,6 +219,34 @@ export function updateUser(id: number, params: {
 	return request(`/api/admin/users/${id}`, {
 		method: 'PUT',
 		data: params,
+		needAuth: true
+	});
+}
+
+/**
+ * 获取邮箱配置
+ */
+export function getAdminEmailConfig() {
+	return request<EmailConfig>('/api/admin/email-config', {
+		method: 'GET',
+		needAuth: true
+	});
+}
+
+/**
+ * 更新邮箱配置
+ */
+export function updateAdminEmailConfig(payload: {
+	host: string;
+	port: number;
+	user: string;
+	pass: string;
+	from: string;
+	fromName?: string;
+}) {
+	return request('/api/admin/email-config', {
+		method: 'PUT',
+		data: payload,
 		needAuth: true
 	});
 }

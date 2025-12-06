@@ -14,27 +14,27 @@
 
 /* 颜色变量 */
 
-/* 行为相关颜色 */
-$uni-color-primary: #007aff;
-$uni-color-success: #4cd964;
-$uni-color-warning: #f0ad4e;
-$uni-color-error: #dd524d;
+/* 行为相关颜色 - 使用更现代的配色 */
+$uni-color-primary: #667eea; // 优雅的紫色
+$uni-color-success: #48bb78; // 柔和的绿色
+$uni-color-warning: #ed8936; // 温暖的橙色
+$uni-color-error: #f56565; // 柔和的红色
 
 /* 文字基本颜色 */
-$uni-text-color:#333;//基本色
+$uni-text-color:#2d3748;//更柔和的深色
 $uni-text-color-inverse:#fff;//反色
-$uni-text-color-grey:#999;//辅助灰色，如加载更多的提示信息
-$uni-text-color-placeholder: #808080;
-$uni-text-color-disable:#c0c0c0;
+$uni-text-color-grey:#718096;//更柔和的灰色
+$uni-text-color-placeholder: #a0aec0;
+$uni-text-color-disable:#cbd5e0;
 
 /* 背景颜色 */
 $uni-bg-color:#ffffff;
-$uni-bg-color-grey:#f8f8f8;
-$uni-bg-color-hover:#f1f1f1;//点击状态颜色
+$uni-bg-color-grey:#f7fafc;//更柔和的灰色背景
+$uni-bg-color-hover:#edf2f7;//点击状态颜色
 $uni-bg-color-mask:rgba(0, 0, 0, 0.4);//遮罩颜色
 
 /* 边框颜色 */
-$uni-border-color:#c8c7cc;
+$uni-border-color:#e2e8f0;
 
 /* 尺寸变量 */
 
@@ -48,10 +48,10 @@ $uni-img-size-sm:40rpx;
 $uni-img-size-base:52rpx;
 $uni-img-size-lg:80rpx;
 
-/* Border Radius */
-$uni-border-radius-sm: 4rpx;
-$uni-border-radius-base: 6rpx;
-$uni-border-radius-lg: 12rpx;
+/* Border Radius - 更圆润的设计 */
+$uni-border-radius-sm: 8rpx;
+$uni-border-radius-base: 12rpx;
+$uni-border-radius-lg: 16rpx;
 $uni-border-radius-circle: 50%;
 
 /* 水平间距 */

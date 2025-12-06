@@ -7,8 +7,9 @@
 				<!-- 顶部标题 -->
 				<view class="header">
 					<tm-text
-						font-size="36"
+						:font-size="42"
 						:bold="true"
+						color="#2d3748"
 						label="管理员后台"
 					></tm-text>
 					<view class="header-buttons">
@@ -16,13 +17,17 @@
 							size="small"
 							type="primary"
 							label="返回首页"
-							:margin="[0, 10, 0, 0]"
+							:margin="[0, 12, 0, 0]"
+							:round="12"
+							:padding="[20, 24]"
 							@tap="goToHome"
 						></tm-button>
 						<tm-button
 							size="small"
 							type="danger"
 							label="退出登录"
+							:round="12"
+							:padding="[20, 24]"
 							@tap="handleLogout"
 						></tm-button>
 					</view>
@@ -31,77 +36,81 @@
 				<!-- 统计卡片 -->
 				<view class="stats-grid" v-if="stats">
 					<tm-sheet
-						:round="4"
-						:shadow="2"
-						:padding="[20, 20]"
-						class="stat-card"
+						:round="16"
+						:shadow="4"
+						:padding="[32, 28]"
+						class="stat-card stat-card-primary"
 					>
 						<tm-text
-							font-size="24"
-							color="#666"
+							:font-size="26"
+							color="#718096"
 							label="总用户数"
 						></tm-text>
 						<tm-text
-							class="mt-8"
-							font-size="40"
+							class="mt-12"
+							:font-size="48"
 							:bold="true"
+							color="#667eea"
 							:label="stats.totalUsers.toString()"
 						></tm-text>
 					</tm-sheet>
 					
 					<tm-sheet
-						:round="4"
-						:shadow="2"
-						:padding="[20, 20]"
-						class="stat-card"
+						:round="16"
+						:shadow="4"
+						:padding="[32, 28]"
+						class="stat-card stat-card-success"
 					>
 						<tm-text
-							font-size="24"
-							color="#666"
+							:font-size="26"
+							color="#718096"
 							label="总记录数"
 						></tm-text>
 						<tm-text
-							class="mt-8"
-							font-size="40"
+							class="mt-12"
+							:font-size="48"
 							:bold="true"
+							color="#48bb78"
 							:label="stats.totalRecords.toString()"
 						></tm-text>
 					</tm-sheet>
 					
 					<tm-sheet
-						:round="4"
-						:shadow="2"
-						:padding="[20, 20]"
-						class="stat-card"
+						:round="16"
+						:shadow="4"
+						:padding="[32, 28]"
+						class="stat-card stat-card-warning"
 					>
 						<tm-text
-							font-size="24"
-							color="#666"
+							:font-size="26"
+							color="#718096"
 							label="今日新增用户"
 						></tm-text>
 						<tm-text
-							class="mt-8"
-							font-size="40"
+							class="mt-12"
+							:font-size="48"
 							:bold="true"
+							color="#ed8936"
 							:label="stats.todayUsers.toString()"
 						></tm-text>
 					</tm-sheet>
 					
 					<tm-sheet
-						:round="4"
-						:shadow="2"
-						:padding="[20, 20]"
-						class="stat-card"
+						:round="16"
+						:shadow="4"
+						:padding="[32, 28]"
+						class="stat-card stat-card-info"
 					>
 						<tm-text
-							font-size="24"
-							color="#666"
+							:font-size="26"
+							color="#718096"
 							label="今日新增记录"
 						></tm-text>
 						<tm-text
-							class="mt-8"
-							font-size="40"
+							class="mt-12"
+							:font-size="48"
 							:bold="true"
+							color="#4299e1"
 							:label="stats.todayRecords.toString()"
 						></tm-text>
 					</tm-sheet>
@@ -110,7 +119,7 @@
 				<!-- 功能菜单 -->
 				<view class="menu-section">
 					<tm-text
-						font-size="28"
+						:font-size="28"
 						:bold="true"
 						label="功能菜单"
 						:margin="[0, 0, 20, 0]"
@@ -125,7 +134,7 @@
 					>
 						<view class="menu-item">
 							<tm-text
-								font-size="28"
+								:font-size="28"
 								:bold="true"
 								label="用户管理"
 							></tm-text>
@@ -133,7 +142,7 @@
 						</view>
 						<tm-text
 							class="mt-8"
-							font-size="22"
+							:font-size="22"
 							color="#999"
 							label="查看和管理所有用户账号"
 						></tm-text>
@@ -148,7 +157,7 @@
 					>
 						<view class="menu-item">
 							<tm-text
-								font-size="28"
+								:font-size="28"
 								:bold="true"
 								label="八字记录管理"
 							></tm-text>
@@ -156,9 +165,32 @@
 						</view>
 						<tm-text
 							class="mt-8"
-							font-size="22"
+							:font-size="22"
 							color="#999"
 							label="查看和管理所有八字排盘记录"
+						></tm-text>
+					</tm-sheet>
+
+					<tm-sheet
+						:round="4"
+						:shadow="2"
+						:padding="[20, 20]"
+						:margin="[0, 0, 20, 0]"
+						@tap="goToEmailConfig"
+					>
+						<view class="menu-item">
+							<tm-text
+								:font-size="28"
+								:bold="true"
+								label="邮箱服务配置"
+							></tm-text>
+							<tm-icon name="chevron-right" :font-size="24"></tm-icon>
+						</view>
+						<tm-text
+							class="mt-8"
+							:font-size="22"
+							color="#999"
+							label="后台设置验证码邮箱服务（仅管理员）"
 						></tm-text>
 					</tm-sheet>
 				</view>
@@ -182,7 +214,7 @@ onMounted(() => {
 	// 检查是否为管理员
 	if (!userStore.isAdmin) {
 		uni.reLaunch({
-			url: '/pages/admin/login'
+			url: '/pages/auth/auth'
 		});
 		return;
 	}
@@ -217,6 +249,12 @@ function goToRecords() {
 	});
 }
 
+function goToEmailConfig() {
+	uni.navigateTo({
+		url: '/pages/admin/email-config'
+	});
+}
+
 function goToHome() {
 	uni.reLaunch({
 		url: '/pages/index/index'
@@ -224,17 +262,9 @@ function goToHome() {
 }
 
 function handleLogout() {
-	uni.showModal({
-		title: '确认退出',
-		content: '确定要退出管理员后台吗？',
-		success: (res) => {
-			if (res.confirm) {
-				userStore.logout();
-				uni.reLaunch({
-					url: '/pages/admin/login'
-				});
-			}
-		}
+	userStore.logout();
+	uni.reLaunch({
+		url: '/pages/auth/auth'
 	});
 }
 </script>
@@ -270,19 +300,91 @@ function handleLogout() {
 	margin-bottom: 40rpx;
 }
 
+.page-wrapper {
+	min-height: 100vh;
+	background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+	padding-bottom: 40rpx;
+}
+
+.page-content {
+	padding: 30rpx 30rpx;
+}
+
+.header {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 30rpx;
+}
+
+.header-buttons {
+	display: flex;
+	flex-direction: row;
+}
+
+.stats-grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 20rpx;
+	margin-bottom: 40rpx;
+}
+
 .stat-card {
-	background: white;
+	background: #ffffff;
+	transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:active {
+	transform: scale(0.98);
 }
 
 .menu-section {
-	margin-top: 40rpx;
+	margin-top: 20rpx;
+}
+
+.menu-card {
+	background: #ffffff;
+	transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.menu-card:active {
+	transform: scale(0.98);
 }
 
 .menu-item {
 	display: flex;
 	flex-direction: row;
-	justify-content: space-between;
 	align-items: center;
+	gap: 24rpx;
+}
+
+.menu-icon-wrapper {
+	width: 88rpx;
+	height: 88rpx;
+	border-radius: 16rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.menu-icon-primary {
+	background: rgba(102, 126, 234, 0.1);
+}
+
+.menu-icon-success {
+	background: rgba(72, 187, 120, 0.1);
+}
+
+.menu-icon-warning {
+	background: rgba(237, 137, 54, 0.1);
+}
+
+.menu-content {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
 }
 </style>
 

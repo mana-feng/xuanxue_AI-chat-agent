@@ -1,4 +1,4 @@
-// 所有后台代码集中在本文件下，使用 SQLite 作为存储
+// 所有后台代码集中在本文件下，仅支持 MySQL
 
 const path = require('path');
 const fs = require('fs');
@@ -6,120 +6,181 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const sqlite3 = require('sqlite3').verbose();
 const nodemailer = require('nodemailer');
+const { initDatabase, getDatabase, autoInitMySQLTables } = require('./db');
+const ConfigService = require('./config-service');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 // 安全防护模块
 const SecurityUtils = require('./security');
 const { securityHeaders, inputValidation, requestSizeLimit, securityLogging } = require('./security-middleware');
 
 // 基础配置（生产环境请改为环境变量）
-const PORT = process.env.PORT || 3001;
+const PORT = Number(process.env.PORT) || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'CHANGE_ME_TO_A_RANDOM_SECRET';
-const DB_FILE = path.join(__dirname, 'bazi.db');
 
-// 邮件配置（生产环境请改为环境变量）
-const EMAIL_HOST = process.env.EMAIL_HOST || 'smtp.yeah.net'; // SMTP服务器地址，如：smtp.qq.com、smtp.163.com、smtp.gmail.com、smtp.yeah.net
-const EMAIL_PORT = process.env.EMAIL_PORT || 465; // SMTP端口，常用：587(TLS)、465(SSL)、25。yeah.net推荐使用465
-const EMAIL_USER = process.env.EMAIL_USER || 'manafeng@yeah.net'; // 发送邮件的邮箱账号
-const EMAIL_PASS = process.env.EMAIL_PASS || 'SS2pBWd3K2th9dFa'; // 邮箱授权码（不是登录密码）
-const EMAIL_FROM = process.env.EMAIL_FROM || EMAIL_USER; // 发件人邮箱地址（显示名称在代码中已设置）
+if (!process.env.JWT_SECRET) {
+	console.warn('⚠️  JWT_SECRET 未设置，正在使用默认值。请在生产环境配置安全的随机字符串。');
+}
 
-// 创建邮件传输器（如果配置了邮箱信息）
+// 数据库实例（将在初始化后设置）
+let db = null;
+
+// 邮件配置通过数据库明文存储加载（不再从环境变量读取邮箱信息）
 let mailTransporter = null;
-if (EMAIL_USER && EMAIL_PASS) {
-	mailTransporter = nodemailer.createTransport({
-		host: EMAIL_HOST,
-		port: EMAIL_PORT,
-		secure: EMAIL_PORT === 465, // true for 465 (SSL), false for other ports
-		auth: {
-			user: EMAIL_USER,
-			pass: EMAIL_PASS
-		}
-	});
-} else {
-	console.warn('⚠️  未配置邮箱信息，验证码功能将无法发送邮件。请设置环境变量 EMAIL_USER 和 EMAIL_PASS');
+let emailConfig = {
+	host: '',
+	port: 0,
+	user: '',
+	pass: '',
+	from: '',
+	fromName: ''
+};
+let emailConfigured = false;
+
+/**
+ * 将 Date 对象转换为 MySQL DATETIME 格式 (YYYY-MM-DD HH:MM:SS)
+ * @param {Date} date - JavaScript Date 对象
+ * @returns {string} MySQL DATETIME 格式字符串
+ */
+function formatMySQLDateTime(date) {
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	const hours = String(date.getHours()).padStart(2, '0');
+	const minutes = String(date.getMinutes()).padStart(2, '0');
+	const seconds = String(date.getSeconds()).padStart(2, '0');
+	return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
-// 确保 server 目录存在
-if (!fs.existsSync(path.dirname(DB_FILE))) {
-	fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
-}
-
-// 初始化数据库
-const db = new sqlite3.Database(DB_FILE);
-
-db.serialize(() => {
-	// 用户表（增加 username 字段，支持用户名登录）
-	db.run(
-		`CREATE TABLE IF NOT EXISTS users (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			email TEXT UNIQUE NOT NULL,
-			username TEXT UNIQUE,
-			password_hash TEXT NOT NULL,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		)`
-	);
-
-	// 兼容老版本：如果之前已经创建过 users 表但没有 username 字段，这里尝试动态增加一列
-	db.all('PRAGMA table_info(users)', (err, rows) => {
-		if (err) {
-			console.error('检查 users 表结构失败', err);
+/**
+ * 加载邮箱配置并初始化邮件传输器
+ */
+async function loadEmailConfig() {
+	try {
+		emailConfig = await ConfigService.getEmailConfig(db);
+		emailConfigured = await ConfigService.isEmailConfigValid(db);
+		
+		if (!emailConfigured) {
+			console.warn('⚠️  邮件配置未完成，邮箱验证码将不可用。请在后台管理中配置邮箱服务。');
+			mailTransporter = null;
 			return;
 		}
-		const hasUsername = rows?.some((c) => c.name === 'username');
-		if (!hasUsername) {
-			db.run('ALTER TABLE users ADD COLUMN username TEXT UNIQUE', (alterErr) => {
-				if (alterErr) {
-					console.error('尝试为 users 表增加 username 字段失败', alterErr);
-				}
-			});
+
+		// 创建邮件传输器
+		mailTransporter = nodemailer.createTransport({
+			host: emailConfig.host,
+			port: emailConfig.port,
+			secure: emailConfig.port === 465, // 465 端口使用 SSL
+			auth: {
+				user: emailConfig.user,
+				pass: emailConfig.pass
+			},
+			// 连接超时设置
+			connectionTimeout: 10000,
+			// 调试选项（生产环境可关闭）
+			debug: process.env.NODE_ENV === 'development',
+			logger: process.env.NODE_ENV === 'development'
+		});
+
+		// 验证连接（异步，不阻塞启动）
+		mailTransporter.verify().then(() => {
+			console.log('✓ 邮件配置已从数据库加载，SMTP 连接验证成功');
+		}).catch((verifyError) => {
+			console.warn('⚠️  SMTP 连接验证失败:', verifyError.message);
+			console.warn('   邮件服务可能无法正常工作，请检查配置');
+		});
+	} catch (error) {
+		console.error('加载邮件配置失败:', error.message);
+		emailConfigured = false;
+		mailTransporter = null;
+	}
+}
+
+/**
+ * 确保默认管理员账号存在
+ */
+async function ensureAdminAccount() {
+	try {
+		const adminUsername = 'manafeng';
+		const adminEmail = 'manafeng@admin.local';
+		
+		// 检查管理员账号是否已存在
+		const existingAdmin = await db.get(
+			'SELECT id FROM users WHERE username = ? OR email = ?',
+			[adminUsername, adminEmail]
+		);
+		
+		if (!existingAdmin) {
+			// 创建管理员账号
+			const passwordHash = bcrypt.hashSync('manafeng', 10);
+			await db.run(
+				'INSERT INTO users (email, username, password_hash, role, created_at) VALUES (?, ?, ?, ?, NOW())',
+				[adminEmail, adminUsername, passwordHash, 'admin']
+			);
+			console.log('✓ 默认管理员账号已创建');
+			console.log(`   用户名: ${adminUsername}`);
+			console.log(`   密码: manafeng`);
+			console.log(`   邮箱: ${adminEmail}`);
+		} else {
+			console.log('✓ 默认管理员账号已存在');
 		}
-		// 检查并添加 role 字段（默认值为 'user'）
-		const hasRole = rows?.some((c) => c.name === 'role');
-		if (!hasRole) {
-			db.run("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'", (alterErr) => {
-				if (alterErr) {
-					console.error('尝试为 users 表增加 role 字段失败', alterErr);
-				} else {
-					console.log('✓ 已添加 role 字段到 users 表');
-				}
-			});
-		}
-	});
+	} catch (err) {
+		console.warn('⚠️  创建默认管理员账号失败:', err.message);
+		// 不阻止服务器启动
+	}
+}
+
+/**
+ * 初始化数据库表结构
+ */
+async function initTables() {
+	// 用户表（兼容旧版本 MySQL，不使用 DEFAULT CURRENT_TIMESTAMP）
+	await db.run(
+		`CREATE TABLE IF NOT EXISTS users (
+			id INT AUTO_INCREMENT PRIMARY KEY,
+			email VARCHAR(255) NOT NULL,
+			username VARCHAR(50) DEFAULT NULL,
+			password_hash VARCHAR(255) NOT NULL,
+			role VARCHAR(20) DEFAULT 'user',
+			created_at DATETIME DEFAULT NULL,
+			UNIQUE KEY idx_email (email),
+			UNIQUE KEY idx_username (username)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+	);
 
 	// 八字记录表
-	db.run(
+	await db.run(
 		`CREATE TABLE IF NOT EXISTS bazi_records (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			user_id INTEGER NOT NULL,
-			name TEXT,
-			gender TEXT,
-			birth_datetime TEXT,
-			calendar_type TEXT,
-			raw_payload TEXT,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			FOREIGN KEY (user_id) REFERENCES users(id)
-		)`
+			id INT AUTO_INCREMENT PRIMARY KEY,
+			user_id INT NOT NULL,
+			name VARCHAR(100) DEFAULT NULL,
+			gender VARCHAR(10) DEFAULT NULL,
+			birth_datetime VARCHAR(50) DEFAULT NULL,
+			calendar_type VARCHAR(20) DEFAULT NULL,
+			raw_payload TEXT DEFAULT NULL,
+			created_at DATETIME DEFAULT NULL,
+			KEY idx_user_id (user_id),
+			KEY idx_created_at (created_at),
+			CONSTRAINT fk_bazi_records_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
 	);
 
 	// 邮箱验证码表
-	db.run(
+	await db.run(
 		`CREATE TABLE IF NOT EXISTS email_verification_codes (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			email TEXT NOT NULL,
-			code TEXT NOT NULL,
-			type TEXT NOT NULL,
+			id INT AUTO_INCREMENT PRIMARY KEY,
+			email VARCHAR(255) NOT NULL,
+			code VARCHAR(10) NOT NULL,
+			type VARCHAR(20) NOT NULL,
 			expires_at DATETIME NOT NULL,
-			used INTEGER DEFAULT 0,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		)`
+			used TINYINT(1) DEFAULT 0,
+			created_at DATETIME DEFAULT NULL,
+			KEY idx_email_code (email, code, type, used),
+			KEY idx_email_expires (email, expires_at)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
 	);
-
-	// 创建索引以提高查询效率
-	db.run('CREATE INDEX IF NOT EXISTS idx_email_code ON email_verification_codes(email, code, type, used)');
-	db.run('CREATE INDEX IF NOT EXISTS idx_email_expires ON email_verification_codes(email, expires_at)');
-});
+}
 
 const app = express();
 
@@ -176,13 +237,8 @@ function generateVerificationCode() {
 	return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// 验证邮箱格式（使用安全工具）
-function isValidEmail(email) {
-	return SecurityUtils.isValidEmail(email);
-}
-
 // 发送邮箱验证码
-app.post('/api/email/send-code', (req, res) => {
+app.post('/api/email/send-code', async (req, res) => {
 	const { email, type = 'register' } = req.body || {};
 
 	if (!email) {
@@ -202,76 +258,67 @@ app.post('/api/email/send-code', (req, res) => {
 		return res.status(400).json({ error: '无效的验证码类型' });
 	}
 
-	// 检查是否在1分钟内已发送过验证码（防止频繁发送）
-	db.get(
-		'SELECT created_at FROM email_verification_codes WHERE email = ? AND type = ? AND created_at > datetime("now", "-1 minute") ORDER BY created_at DESC LIMIT 1',
-		[trimmedEmail, validType],
-		(err, row) => {
-			if (err) {
-				console.error('db error', err);
-				return res.status(500).json({ error: '服务器错误' });
-			}
-			if (row) {
-				return res.status(429).json({ error: '发送过于频繁，请1分钟后再试' });
-			}
+	if (!emailConfigured || !mailTransporter) {
+		return res.status(503).json({ error: '邮件服务未配置，请联系管理员' });
+	}
 
-			// 生成验证码
-			const code = generateVerificationCode();
-			const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10分钟后过期
-
-			// 保存验证码到数据库
-			db.run(
-				'INSERT INTO email_verification_codes (email, code, type, expires_at) VALUES (?, ?, ?, ?)',
-				[trimmedEmail, code, validType, expiresAt.toISOString()],
-				function (insertErr) {
-					if (insertErr) {
-						console.error('db error', insertErr);
-						return res.status(500).json({ error: '服务器错误' });
-					}
-
-					// 发送邮件
-					if (mailTransporter) {
-						const mailOptions = {
-							from: `"Ai八字" <${EMAIL_FROM}>`,
-							to: trimmedEmail,
-							subject: '邮箱验证码',
-							html: `
-								<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-									<h2 style="color: #333;">邮箱验证码</h2>
-									<p style="color: #666; font-size: 14px;">您的验证码是：</p>
-									<div style="background-color: #f5f5f5; padding: 20px; text-align: center; margin: 20px 0;">
-										<span style="font-size: 32px; font-weight: bold; color: #409EFF; letter-spacing: 5px;">${code}</span>
-									</div>
-									<p style="color: #999; font-size: 12px;">验证码有效期为10分钟，请勿泄露给他人。</p>
-									<p style="color: #999; font-size: 12px;">如非本人操作，请忽略此邮件。</p>
-								</div>
-							`
-						};
-
-						mailTransporter.sendMail(mailOptions, (mailErr) => {
-							if (mailErr) {
-								console.error('邮件发送失败:', mailErr);
-								return res.status(500).json({ error: '邮件发送失败，请稍后重试' });
-							}
-							res.json({ success: true, message: '验证码已发送到您的邮箱' });
-						});
-					} else {
-						// 开发环境：如果没有配置邮件服务，直接返回验证码（仅用于测试）
-						console.log(`[开发模式] 邮箱 ${trimmedEmail} 的验证码: ${code}`);
-						res.json({
-							success: true,
-							message: '验证码已生成（开发模式，请查看服务器日志）',
-							code: code // 仅开发环境返回，生产环境应删除此行
-						});
-					}
-				}
-			);
+	try {
+		// 检查是否在1分钟内已发送过验证码（防止频繁发送）
+		const row = await db.get(
+			`SELECT created_at FROM email_verification_codes WHERE email = ? AND type = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 MINUTE) ORDER BY created_at DESC LIMIT 1`,
+			[trimmedEmail, validType]
+		);
+		
+		if (row) {
+			return res.status(429).json({ error: '发送过于频繁，请1分钟后再试' });
 		}
-	);
+
+		// 生成验证码
+		const code = generateVerificationCode();
+		const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10分钟后过期
+
+		// 保存验证码到数据库
+		await db.run(
+			'INSERT INTO email_verification_codes (email, code, type, expires_at, created_at) VALUES (?, ?, ?, ?, NOW())',
+			[trimmedEmail, code, validType, formatMySQLDateTime(expiresAt)]
+		);
+
+		// 发送邮件
+		const displayFrom = emailConfig.fromName
+			? `"${emailConfig.fromName}" <${emailConfig.from}>`
+			: `<${emailConfig.from}>`;
+		const mailOptions = {
+			from: displayFrom,
+			to: trimmedEmail,
+			subject: '邮箱验证码',
+			html: `
+				<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+					<h2 style="color: #333;">邮箱验证码</h2>
+					<p style="color: #666; font-size: 14px;">您的验证码是：</p>
+					<div style="background-color: #f5f5f5; padding: 20px; text-align: center; margin: 20px 0;">
+						<span style="font-size: 32px; font-weight: bold; color: #409EFF; letter-spacing: 5px;">${code}</span>
+					</div>
+					<p style="color: #999; font-size: 12px;">验证码有效期为10分钟，请勿泄露给他人。</p>
+					<p style="color: #999; font-size: 12px;">如非本人操作，请忽略此邮件。</p>
+				</div>
+			`
+		};
+
+		mailTransporter.sendMail(mailOptions, (mailErr) => {
+			if (mailErr) {
+				console.error('邮件发送失败:', mailErr);
+				return res.status(500).json({ error: '邮件发送失败，请稍后重试' });
+			}
+			res.json({ success: true, message: '验证码已发送到您的邮箱' });
+		});
+	} catch (err) {
+		console.error('发送验证码失败:', err);
+		return res.status(500).json({ error: '服务器错误' });
+	}
 });
 
 // 验证邮箱验证码
-app.post('/api/email/verify-code', (req, res) => {
+app.post('/api/email/verify-code', async (req, res) => {
 	const { email, code, type = 'register' } = req.body || {};
 
 	if (!email || !code) {
@@ -297,45 +344,45 @@ app.post('/api/email/verify-code', (req, res) => {
 		return res.status(400).json({ error: '无效的验证码类型' });
 	}
 
-	// 查询验证码
-	db.get(
-		'SELECT id, expires_at, used FROM email_verification_codes WHERE email = ? AND code = ? AND type = ? ORDER BY created_at DESC LIMIT 1',
-		[trimmedEmail, trimmedCode, validType],
-		(err, row) => {
-			if (err) {
-				console.error('db error', err);
-				return res.status(500).json({ error: '服务器错误' });
-			}
+	try {
+		// 查询验证码
+		const row = await db.get(
+			'SELECT id, expires_at, used FROM email_verification_codes WHERE email = ? AND code = ? AND type = ? ORDER BY created_at DESC LIMIT 1',
+			[trimmedEmail, trimmedCode, validType]
+		);
 
-			if (!row) {
-				return res.status(400).json({ error: '验证码错误' });
-			}
-
-			// 检查是否已使用
-			if (row.used === 1) {
-				return res.status(400).json({ error: '验证码已使用' });
-			}
-
-			// 检查是否过期
-			const expiresAt = new Date(row.expires_at);
-			if (expiresAt < new Date()) {
-				return res.status(400).json({ error: '验证码已过期' });
-			}
-
-			// 标记验证码为已使用
-			db.run('UPDATE email_verification_codes SET used = 1 WHERE id = ?', [row.id], (updateErr) => {
-				if (updateErr) {
-					console.error('db error', updateErr);
-					// 即使更新失败，也返回成功（验证码已验证）
-				}
-				res.json({ success: true, message: '验证码验证成功' });
-			});
+		if (!row) {
+			return res.status(400).json({ error: '验证码错误' });
 		}
-	);
+
+		// 检查是否已使用
+		if (row.used === 1 || row.used === true) {
+			return res.status(400).json({ error: '验证码已使用' });
+		}
+
+		// 检查是否过期
+		const expiresAt = new Date(row.expires_at);
+		if (expiresAt < new Date()) {
+			return res.status(400).json({ error: '验证码已过期' });
+		}
+
+		// 标记验证码为已使用
+		try {
+			await db.run('UPDATE email_verification_codes SET used = 1 WHERE id = ?', [row.id]);
+		} catch (updateErr) {
+			console.error('更新验证码状态失败:', updateErr);
+			// 即使更新失败，也返回成功（验证码已验证）
+		}
+		
+		res.json({ success: true, message: '验证码验证成功' });
+	} catch (err) {
+		console.error('验证验证码失败:', err);
+		return res.status(500).json({ error: '服务器错误' });
+	}
 });
 
 // 注册（支持用户名）
-app.post('/api/register', (req, res) => {
+app.post('/api/register', async (req, res) => {
 	const { email, username, password } = req.body || {};
 
 	if (!email || !password || !username) {
@@ -362,45 +409,40 @@ app.post('/api/register', (req, res) => {
 		return res.status(400).json({ error: passwordValidation.error });
 	}
 
-	db.get('SELECT id FROM users WHERE email = ? OR username = ?', [trimmedEmail, trimmedUsername], (err, row) => {
-		if (err) {
-			console.error('db error', err);
-			return res.status(500).json({ error: '服务器错误' });
-		}
+	try {
+		const row = await db.get('SELECT id FROM users WHERE email = ? OR username = ?', [trimmedEmail, trimmedUsername]);
+		
 		if (row) {
 			return res.status(409).json({ error: '该邮箱或用户名已被使用' });
 		}
 
 		const passwordHash = bcrypt.hashSync(String(password), 10);
 
-		db.run(
-			'INSERT INTO users (email, username, password_hash) VALUES (?, ?, ?)',
-			[trimmedEmail, trimmedUsername, passwordHash],
-			function (insertErr) {
-				if (insertErr) {
-					console.error('db error', insertErr);
-					return res.status(500).json({ error: '服务器错误' });
-				}
-
-				const userId = this.lastID;
-				const token = jwt.sign({ uid: userId }, JWT_SECRET, { expiresIn: '7d' });
-
-				res.json({
-					token,
-					user: { 
-						id: userId, 
-						email: trimmedEmail, 
-						username: trimmedUsername,
-						role: 'user' // 新注册用户默认为普通用户
-					}
-				});
-			}
+		const result = await db.run(
+			'INSERT INTO users (email, username, password_hash, created_at) VALUES (?, ?, ?, NOW())',
+			[trimmedEmail, trimmedUsername, passwordHash]
 		);
-	});
+
+		const userId = result.lastID;
+		const token = jwt.sign({ uid: userId }, JWT_SECRET, { expiresIn: '7d' });
+
+		res.json({
+			token,
+			user: { 
+				id: userId, 
+				email: trimmedEmail, 
+				username: trimmedUsername,
+				role: 'user' // 新注册用户默认为普通用户
+			}
+		});
+	} catch (err) {
+		console.error('注册失败:', err);
+		return res.status(500).json({ error: '服务器错误' });
+	}
 });
 
 // 登录（支持邮箱或用户名登录）
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
 	const { identifier, email, password } = req.body || {};
 
 	const rawIdentifier = identifier || email;
@@ -419,35 +461,35 @@ app.post('/api/login', (req, res) => {
 		return res.status(400).json({ error: passwordValidation.error });
 	}
 
-	db.get(
-		'SELECT id, email, username, password_hash, role FROM users WHERE email = ? OR username = ?',
-		[emailCandidate, trimmedIdentifier],
-		(err, row) => {
-			if (err) {
-				console.error('db error', err);
-				return res.status(500).json({ error: '服务器错误' });
-			}
-			if (!row) {
-				return res.status(401).json({ error: '账号或密码错误' });
-			}
-
-			const match = bcrypt.compareSync(String(password), row.password_hash);
-			if (!match) {
-				return res.status(401).json({ error: '账号或密码错误' });
-			}
-
-			const token = jwt.sign({ uid: row.id }, JWT_SECRET, { expiresIn: '7d' });
-			res.json({
-				token,
-				user: { 
-					id: row.id, 
-					email: row.email, 
-					username: row.username || null,
-					role: row.role || 'user'
-				}
-			});
+	try {
+		const row = await db.get(
+			'SELECT id, email, username, password_hash, role FROM users WHERE email = ? OR username = ?',
+			[emailCandidate, trimmedIdentifier]
+		);
+		
+		if (!row) {
+			return res.status(401).json({ error: '账号或密码错误' });
 		}
-	);
+
+		const match = bcrypt.compareSync(String(password), row.password_hash);
+		if (!match) {
+			return res.status(401).json({ error: '账号或密码错误' });
+		}
+
+		const token = jwt.sign({ uid: row.id }, JWT_SECRET, { expiresIn: '7d' });
+		res.json({
+			token,
+			user: { 
+				id: row.id, 
+				email: row.email, 
+				username: row.username || null,
+				role: row.role || 'user'
+			}
+		});
+	} catch (err) {
+		console.error('登录失败:', err);
+		return res.status(500).json({ error: '服务器错误' });
+	}
 });
 
 // 鉴权中间件
@@ -469,7 +511,7 @@ function authMiddleware(req, res, next) {
 }
 
 // 管理员鉴权中间件
-function adminMiddleware(req, res, next) {
+async function adminMiddleware(req, res, next) {
 	const authHeader = req.headers.authorization || '';
 	const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
@@ -482,26 +524,25 @@ function adminMiddleware(req, res, next) {
 		const userId = decoded.uid;
 		
 		// 查询用户角色
-		db.get('SELECT role FROM users WHERE id = ?', [userId], (err, row) => {
-			if (err) {
-				console.error('查询用户角色失败:', err);
-				return res.status(500).json({ error: '服务器错误' });
-			}
-			
-			if (!row || row.role !== 'admin') {
-				return res.status(403).json({ error: '需要管理员权限' });
-			}
-			
-			req.user = { id: userId, role: 'admin' };
-			next();
-		});
+		const row = await db.get('SELECT role FROM users WHERE id = ?', [userId]);
+		
+		if (!row || row.role !== 'admin') {
+			return res.status(403).json({ error: '需要管理员权限' });
+		}
+		
+		req.user = { id: userId };
+		next();
 	} catch (e) {
-		return res.status(401).json({ error: '登录已失效，请重新登录' });
+		if (e.name === 'JsonWebTokenError' || e.name === 'TokenExpiredError') {
+			return res.status(401).json({ error: '登录已失效，请重新登录' });
+		}
+		console.error('管理员鉴权失败:', e);
+		return res.status(500).json({ error: '服务器错误' });
 	}
 }
 
 // 保存八字
-app.post('/api/bazi', authMiddleware, (req, res) => {
+app.post('/api/bazi', authMiddleware, async (req, res) => {
 	const userId = req.user.id;
 	
 	// 添加日志查看接收到的数据
@@ -558,50 +599,49 @@ app.post('/api/bazi', authMiddleware, (req, res) => {
 		userId,
 		name,
 		gender,
-		birthDatetimeStr,
+		birthDatetime: validatedDateTime,
 		calendarType,
 		rawPayloadLength: rawPayloadJson ? rawPayloadJson.length : 0
 	});
 
 	const insertSql =
-		'INSERT INTO bazi_records (user_id, name, gender, birth_datetime, calendar_type, raw_payload) VALUES (?, ?, ?, ?, ?, ?)';
+		'INSERT INTO bazi_records (user_id, name, gender, birth_datetime, calendar_type, raw_payload, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())';
 
-	db.run(
-		insertSql,
-		[
-			userId,
-			sanitizedName,
-			validatedGender,
-			validatedDateTime,
-			sanitizedCalendarType,
-			rawPayloadJson
-		],
-		function (err) {
-			if (err) {
-				console.error('保存八字记录失败:', err);
-				console.error('SQL 参数:', [userId, name, gender, birthDatetimeStr, calendarType, rawPayloadJson ? '有数据' : 'null']);
-				// 如果是唯一约束冲突，返回更友好的错误信息
-				if (err.message && err.message.includes('UNIQUE constraint')) {
-					return res.status(409).json({ error: '该记录已存在' });
-				}
-				return res.status(500).json({ error: '保存失败，请稍后重试: ' + err.message });
-			}
+	try {
+		const result = await db.run(
+			insertSql,
+			[
+				userId,
+				sanitizedName,
+				validatedGender,
+				validatedDateTime,
+				sanitizedCalendarType,
+				rawPayloadJson
+			]
+		);
 
-			console.log('保存成功，记录ID:', this.lastID);
-			res.json({
-				id: this.lastID,
-				user_id: userId,
-				name,
-				gender,
-				birthDatetime: birthDatetimeStr,
-				calendarType
-			});
+		console.log('保存成功，记录ID:', result.lastID);
+		res.json({
+			id: result.lastID,
+			user_id: userId,
+			name,
+			gender,
+			birthDatetime: validatedDateTime,
+			calendarType
+		});
+	} catch (err) {
+		console.error('保存八字记录失败:', err);
+		console.error('SQL 参数:', [userId, name, gender, validatedDateTime, calendarType, rawPayloadJson ? '有数据' : 'null']);
+		// 如果是唯一约束冲突，返回更友好的错误信息
+		if (err.message && (err.message.includes('UNIQUE constraint') || err.message.includes('Duplicate entry'))) {
+			return res.status(409).json({ error: '该记录已存在' });
 		}
-	);
+		return res.status(500).json({ error: '保存失败，请稍后重试: ' + err.message });
+	}
 });
 
 // 查询当前账号的所有排盘（供 /pages/history/list 使用）
-app.get('/api/charts', authMiddleware, (req, res) => {
+app.get('/api/charts', authMiddleware, async (req, res) => {
 	const userId = req.user.id;
 	
 	// 使用安全工具验证和清理查询参数
@@ -642,11 +682,8 @@ app.get('/api/charts', authMiddleware, (req, res) => {
 	
 	sql += ` ORDER BY ${orderByField} ${sortOrder}`;
 
-	db.all(sql, params, (err, rows) => {
-		if (err) {
-			console.error('db error', err);
-			return res.status(500).json({ error: '查询失败' });
-		}
+	try {
+		const rows = await db.all(sql, params);
 
 		const list =
 			rows?.map((r) => ({
@@ -665,11 +702,14 @@ app.get('/api/charts', authMiddleware, (req, res) => {
 			total: list.length,
 			hasMore: false // 暂时不支持分页
 		});
-	});
+	} catch (err) {
+		console.error('查询失败:', err);
+		return res.status(500).json({ error: '查询失败' });
+	}
 });
 
 // 删除某条排盘记录
-app.delete('/api/charts/:id', authMiddleware, (req, res) => {
+app.delete('/api/charts/:id', authMiddleware, async (req, res) => {
 	const userId = req.user.id;
 	
 	// 使用安全工具验证 ID
@@ -678,45 +718,46 @@ app.delete('/api/charts/:id', authMiddleware, (req, res) => {
 		return res.status(400).json({ error: '缺少有效的 id' });
 	}
 
-	db.run('DELETE FROM bazi_records WHERE id = ? AND user_id = ?', [id, userId], function (err) {
-		if (err) {
-			console.error('db error', err);
-			return res.status(500).json({ error: '删除失败' });
+	try {
+		const result = await db.run('DELETE FROM bazi_records WHERE id = ? AND user_id = ?', [id, userId]);
+		
+		if (result.changes === 0) {
+			return res.status(404).json({ error: '记录不存在或无权限删除' });
 		}
-		if (this.changes === 0) {
-			return res.status(404).json({ error: '记录不存在' });
-		}
+		
 		res.json({ success: true });
-	});
+	} catch (err) {
+		console.error('删除失败:', err);
+		return res.status(500).json({ error: '删除失败' });
+	}
 });
 
 // 兼容性接口：如果后续需要，可保留 /api/bazi 列表形式
-app.get('/api/bazi', authMiddleware, (req, res) => {
+app.get('/api/bazi', authMiddleware, async (req, res) => {
 	const userId = req.user.id;
 
-	db.all(
-		'SELECT id, name, gender, birth_datetime AS birthDatetime, calendar_type AS calendarType, raw_payload AS rawPayload, created_at AS createdAt FROM bazi_records WHERE user_id = ? ORDER BY created_at DESC',
-		[userId],
-		(err, rows) => {
-			if (err) {
-				console.error('db error', err);
-				return res.status(500).json({ error: '查询失败' });
-			}
+	try {
+		const rows = await db.all(
+			'SELECT id, name, gender, birth_datetime AS birthDatetime, calendar_type AS calendarType, raw_payload AS rawPayload, created_at AS createdAt FROM bazi_records WHERE user_id = ? ORDER BY created_at DESC',
+			[userId]
+		);
 
-			const list =
-				rows?.map((r) => ({
-					id: r.id,
-					title: r.name || '未命名排盘',
-					gender: r.gender,
-					birthDatetime: r.birthDatetime,
-					calendarType: r.calendarType,
-					rawPayload: r.rawPayload ? safeJsonParse(r.rawPayload) : null,
-					createdAt: r.createdAt
-				})) || [];
+		const list =
+			rows?.map((r) => ({
+				id: r.id,
+				title: r.name || '未命名排盘',
+				gender: r.gender,
+				birthDatetime: r.birthDatetime,
+				calendarType: r.calendarType,
+				rawPayload: r.rawPayload ? safeJsonParse(r.rawPayload) : null,
+				createdAt: r.createdAt
+			})) || [];
 
-			res.json({ list });
-		}
-	);
+		res.json({ list });
+	} catch (err) {
+		console.error('查询失败:', err);
+		return res.status(500).json({ error: '查询失败' });
+	}
 });
 
 function safeJsonParse(text) {
@@ -729,38 +770,118 @@ function safeJsonParse(text) {
 
 // ==================== 管理员后台API ====================
 
+// 管理邮箱配置（仅管理员），数据加密存储在 DB，不暴露密码
+app.get('/api/admin/email-config', adminMiddleware, async (req, res) => {
+	try {
+		const cfg = await ConfigService.getEmailConfig(db);
+		const configured = await ConfigService.isEmailConfigValid(db);
+		res.json({
+			configured,
+			host: cfg.host || '',
+			port: cfg.port || 0,
+			user: cfg.user || '',
+			from: cfg.from || '',
+			fromName: cfg.fromName || ''
+			// 不返回 pass（密码）
+		});
+	} catch (e) {
+		console.error('获取邮件配置失败:', e);
+		res.status(500).json({ error: '获取邮件配置失败' });
+	}
+});
+
+app.put('/api/admin/email-config', adminMiddleware, async (req, res) => {
+	const { host, port, user, pass, from, fromName } = req.body || {};
+	
+	try {
+		// 清理和验证输入
+		const sanitizedHost = SecurityUtils.sanitizeString(String(host || ''), { maxLength: 200 }).trim();
+		const sanitizedUser = SecurityUtils.sanitizeString(String(user || ''), { maxLength: 200 }).trim();
+		const sanitizedFrom = SecurityUtils.sanitizeString(String(from || ''), { maxLength: 200 }).trim();
+		const sanitizedFromName = fromName ? SecurityUtils.sanitizeString(String(fromName), { maxLength: 200, allowSpecialChars: true }).trim() : '';
+		const portNum = Number(port);
+
+		// 验证必填项
+		if (!sanitizedHost) {
+			return res.status(400).json({ error: 'SMTP 服务器地址不能为空' });
+		}
+		if (!sanitizedUser) {
+			return res.status(400).json({ error: '邮箱账号不能为空' });
+		}
+		if (Number.isNaN(portNum) || portNum <= 0 || portNum > 65535) {
+			return res.status(400).json({ error: '端口号无效（1-65535）' });
+		}
+		if (!sanitizedFrom || !SecurityUtils.isValidEmail(sanitizedFrom)) {
+			return res.status(400).json({ error: '发件人邮箱格式不正确' });
+		}
+
+		// 密码处理：如果提供则更新，否则检查是否已有密码
+		let finalPass = null;
+		if (pass && String(pass).trim()) {
+			// 提供了新密码，使用新密码
+			finalPass = String(pass).trim();
+		} else {
+			// 未提供密码，检查是否已有密码
+			const existingPass = await ConfigService.getConfig(db, 'EMAIL_PASS');
+			if (!existingPass) {
+				return res.status(400).json({ error: '首次配置必须填写密码/授权码' });
+			}
+			// 使用已有密码
+			finalPass = existingPass;
+		}
+
+		// 使用新的批量设置方法
+		await ConfigService.setEmailConfig(db, {
+			host: sanitizedHost,
+			port: portNum,
+			user: sanitizedUser,
+			pass: finalPass, // 总是传递密码（新密码或已有密码）
+			from: sanitizedFrom,
+			fromName: sanitizedFromName
+		});
+
+		// 重新加载配置
+		await loadEmailConfig();
+
+		res.json({ success: true, message: '邮箱配置已保存' });
+	} catch (e) {
+		console.error('更新邮件配置失败:', e);
+		res.status(500).json({ error: '更新邮件配置失败' });
+	}
+});
+
 // 获取统计数据
-app.get('/api/admin/stats', adminMiddleware, (req, res) => {
+app.get('/api/admin/stats', adminMiddleware, async (req, res) => {
 	const queries = {
 		totalUsers: 'SELECT COUNT(*) as count FROM users',
 		totalRecords: 'SELECT COUNT(*) as count FROM bazi_records',
-		todayUsers: "SELECT COUNT(*) as count FROM users WHERE DATE(created_at) = DATE('now')",
-		todayRecords: "SELECT COUNT(*) as count FROM bazi_records WHERE DATE(created_at) = DATE('now')",
+		todayUsers: `SELECT COUNT(*) as count FROM users WHERE DATE(created_at) = CURDATE()`,
+		todayRecords: `SELECT COUNT(*) as count FROM bazi_records WHERE DATE(created_at) = CURDATE()`,
 		adminUsers: "SELECT COUNT(*) as count FROM users WHERE role = 'admin'"
 	};
 
-	const results = {};
-	let completed = 0;
-	const total = Object.keys(queries).length;
-
-	Object.keys(queries).forEach((key) => {
-		db.get(queries[key], [], (err, row) => {
-			if (err) {
+	try {
+		const results = {};
+		const promises = Object.keys(queries).map(async (key) => {
+			try {
+				const row = await db.get(queries[key], []);
+				results[key] = row?.count || 0;
+			} catch (err) {
 				console.error(`查询 ${key} 失败:`, err);
 				results[key] = 0;
-			} else {
-				results[key] = row?.count || 0;
-			}
-			completed++;
-			if (completed === total) {
-				res.json(results);
 			}
 		});
-	});
+		
+		await Promise.all(promises);
+		res.json(results);
+	} catch (err) {
+		console.error('获取统计数据失败:', err);
+		return res.status(500).json({ error: '获取统计数据失败' });
+	}
 });
 
 // 获取用户列表
-app.get('/api/admin/users', adminMiddleware, (req, res) => {
+app.get('/api/admin/users', adminMiddleware, async (req, res) => {
 	const page = parseInt(req.query.page) || 1;
 	const pageSize = parseInt(req.query.pageSize) || 20;
 	const offset = (page - 1) * pageSize;
@@ -792,35 +913,29 @@ app.get('/api/admin/users', adminMiddleware, (req, res) => {
 	const queryParams = [...params, pageSize, offset];
 	const countParams = params;
 
-	// 先获取总数
-	db.get(countQuery, countParams, (err, countRow) => {
-		if (err) {
-			console.error('查询用户总数失败:', err);
-			return res.status(500).json({ error: '查询失败' });
-		}
-
+	try {
+		// 先获取总数
+		const countRow = await db.get(countQuery, countParams);
 		const total = countRow?.count || 0;
 
 		// 再获取列表
-		db.all(query, queryParams, (err, rows) => {
-			if (err) {
-				console.error('查询用户列表失败:', err);
-				return res.status(500).json({ error: '查询失败' });
-			}
+		const rows = await db.all(query, queryParams);
 
-			res.json({
-				list: rows || [],
-				total,
-				page,
-				pageSize,
-				totalPages: Math.ceil(total / pageSize)
-			});
+		res.json({
+			list: rows || [],
+			total,
+			page,
+			pageSize,
+			totalPages: Math.ceil(total / pageSize)
 		});
-	});
+	} catch (err) {
+		console.error('查询用户列表失败:', err);
+		return res.status(500).json({ error: '查询失败' });
+	}
 });
 
 // 创建用户（管理员）- 必须在 /api/admin/users/:id 之前
-app.post('/api/admin/users', adminMiddleware, (req, res) => {
+app.post('/api/admin/users', adminMiddleware, async (req, res) => {
 	console.log('POST /api/admin/users - 收到请求');
 	console.log('请求体:', req.body);
 	const { email, username, password, role = 'user' } = req.body || {};
@@ -863,11 +978,9 @@ app.post('/api/admin/users', adminMiddleware, (req, res) => {
 		: 'SELECT id FROM users WHERE email = ?';
 	const checkParams = trimmedUsername ? [trimmedEmail, trimmedUsername] : [trimmedEmail];
 
-	db.get(checkQuery, checkParams, (err, row) => {
-		if (err) {
-			console.error('检查用户是否存在失败:', err);
-			return res.status(500).json({ error: '服务器错误' });
-		}
+	try {
+		const row = await db.get(checkQuery, checkParams);
+		
 		if (row) {
 			return res.status(409).json({ error: '该邮箱或用户名已被使用' });
 		}
@@ -875,70 +988,71 @@ app.post('/api/admin/users', adminMiddleware, (req, res) => {
 		const passwordHash = bcrypt.hashSync(String(password), 10);
 
 		const insertQuery = trimmedUsername
-			? 'INSERT INTO users (email, username, password_hash, role) VALUES (?, ?, ?, ?)'
-			: 'INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)';
+			? 'INSERT INTO users (email, username, password_hash, role, created_at) VALUES (?, ?, ?, ?, NOW())'
+			: 'INSERT INTO users (email, password_hash, role, created_at) VALUES (?, ?, ?, NOW())';
 		const insertParams = trimmedUsername
 			? [trimmedEmail, trimmedUsername, passwordHash, role]
 			: [trimmedEmail, passwordHash, role];
 
-		db.run(insertQuery, insertParams, function (insertErr) {
-			if (insertErr) {
-				console.error('创建用户失败:', insertErr);
-				return res.status(500).json({ error: '创建失败' });
-			}
+		const result = await db.run(insertQuery, insertParams);
 
-			res.json({
-				success: true,
-				user: {
-					id: this.lastID,
-					email: trimmedEmail,
-					username: trimmedUsername,
-					role: role
-				}
-			});
+		res.json({
+			success: true,
+			user: {
+				id: result.lastID,
+				email: trimmedEmail,
+				username: trimmedUsername,
+				role: role
+			}
 		});
-	});
+	} catch (err) {
+		console.error('创建用户失败:', err);
+		return res.status(500).json({ error: '创建失败' });
+	}
 });
 
 // 获取用户详情
-app.get('/api/admin/users/:id', adminMiddleware, (req, res) => {
+app.get('/api/admin/users/:id', adminMiddleware, async (req, res) => {
 	const id = SecurityUtils.validateId(req.params.id);
 	if (!id) {
 		return res.status(400).json({ error: '无效的用户ID' });
 	}
 
-	db.get(
-		'SELECT id, email, username, role, created_at FROM users WHERE id = ?',
-		[id],
-		(err, row) => {
-			if (err) {
-				console.error('查询用户详情失败:', err);
-				return res.status(500).json({ error: '查询失败' });
-			}
-			if (!row) {
-				return res.status(404).json({ error: '用户不存在' });
-			}
-
-			// 获取该用户的八字记录数
-			db.get(
-				'SELECT COUNT(*) as count FROM bazi_records WHERE user_id = ?',
-				[id],
-				(countErr, countRow) => {
-					if (countErr) {
-						console.error('查询用户记录数失败:', countErr);
-					}
-					res.json({
-						...row,
-						recordCount: countRow?.count || 0
-					});
-				}
-			);
+	try {
+		const row = await db.get(
+			'SELECT id, email, username, role, created_at FROM users WHERE id = ?',
+			[id]
+		);
+		
+		if (!row) {
+			return res.status(404).json({ error: '用户不存在' });
 		}
-	);
+
+		// 获取该用户的八字记录数
+		try {
+			const countRow = await db.get(
+				'SELECT COUNT(*) as count FROM bazi_records WHERE user_id = ?',
+				[id]
+			);
+			res.json({
+				...row,
+				recordCount: countRow?.count || 0
+			});
+		} catch (countErr) {
+			console.error('查询用户记录数失败:', countErr);
+			res.json({
+				...row,
+				recordCount: 0
+			});
+		}
+	} catch (err) {
+		console.error('查询用户详情失败:', err);
+		return res.status(500).json({ error: '查询失败' });
+	}
 });
 
 // 更新用户信息（管理员）
-app.put('/api/admin/users/:id', adminMiddleware, (req, res) => {
+app.put('/api/admin/users/:id', adminMiddleware, async (req, res) => {
 	const id = SecurityUtils.validateId(req.params.id);
 	const { email, username, password, role } = req.body || {};
 
@@ -951,12 +1065,10 @@ app.put('/api/admin/users/:id', adminMiddleware, (req, res) => {
 		return res.status(400).json({ error: '不能修改自己的角色' });
 	}
 
-	// 先查询用户是否存在
-	db.get('SELECT id, email, username, role FROM users WHERE id = ?', [id], (err, userRow) => {
-		if (err) {
-			console.error('查询用户失败:', err);
-			return res.status(500).json({ error: '查询失败' });
-		}
+	try {
+		// 先查询用户是否存在
+		const userRow = await db.get('SELECT id, email, username, role FROM users WHERE id = ?', [id]);
+		
 		if (!userRow) {
 			return res.status(404).json({ error: '用户不存在' });
 		}
@@ -1033,40 +1145,31 @@ app.put('/api/admin/users/:id', adminMiddleware, (req, res) => {
 		if (checkConditions.length > 0) {
 			checkParams.push(id);
 			const checkQuery = `SELECT id FROM users WHERE (${checkConditions.join(' OR ')}) AND id != ?`;
-			db.get(checkQuery, checkParams, (checkErr, checkRow) => {
-				if (checkErr) {
-					console.error('检查冲突失败:', checkErr);
-					return res.status(500).json({ error: '服务器错误' });
-				}
-				if (checkRow) {
-					return res.status(409).json({ error: '该邮箱或用户名已被使用' });
-				}
-				performUpdate();
-			});
-		} else {
-			performUpdate();
+			const checkRow = await db.get(checkQuery, checkParams);
+			
+			if (checkRow) {
+				return res.status(409).json({ error: '该邮箱或用户名已被使用' });
+			}
 		}
 
-		function performUpdate() {
-			params.push(id);
-			const updateQuery = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
-
-			db.run(updateQuery, params, function (updateErr) {
-				if (updateErr) {
-					console.error('更新用户失败:', updateErr);
-					return res.status(500).json({ error: '更新失败' });
-				}
-				if (this.changes === 0) {
-					return res.status(404).json({ error: '用户不存在' });
-				}
-				res.json({ success: true });
-			});
+		// 执行更新
+		params.push(id);
+		const updateQuery = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
+		const result = await db.run(updateQuery, params);
+		
+		if (result.changes === 0) {
+			return res.status(404).json({ error: '用户不存在' });
 		}
-	});
+		
+		res.json({ success: true });
+	} catch (err) {
+		console.error('更新用户失败:', err);
+		return res.status(500).json({ error: '更新失败' });
+	}
 });
 
 // 更新用户角色
-app.put('/api/admin/users/:id/role', adminMiddleware, (req, res) => {
+app.put('/api/admin/users/:id/role', adminMiddleware, async (req, res) => {
 	const id = SecurityUtils.validateId(req.params.id);
 	const { role } = req.body || {};
 
@@ -1083,20 +1186,22 @@ app.put('/api/admin/users/:id/role', adminMiddleware, (req, res) => {
 		return res.status(400).json({ error: '不能修改自己的角色' });
 	}
 
-	db.run('UPDATE users SET role = ? WHERE id = ?', [role, id], function (err) {
-		if (err) {
-			console.error('更新用户角色失败:', err);
-			return res.status(500).json({ error: '更新失败' });
-		}
-		if (this.changes === 0) {
+	try {
+		const result = await db.run('UPDATE users SET role = ? WHERE id = ?', [role, id]);
+		
+		if (result.changes === 0) {
 			return res.status(404).json({ error: '用户不存在' });
 		}
+		
 		res.json({ success: true });
-	});
+	} catch (err) {
+		console.error('更新用户角色失败:', err);
+		return res.status(500).json({ error: '更新失败' });
+	}
 });
 
 // 删除用户
-app.delete('/api/admin/users/:id', adminMiddleware, (req, res) => {
+app.delete('/api/admin/users/:id', adminMiddleware, async (req, res) => {
 	const id = SecurityUtils.validateId(req.params.id);
 	if (!id) {
 		return res.status(400).json({ error: '无效的用户ID' });
@@ -1107,29 +1212,26 @@ app.delete('/api/admin/users/:id', adminMiddleware, (req, res) => {
 		return res.status(400).json({ error: '不能删除自己' });
 	}
 
-	// 先删除该用户的所有八字记录
-	db.run('DELETE FROM bazi_records WHERE user_id = ?', [id], (err) => {
-		if (err) {
-			console.error('删除用户记录失败:', err);
-			return res.status(500).json({ error: '删除失败' });
-		}
+	try {
+		// 先删除该用户的所有八字记录
+		await db.run('DELETE FROM bazi_records WHERE user_id = ?', [id]);
 
 		// 再删除用户
-		db.run('DELETE FROM users WHERE id = ?', [id], function (deleteErr) {
-			if (deleteErr) {
-				console.error('删除用户失败:', deleteErr);
-				return res.status(500).json({ error: '删除失败' });
-			}
-			if (this.changes === 0) {
-				return res.status(404).json({ error: '用户不存在' });
-			}
-			res.json({ success: true });
-		});
-	});
+		const result = await db.run('DELETE FROM users WHERE id = ?', [id]);
+		
+		if (result.changes === 0) {
+			return res.status(404).json({ error: '用户不存在' });
+		}
+		
+		res.json({ success: true });
+	} catch (err) {
+		console.error('删除用户失败:', err);
+		return res.status(500).json({ error: '删除失败' });
+	}
 });
 
 // 获取八字记录列表（管理员）
-app.get('/api/admin/records', adminMiddleware, (req, res) => {
+app.get('/api/admin/records', adminMiddleware, async (req, res) => {
 	const page = parseInt(req.query.page) || 1;
 	const pageSize = parseInt(req.query.pageSize) || 20;
 	const offset = (page - 1) * pageSize;
@@ -1175,97 +1277,88 @@ app.get('/api/admin/records', adminMiddleware, (req, res) => {
 	const queryParams = [...params, pageSize, offset];
 	const countParams = params;
 
-	// 先获取总数
-	db.get(countQuery, countParams, (err, countRow) => {
-		if (err) {
-			console.error('查询记录总数失败:', err);
-			return res.status(500).json({ error: '查询失败' });
-		}
-
+	try {
+		// 先获取总数
+		const countRow = await db.get(countQuery, countParams);
 		const total = countRow?.count || 0;
 
 		// 再获取列表
-		db.all(query, queryParams, (err, rows) => {
-			if (err) {
-				console.error('查询记录列表失败:', err);
-				return res.status(500).json({ error: '查询失败' });
-			}
+		const rows = await db.all(query, queryParams);
 
-			res.json({
-				list: rows || [],
-				total,
-				page,
-				pageSize,
-				totalPages: Math.ceil(total / pageSize)
-			});
+		res.json({
+			list: rows || [],
+			total,
+			page,
+			pageSize,
+			totalPages: Math.ceil(total / pageSize)
 		});
-	});
+	} catch (err) {
+		console.error('查询记录列表失败:', err);
+		return res.status(500).json({ error: '查询失败' });
+	}
 });
 
 // 获取八字记录详情（管理员）
-app.get('/api/admin/records/:id', adminMiddleware, (req, res) => {
+app.get('/api/admin/records/:id', adminMiddleware, async (req, res) => {
 	const id = SecurityUtils.validateId(req.params.id);
 	if (!id) {
 		return res.status(400).json({ error: '无效的记录ID' });
 	}
 
-	db.get(
-		`SELECT 
-			r.id, 
-			r.name, 
-			r.gender, 
-			r.birth_datetime AS birthDatetime, 
-			r.calendar_type AS calendarType,
-			r.raw_payload AS rawPayload,
-			r.created_at AS createdAt,
-			u.id AS userId,
-			u.email AS userEmail,
-			u.username AS userUsername
-		FROM bazi_records r
-		LEFT JOIN users u ON r.user_id = u.id
-		WHERE r.id = ?`,
-		[id],
-		(err, row) => {
-			if (err) {
-				console.error('查询记录详情失败:', err);
-				return res.status(500).json({ error: '查询失败' });
-			}
-			if (!row) {
-				return res.status(404).json({ error: '记录不存在' });
-			}
-
-			// 解析 rawPayload
-			let rawPayload = null;
-			if (row.rawPayload) {
-				try {
-					rawPayload = JSON.parse(row.rawPayload);
-				} catch (e) {
-					console.error('解析 rawPayload 失败:', e);
-				}
-			}
-
-			res.json({
-				...row,
-				rawPayload
-			});
+	try {
+		const row = await db.get(
+			`SELECT 
+				r.id, 
+				r.name, 
+				r.gender, 
+				r.birth_datetime AS birthDatetime, 
+				r.calendar_type AS calendarType,
+				r.raw_payload AS rawPayload,
+				r.created_at AS createdAt,
+				u.id AS userId,
+				u.email AS userEmail,
+				u.username AS userUsername
+			FROM bazi_records r
+			LEFT JOIN users u ON r.user_id = u.id
+			WHERE r.id = ?`,
+			);
+		
+		if (!row) {
+			return res.status(404).json({ error: '记录不存在' });
 		}
-	);
+
+		// 解析 rawPayload
+		let rawPayload = null;
+		if (row.rawPayload) {
+			try {
+				rawPayload = JSON.parse(row.rawPayload);
+			} catch (e) {
+				console.error('解析 rawPayload 失败:', e);
+			}
+		}
+
+		res.json({
+			...row,
+			rawPayload
+		});
+	} catch (err) {
+		console.error('查询记录详情失败:', err);
+		return res.status(500).json({ error: '查询失败' });
+	}
 });
 
 // 创建八字记录（管理员）
-app.post('/api/admin/records', adminMiddleware, (req, res) => {
+app.post('/api/admin/records', adminMiddleware, async (req, res) => {
 	const { userId, name, gender, birthDatetime, calendarType, rawPayload } = req.body || {};
 
 	if (!userId || birthDatetime === null || birthDatetime === undefined || birthDatetime === '') {
 		return res.status(400).json({ error: '缺少 userId 或 birthDatetime' });
 	}
 
-	// 验证用户是否存在
-	db.get('SELECT id FROM users WHERE id = ?', [userId], (userErr, userRow) => {
-		if (userErr) {
-			console.error('查询用户失败:', userErr);
-			return res.status(500).json({ error: '服务器错误' });
-		}
+	try {
+		// 验证用户是否存在
+		const userRow = await db.get('SELECT id FROM users WHERE id = ?', [userId]);
+		
 		if (!userRow) {
 			return res.status(404).json({ error: '用户不存在' });
 		}
@@ -1297,35 +1390,32 @@ app.post('/api/admin/records', adminMiddleware, (req, res) => {
 		}
 
 		const insertSql =
-			'INSERT INTO bazi_records (user_id, name, gender, birth_datetime, calendar_type, raw_payload) VALUES (?, ?, ?, ?, ?, ?)';
+			'INSERT INTO bazi_records (user_id, name, gender, birth_datetime, calendar_type, raw_payload, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())';
 
-		db.run(
+		const result = await db.run(
 			insertSql,
-			[userId, sanitizedName, validatedGender, validatedDateTime, sanitizedCalendarType, rawPayloadJson],
-			function (err) {
-				if (err) {
-					console.error('创建记录失败:', err);
-					return res.status(500).json({ error: '创建失败' });
-				}
-
-				res.json({
-					success: true,
-					record: {
-						id: this.lastID,
-						userId,
-						name: sanitizedName,
-						gender: validatedGender,
-						birthDatetime: validatedDateTime,
-						calendarType: sanitizedCalendarType
-					}
-				});
-			}
+			[userId, sanitizedName, validatedGender, validatedDateTime, sanitizedCalendarType, rawPayloadJson]
 		);
-	});
+
+		res.json({
+			success: true,
+			record: {
+				id: result.lastID,
+				userId,
+				name: sanitizedName,
+				gender: validatedGender,
+				birthDatetime: validatedDateTime,
+				calendarType: sanitizedCalendarType
+			}
+		});
+	} catch (err) {
+		console.error('创建记录失败:', err);
+		return res.status(500).json({ error: '创建失败' });
+	}
 });
 
 // 更新八字记录（管理员）
-app.put('/api/admin/records/:id', adminMiddleware, (req, res) => {
+app.put('/api/admin/records/:id', adminMiddleware, async (req, res) => {
 	const id = SecurityUtils.validateId(req.params.id);
 	const { userId, name, gender, birthDatetime, calendarType, rawPayload } = req.body || {};
 
@@ -1333,135 +1423,122 @@ app.put('/api/admin/records/:id', adminMiddleware, (req, res) => {
 		return res.status(400).json({ error: '无效的记录ID' });
 	}
 
-	// 先查询记录是否存在
-	db.get('SELECT id, user_id FROM bazi_records WHERE id = ?', [id], (err, recordRow) => {
-		if (err) {
-			console.error('查询记录失败:', err);
-			return res.status(500).json({ error: '查询失败' });
-		}
+	try {
+		// 先查询记录是否存在
+		const recordRow = await db.get('SELECT id, user_id FROM bazi_records WHERE id = ?', [id]);
+		
 		if (!recordRow) {
 			return res.status(404).json({ error: '记录不存在' });
 		}
 
 		// 如果更新 userId，验证用户是否存在
 		if (userId !== undefined && userId !== recordRow.user_id) {
-			db.get('SELECT id FROM users WHERE id = ?', [userId], (userErr, userRow) => {
-				if (userErr) {
-					console.error('查询用户失败:', userErr);
-					return res.status(500).json({ error: '服务器错误' });
-				}
-				if (!userRow) {
-					return res.status(404).json({ error: '用户不存在' });
-				}
-				performUpdate();
-			});
-		} else {
-			performUpdate();
+			const userRow = await db.get('SELECT id FROM users WHERE id = ?', [userId]);
+			
+			if (!userRow) {
+				return res.status(404).json({ error: '用户不存在' });
+			}
 		}
 
-		function performUpdate() {
-			const updates = [];
-			const params = [];
+		const updates = [];
+		const params = [];
 
-			// 更新用户ID
-			if (userId !== undefined) {
-				updates.push('user_id = ?');
-				params.push(userId);
+		// 更新用户ID
+		if (userId !== undefined) {
+			updates.push('user_id = ?');
+			params.push(userId);
+		}
+
+		// 更新姓名
+		if (name !== undefined) {
+			if (name === null || name === '') {
+				updates.push('name = NULL');
+			} else {
+				updates.push('name = ?');
+				params.push(SecurityUtils.sanitizeString(String(name), { maxLength: 100 }));
 			}
+		}
 
-			// 更新姓名
-			if (name !== undefined) {
-				if (name === null || name === '') {
-					updates.push('name = NULL');
-				} else {
-					updates.push('name = ?');
-					params.push(SecurityUtils.sanitizeString(String(name), { maxLength: 100 }));
-				}
+		// 更新性别
+		if (gender !== undefined) {
+			const validatedGender = SecurityUtils.validateGender(gender);
+			updates.push('gender = ?');
+			params.push(validatedGender);
+		}
+
+		// 更新出生时间
+		if (birthDatetime !== undefined) {
+			const validatedDateTime = SecurityUtils.validateDateTime(birthDatetime);
+			if (!validatedDateTime) {
+				return res.status(400).json({ error: '出生时间格式不正确' });
 			}
+			updates.push('birth_datetime = ?');
+			params.push(validatedDateTime);
+		}
 
-			// 更新性别
-			if (gender !== undefined) {
-				const validatedGender = SecurityUtils.validateGender(gender);
-				updates.push('gender = ?');
-				params.push(validatedGender);
+		// 更新历法类型
+		if (calendarType !== undefined) {
+			if (calendarType === null || calendarType === '') {
+				updates.push('calendar_type = NULL');
+			} else {
+				updates.push('calendar_type = ?');
+				params.push(SecurityUtils.sanitizeString(String(calendarType), { maxLength: 20 }));
 			}
+		}
 
-			// 更新出生时间
-			if (birthDatetime !== undefined) {
-				const validatedDateTime = SecurityUtils.validateDateTime(birthDatetime);
-				if (!validatedDateTime) {
-					return res.status(400).json({ error: '出生时间格式不正确' });
-				}
-				updates.push('birth_datetime = ?');
-				params.push(validatedDateTime);
-			}
-
-			// 更新历法类型
-			if (calendarType !== undefined) {
-				if (calendarType === null || calendarType === '') {
-					updates.push('calendar_type = NULL');
-				} else {
-					updates.push('calendar_type = ?');
-					params.push(SecurityUtils.sanitizeString(String(calendarType), { maxLength: 20 }));
-				}
-			}
-
-			// 更新 rawPayload
-			if (rawPayload !== undefined) {
-				if (rawPayload === null) {
-					updates.push('raw_payload = NULL');
-				} else {
-					try {
-						const payloadStr = JSON.stringify(rawPayload);
-						if (payloadStr.length > 1000000) {
-							return res.status(400).json({ error: '数据过大，无法保存' });
-						}
-						updates.push('raw_payload = ?');
-						params.push(payloadStr);
-					} catch (e) {
-						return res.status(400).json({ error: '数据格式错误: ' + e.message });
+		// 更新 rawPayload
+		if (rawPayload !== undefined) {
+			if (rawPayload === null) {
+				updates.push('raw_payload = NULL');
+			} else {
+				try {
+					const payloadStr = JSON.stringify(rawPayload);
+					if (payloadStr.length > 1000000) {
+						return res.status(400).json({ error: '数据过大，无法保存' });
 					}
+					updates.push('raw_payload = ?');
+					params.push(payloadStr);
+				} catch (e) {
+					return res.status(400).json({ error: '数据格式错误: ' + e.message });
 				}
 			}
-
-			if (updates.length === 0) {
-				return res.status(400).json({ error: '没有要更新的字段' });
-			}
-
-			params.push(id);
-			const updateQuery = `UPDATE bazi_records SET ${updates.join(', ')} WHERE id = ?`;
-
-			db.run(updateQuery, params, function (updateErr) {
-				if (updateErr) {
-					console.error('更新记录失败:', updateErr);
-					return res.status(500).json({ error: '更新失败' });
-				}
-				if (this.changes === 0) {
-					return res.status(404).json({ error: '记录不存在' });
-				}
-				res.json({ success: true });
-			});
 		}
-	});
+
+		if (updates.length === 0) {
+			return res.status(400).json({ error: '没有要更新的字段' });
+		}
+
+		const updateQuery = `UPDATE bazi_records SET ${updates.join(', ')} WHERE id = ?`;
+		const result = await db.run(updateQuery, params);
+		
+		if (result.changes === 0) {
+			return res.status(404).json({ error: '记录不存在' });
+		}
+		
+		res.json({ success: true });
+	} catch (err) {
+		console.error('更新记录失败:', err);
+		return res.status(500).json({ error: '更新失败' });
+	}
 });
 
 // 删除八字记录（管理员）
-app.delete('/api/admin/records/:id', adminMiddleware, (req, res) => {
+app.delete('/api/admin/records/:id', adminMiddleware, async (req, res) => {
 	const id = SecurityUtils.validateId(req.params.id);
 	if (!id) {
 		return res.status(400).json({ error: '无效的记录ID' });
 	}
 
-	db.run('DELETE FROM bazi_records WHERE id = ?', [id], function (err) {
-		if (err) {
-			console.error('删除记录失败:', err);
-			return res.status(500).json({ error: '删除失败' });
-		}
-		if (this.changes === 0) {
+	try {
+		const result = await db.run('DELETE FROM bazi_records WHERE id = ?', [id]);
+		if (result.changes === 0) {
 			return res.status(404).json({ error: '记录不存在' });
 		}
 		res.json({ success: true });
-	});
+	} catch (err) {
+		console.error('删除记录失败:', err);
+		return res.status(500).json({ error: '删除失败' });
+	}
 });
 
 // 404处理（必须在所有路由之后，错误处理之前）
@@ -1484,9 +1561,37 @@ app.use((err, req, res, next) => {
 	next(err);
 });
 
-app.listen(PORT, () => {
-	console.log(`Bazi backend listening on http://localhost:${PORT}`);
-	console.log(`安全特性: SQL注入防护、XSS防护、输入验证、安全HTTP头`);
-});
+async function bootstrap() {
+	try {
+		// 初始化数据库连接
+		await initDatabase();
+		db = getDatabase();
+		console.log('✓ 使用数据库类型: MYSQL');
+		
+		// MySQL 自动初始化（如果表不存在）
+		if (db.pool) {
+			await autoInitMySQLTables(db.pool);
+		}
+		
+		// 初始化表结构（兼容性创建，如果表已存在则跳过）
+		await initTables();
+		console.log('✓ 数据库表结构初始化完成');
+		
+		// 初始化配置表
+		await ConfigService.initTable(db);
+		await loadEmailConfig();
+		
+		// 确保默认管理员账号存在
+		await ensureAdminAccount();
 
+		app.listen(PORT, () => {
+			console.log(`Bazi backend listening on http://localhost:${PORT}`);
+			console.log(`安全特性: SQL注入防护、XSS防护、输入验证、安全HTTP头`);
+		});
+	} catch (err) {
+		console.error('服务器启动失败，原因:', err.message || err);
+		process.exit(1);
+	}
+}
 
+bootstrap();
