@@ -34,8 +34,7 @@ import tmPickerView from "../tm-picker-view/tm-picker-view.vue";
 import TmSheet from "../tm-sheet/tm-sheet.vue";
 import tmText from "../tm-text/tm-text.vue";
 import tmButton from "../tm-button/tm-button.vue";
-const instance = getCurrentInstance();
-const proxy = instance?.proxy;
+const {proxy} = getCurrentInstance()
 
 /**
  * 事件说明：
@@ -124,9 +123,7 @@ function confirm() {
     if (!aniover.value) return
     setVal();
     emits("confirm", props.modelValue)
-    if (proxy) {
-        (proxy as any).$refs.drawer.close();
-    }
+    proxy.$refs.drawer.close();
 }
 function cancel() {
      if (!aniover.value) return

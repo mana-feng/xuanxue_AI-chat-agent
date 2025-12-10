@@ -1,307 +1,309 @@
 <template>
 	<tm-app>
 		<view class="page-wrapper">
-			<view class="page-shell">
-				<yx-nav-header class="page-nav" @open-auth="openAuth"></yx-nav-header>
+			<yx-nav-header @open-auth="openAuth"></yx-nav-header>
+			
+			<view class="page-content">
+				<!-- 欢迎 & 说明 -->
+				<tm-sheet
+					:round="16"
+					:shadow="3"
+					:margin="[0, 20]"
+					:padding="[32, 28]"
+					class="welcome-card"
+				>
+					<view class="welcome-content">
+						<tm-text
+							:font-size="38"
+							label="欢迎使用八字排盘"
+							:bold="true"
+							color="#2d3748"
+						></tm-text>
+						<tm-text
+							class="mt-8"
+							:font-size="26"
+							color="#718096"
+							:label="isLoggedIn ? '已登录账号，可随时保存与查看排盘记录' : '登录后可保存排盘到账号，在多设备间同步与管理历史记录'"
+						></tm-text>
+					</view>
+				</tm-sheet>
 
-				<view class="card-stack">
-					<!-- 欢迎 & 说明 -->
-					<tm-sheet
-						:round="16"
-						:shadow="3"
-						:margin="[0, 0]"
-						:padding="[32, 28]"
-						class="welcome-card"
-					>
-						<view class="welcome-content">
-							<tm-text
-								:font-size="38"
-								label="欢迎使用八字排盘"
-								:bold="true"
-								color="#2d3748"
-							></tm-text>
-							<tm-text
-								class="mt-8"
-								:font-size="26"
-								color="#718096"
-								:label="isLoggedIn ? '已登录账号，可随时保存与查看排盘记录' : '登录后可保存排盘到账号，在多设备间同步与管理历史记录'"
-							></tm-text>
-						</view>
-					</tm-sheet>
-	
-					<!-- 登录 / 注册区域（卡片） -->
-					<tm-sheet
-						:round="16"
-						:shadow="4"
-						:margin="[0, 0]"
-						:padding="[32, 28]"
-						class="auth-card"
-					>
-						<!-- 已登录状态 -->
-						<view v-if="isLoggedIn" class="auth-logged-in">
-							<view class="auth-header">
-								<view class="auth-avatar">
-									<tm-icon name="account-circle" :font-size="60" color="#667eea"></tm-icon>
-								</view>
-								<view class="auth-info">
-									<tm-text
-										:font-size="32"
-										:bold="true"
-										color="#2d3748"
-										:label="'您好，' + (user_store.email || '已登录用户')"
-									></tm-text>
-									<tm-text
-										class="mt-6"
-										:font-size="24"
-										color="#718096"
-										label="当前登录账号将自动保存您的排盘记录"
-									></tm-text>
-								</view>
+				<!-- 登录 / 注册区域（卡片） -->
+				<tm-sheet
+					:round="16"
+					:shadow="4"
+					:margin="[0, 20]"
+					:padding="[32, 28]"
+					class="auth-card"
+				>
+					<!-- 已登录状态 -->
+					<view v-if="isLoggedIn" class="auth-logged-in">
+						<view class="auth-header">
+							<view class="auth-avatar">
+								<tm-icon name="account-circle" :font-size="60" color="#667eea"></tm-icon>
 							</view>
-							<view class="auth-actions">
-								<tm-button
-									size="s"
-									color="primary"
-									:margin="[0, 8, 0, 0]"
-									:round="12"
-									label="历史查询"
-									@tap="goToHistory"
-								></tm-button>
-								<tm-button
-									v-if="user_store.isAdmin"
-									size="s"
-									color="warning"
-									:margin="[0, 8, 0, 0]"
-									:round="12"
-									label="管理员后台"
-									@tap="goToAdmin"
-								></tm-button>
-								<tm-button
-									size="s"
-									color="error"
-									:margin="[0, 0]"
-									:round="12"
-									label="退出登录"
-									@tap="user_store.logout()"
-								></tm-button>
-							</view>
-						</view>
-	
-						<!-- 未登录状态 -->
-						<view v-else class="auth-not-logged-in">
-							<view class="auth-header">
+							<view class="auth-info">
 								<tm-text
 									:font-size="32"
 									:bold="true"
 									color="#2d3748"
-									label="账号登录 / 注册"
+									:label="'您好，' + (user_store.email || '已登录用户')"
 								></tm-text>
 								<tm-text
 									class="mt-6"
 									:font-size="24"
 									color="#718096"
-									label="只需邮箱和密码，即可轻松管理您的八字排盘历史"
+									label="当前登录账号将自动保存您的排盘记录"
 								></tm-text>
 							</view>
+						</view>
+						<view class="auth-actions">
 							<tm-button
-								color="primary"
-								block
+								size="small"
+								type="primary"
+								:margin="[0, 8, 0, 0]"
+								:padding="[24, 32]"
 								:round="12"
-								:height="88"
-								font-size="30"
-								:bold="true"
-								label="登录 / 注册"
-								@tap="showAuthForm = true"
+								label="历史查询"
+								@tap="goToHistory"
+							></tm-button>
+							<tm-button
+								v-if="user_store.isAdmin"
+								size="small"
+								type="warning"
+								:margin="[0, 8, 0, 0]"
+								:padding="[24, 32]"
+								:round="12"
+								label="管理员后台"
+								@tap="goToAdmin"
+							></tm-button>
+							<tm-button
+								size="small"
+								type="danger"
+								:margin="[0, 0]"
+								:padding="[24, 32]"
+								:round="12"
+								label="退出登录"
+								@tap="user_store.logout()"
 							></tm-button>
 						</view>
-	
-						<!-- 登录/注册表单（未登录时显示） -->
-						<view
-							v-if="!isLoggedIn && showAuthForm"
-							class="auth-form-container"
-						>
-							<!-- 登录 / 注册切换 -->
-							<view class="auth-tabs">
-								<view 
-									class="auth-tab"
-									:class="{ active: authMode === 'login' }"
-									@tap="authMode = 'login'; authError = ''"
-								>
-									<tm-text
-										:font-size="30"
-										:bold="authMode === 'login'"
-										:color="authMode === 'login' ? '#667eea' : '#718096'"
-										label="登录"
-									></tm-text>
-								</view>
-								<view 
-									class="auth-tab"
-									:class="{ active: authMode === 'register' }"
-									@tap="authMode = 'register'; authError = ''"
-								>
-									<tm-text
-										:font-size="30"
-										:bold="authMode === 'register'"
-										:color="authMode === 'register' ? '#667eea' : '#718096'"
-										label="注册"
-									></tm-text>
-								</view>
-							</view>
-	
-							<!-- 表单输入 -->
-							<view class="auth-form-fields">
-								<tm-input
-									v-model="authEmail"
-									:margin="[0, 0, 20, 0]"
-									prefix="tmicon-md-mail"
-									type="text"
-									:round="12"
-									:border="1"
-									placeholder="请输入常用邮箱，用于登录与找回账号"
-								></tm-input>
-								<tm-input
-									v-model="authPassword"
-									:margin="[0, 0, 20, 0]"
-									prefix="tmicon-md-lock"
-									type="password"
-									:round="12"
-									:border="1"
-									placeholder="设置登录密码（建议不少于 6 位，包含字母和数字）"
-								></tm-input>
-							</view>
-	
-							<view class="auth-form-hint">
+					</view>
+
+					<!-- 未登录状态 -->
+					<view v-else class="auth-not-logged-in">
+						<view class="auth-header">
+							<tm-text
+								:font-size="32"
+								:bold="true"
+								color="#2d3748"
+								label="账号登录 / 注册"
+							></tm-text>
+							<tm-text
+								class="mt-6"
+								:font-size="24"
+								color="#718096"
+								label="只需邮箱和密码，即可轻松管理您的八字排盘历史"
+							></tm-text>
+						</view>
+						<tm-button
+							type="primary"
+							block
+							:round="12"
+							:height="88"
+							:font-size="30"
+							:bold="true"
+							label="登录 / 注册"
+							@tap="showAuthForm = true"
+						></tm-button>
+					</view>
+
+					<!-- 登录/注册表单（未登录时显示） -->
+					<view
+						v-if="!isLoggedIn && showAuthForm"
+						class="auth-form-container"
+					>
+						<!-- 登录 / 注册切换 -->
+						<view class="auth-tabs">
+							<view 
+								class="auth-tab"
+								:class="{ active: authMode === 'login' }"
+								@tap="authMode = 'login'; authError = ''"
+							>
 								<tm-text
-									:font-size="22"
-									color="#a0aec0"
-									:label="authMode === 'login' ? '为保障安全，请在私人环境下登录账号' : '注册即表示同意相关服务条款'"
-								></tm-text>
-								<tm-text
-									v-if="authMode === 'login'"
-									:font-size="22"
-									color="#667eea"
-									label="忘记密码？"
-								></tm-text>
-							</view>
-	
-							<view v-if="authError" class="auth-error">
-								<tm-icon name="close-circle" :font-size="24" color="#f56565" :margin="[0, 8, 0, 0]"></tm-icon>
-								<tm-text
-									:label="authError"
-									color="#f56565"
-									:font-size="24"
-								></tm-text>
-							</view>
-	
-							<view class="auth-form-actions">
-								<tm-button
-									block
-									:loading="authLoading"
-									:disabled="authLoading"
-									:margin="[0, 0]"
-									:type="authMode === 'login' ? 'primary' : 'success'"
-									:round="12"
-									:height="88"
 									:font-size="30"
-									:bold="true"
-									:label="authMode === 'login' ? '登录' : '注册并登录'"
-									@tap="submitAuth"
-								></tm-button>
-								<tm-button
-									class="mt-16"
-									type="grey"
-									block
-									:margin="[0, 0]"
-									:round="12"
-									:height="88"
+									:bold="authMode === 'login'"
+									:color="authMode === 'login' ? '#667eea' : '#718096'"
+									label="登录"
+								></tm-text>
+							</view>
+							<view 
+								class="auth-tab"
+								:class="{ active: authMode === 'register' }"
+								@tap="authMode = 'register'; authError = ''"
+							>
+								<tm-text
 									:font-size="30"
-									label="取消"
-									@tap="showAuthForm = false"
-								></tm-button>
+									:bold="authMode === 'register'"
+									:color="authMode === 'register' ? '#667eea' : '#718096'"
+									label="注册"
+								></tm-text>
 							</view>
 						</view>
-					</tm-sheet>
-	
-					<!-- 排盘表单 -->
-					<tm-sheet :round="16" :shadow="4" :margin="[0, 0]" :padding="[32, 28]" class="form-card">
-						<view class="form-header">
-							<view class="form-header-icon">
-								<tm-icon name="calendar-alt" :font-size="44" color="#667eea"></tm-icon>
-							</view>
-							<view class="form-header-text">
-								<tm-text
-									:font-size="38"
-									:bold="true"
-									color="#2d3748"
-									label="排盘信息"
-								></tm-text>
-								<tm-text
-									:font-size="24"
-									color="#a0aec0"
-									label="请填写以下信息进行八字排盘"
-									:margin="[8, 0, 0, 0]"
-								></tm-text>
-							</view>
+
+						<!-- 表单输入 -->
+						<view class="auth-form-fields">
+							<tm-input
+								v-model="authEmail"
+								:margin="[0, 0, 20, 0]"
+								prefix="tmicon-md-mail"
+								type="text"
+								:round="12"
+								:border="1"
+								placeholder="请输入常用邮箱，用于登录与找回账号"
+							></tm-input>
+							<tm-input
+								v-model="authPassword"
+								:margin="[0, 0, 20, 0]"
+								prefix="tmicon-md-lock"
+								type="password"
+								:round="12"
+								:border="1"
+								placeholder="设置登录密码（建议不少于 6 位，包含字母和数字）"
+							></tm-input>
+						</view>
+
+						<view class="auth-form-hint">
+							<tm-text
+								:font-size="22"
+								color="#a0aec0"
+								:label="authMode === 'login' ? '为保障安全，请在私人环境下登录账号' : '注册即表示同意相关服务条款'"
+							></tm-text>
+							<tm-text
+								v-if="authMode === 'login'"
+								:font-size="22"
+								color="#667eea"
+								label="忘记密码？"
+							></tm-text>
+						</view>
+
+						<view v-if="authError" class="auth-error">
+							<tm-icon name="close-circle" :font-size="24" color="#f56565" :margin="[0, 8, 0, 0]"></tm-icon>
+							<tm-text
+								:label="authError"
+								color="#f56565"
+								:font-size="24"
+							></tm-text>
+						</view>
+
+						<view class="auth-form-actions">
+							<tm-button
+								block
+								:loading="authLoading"
+								:disabled="authLoading"
+								:margin="[0, 0]"
+								:type="authMode === 'login' ? 'primary' : 'success'"
+								:round="12"
+								:height="88"
+								:font-size="30"
+								:bold="true"
+								:label="authMode === 'login' ? '登录' : '注册并登录'"
+								@tap="submitAuth"
+							></tm-button>
+							<tm-button
+								class="mt-16"
+								type="grey"
+								block
+								:margin="[0, 0]"
+								:round="12"
+								:height="88"
+								:font-size="30"
+								label="取消"
+								@tap="showAuthForm = false"
+							></tm-button>
+						</view>
+					</view>
+				</tm-sheet>
+
+				<!-- 排盘表单 -->
+				<tm-sheet :round="16" :shadow="4" :margin="[0, 20]" :padding="[32, 28]" class="form-card">
+					<view class="form-header">
+						<view class="form-header-icon">
+							<tm-icon name="calendar-alt" :font-size="44" color="#667eea"></tm-icon>
+						</view>
+						<view class="form-header-text">
+							<tm-text
+								:font-size="38"
+								:bold="true"
+								color="#2d3748"
+								label="排盘信息"
+							></tm-text>
+							<tm-text
+								:font-size="24"
+								color="#a0aec0"
+								label="请填写以下信息进行八字排盘"
+								:margin="[8, 0, 0, 0]"
+							></tm-text>
+						</view>
+					</view>
+					
+					<!-- 基本信息区块 -->
+					<view class="form-section form-section-card">
+						<view class="section-title">
+							<tm-icon name="tmicon-md-person" :font-size="28" color="#667eea" :margin="[0, 8, 0, 0]"></tm-icon>
+							<tm-text
+								:font-size="28"
+								color="#2d3748"
+								:bold="true"
+								label="基本信息"
+							></tm-text>
 						</view>
 						
-						<!-- 基本信息区块 -->
-						<view class="form-section form-section-card">
-							<view class="section-title">
-								<tm-icon name="tmicon-md-person" :font-size="28" color="#667eea" :margin="[0, 8, 0, 0]"></tm-icon>
-								<tm-text
-									:font-size="28"
-									color="#2d3748"
-									:bold="true"
-									label="基本信息"
-								></tm-text>
-							</view>
-							
-							<view class="section-content">
-								<tm-input
-									v-model="realname"
-									:margin="[0, 0, 24, 0]"
-									placeholder="请输入姓名（可选）"
-									prefix="tmicon-md-person"
-									:round="12"
-									:border="1"
-									:padding="[24, 20]"
-								></tm-input>
-	
-								<view class="form-group-single">
-									<view class="form-label">
-										<tm-icon name="tmicon-md-people" :font-size="24" color="#718096" :margin="[0, 6, 0, 0]"></tm-icon>
-										<tm-text
-											:font-size="26"
-											color="#718096"
-											label="性别"
-										></tm-text>
-									</view>
-									<view class="form-control">
-										<tm-radio-group v-model="gender">
-											<tm-radio label="男" :value="0" :margin="[0, 16, 0, 0]"></tm-radio>
-											<tm-radio label="女" :value="1"></tm-radio>
-										</tm-radio-group>
-									</view>
+						<view class="section-content">
+							<tm-input
+								v-model="realname"
+								:margin="[0, 0, 24, 0]"
+								placeholder="请输入姓名（可选）"
+								prefix="tmicon-md-person"
+								:round="12"
+								:border="1"
+								:padding="[24, 20]"
+							></tm-input>
+
+							<view class="form-group-single">
+								<view class="form-label">
+									<tm-icon name="tmicon-md-people" :font-size="24" color="#718096" :margin="[0, 6, 0, 0]"></tm-icon>
+									<tm-text
+										:font-size="26"
+										color="#718096"
+										label="性别"
+									></tm-text>
+								</view>
+								<view class="form-control">
+									<tm-radio-group v-model="gender">
+										<tm-radio label="男" :value="0" :margin="[0, 16, 0, 0]"></tm-radio>
+										<tm-radio label="女" :value="1"></tm-radio>
+									</tm-radio-group>
 								</view>
 							</view>
 						</view>
-	
-						<!-- 出生时间区块 -->
-						<view class="form-section form-section-card">
-							<view class="section-title">
-								<tm-icon name="tmicon-time" :font-size="28" color="#667eea" :margin="[0, 8, 0, 0]"></tm-icon>
-								<tm-text
-									:font-size="28"
-									color="#2d3748"
-									:bold="true"
-									label="出生时间"
-								></tm-text>
-							</view>
-							
-							<view class="section-content">
-								<!-- 日历类型选择 -->
-								<view class="form-group-single calendar-type-selector">
-									<view class="form-label">
+					</view>
+
+					<!-- 出生时间区块 -->
+					<view class="form-section form-section-card">
+						<view class="section-title">
+							<tm-icon name="tmicon-time" :font-size="28" color="#667eea" :margin="[0, 8, 0, 0]"></tm-icon>
+							<tm-text
+								:font-size="28"
+								color="#2d3748"
+								:bold="true"
+								label="出生时间"
+							></tm-text>
+						</view>
+						
+						<view class="section-content">
+							<!-- 日历类型选择 -->
+							<view class="form-group-single calendar-type-selector">
+								<view class="form-label">
 									<tm-icon name="tmicon-calendar-alt" :font-size="24" color="#718096" :margin="[0, 6, 0, 0]"></tm-icon>
 									<tm-text
 										:font-size="26"
@@ -315,95 +317,93 @@
 										:default-value="0"
 										:list="[{ text: '阳历' }, { text: '阴历' }]"
 										:margin="[0, 0]"
-										:width="520"
+										:width="300"
 									></tm-segtab>
 								</view>
 							</view>
-								
-								<!-- 日期时间选择 -->
-								<tm-input
-									:placeholder="model === 0 ? '请选择阳历出生日期和时间（精确到分钟）' : '请选择阴历出生日期和时间（精确到分钟）'"
-									prefix="tmicon-calendar-alt"
-									suffix="tmicon-angle-right"
-									v-model="datetime_label"
-									:margin="[0, 0, 20, 0]"
-									:round="12"
-									:border="1"
-									:padding="[24, 20]"
-									@tap="SelectTime"
-								></tm-input>
-	
-								<!-- 显示信息卡片组 -->
-								<view v-if="lunar_label || bazi_label" class="info-cards">
-									<view v-if="lunar_label" class="info-card">
-										<view class="info-card-header">
-											<tm-icon name="tmicon-integral" :font-size="32" color="#48bb78"></tm-icon>
-											<tm-text
-												:font-size="24"
-												color="#718096"
-												:label="model === 0 ? '对应阴历' : '对应阳历'"
-												:margin="[0, 0, 0, 12]"
-											></tm-text>
-										</view>
+							
+							<!-- 日期时间选择 -->
+							<tm-input
+								:placeholder="model === 0 ? '请选择阳历出生日期和时间（精确到分钟）' : '请选择阴历出生日期和时间（精确到分钟）'"
+								prefix="tmicon-calendar-alt"
+								suffix="tmicon-angle-right"
+								v-model="datetime_label"
+								:margin="[0, 0, 20, 0]"
+								:round="12"
+								:border="1"
+								:padding="[24, 20]"
+								@tap="SelectTime"
+							></tm-input>
+
+							<!-- 显示信息卡片组 -->
+							<view v-if="lunar_label || bazi_label" class="info-cards">
+								<view v-if="lunar_label" class="info-card">
+									<view class="info-card-header">
+										<tm-icon name="tmicon-integral" :font-size="32" color="#48bb78"></tm-icon>
 										<tm-text
-											:font-size="28"
-											color="#2d3748"
-											:bold="true"
-											:label="lunar_label"
+											:font-size="24"
+											color="#718096"
+											label="对应阴历"
+											:margin="[0, 0, 0, 12]"
 										></tm-text>
 									</view>
-									
-									<view v-if="bazi_label" class="info-card">
-										<view class="info-card-header">
-											<tm-icon name="tmicon-calendar" :font-size="32" color="#667eea"></tm-icon>
-											<tm-text
-												:font-size="24"
-												color="#718096"
-												label="四柱八字"
-												:margin="[0, 0, 0, 12]"
-											></tm-text>
-										</view>
-										<view class="bazi-display">
-											<tm-tag
-												v-for="(item, index) in bazi_label.split(' ')"
-												:key="index"
-												:label="item"
-												color="primary"
-												:round="8"
-												:margin="[0, 8, 0, 0]"
-												font-size="26"
-												:bold="true"
-											></tm-tag>
-										</view>
+									<tm-text
+										:font-size="28"
+										color="#2d3748"
+										:bold="true"
+										:label="lunar_label"
+									></tm-text>
+								</view>
+								
+								<view v-if="bazi_label" class="info-card">
+									<view class="info-card-header">
+										<tm-icon name="tmicon-calendar" :font-size="32" color="#667eea"></tm-icon>
+										<tm-text
+											:font-size="24"
+											color="#718096"
+											label="四柱八字"
+											:margin="[0, 0, 0, 12]"
+										></tm-text>
+									</view>
+									<view class="bazi-display">
+										<tm-tag
+											v-for="(item, index) in bazi_label.split(' ')"
+											:key="index"
+											:label="item"
+											type="primary"
+											:round="8"
+											:margin="[0, 8, 0, 0]"
+											:font-size="26"
+											:bold="true"
+										></tm-tag>
 									</view>
 								</view>
 							</view>
 						</view>
-	
-						<!-- 提交按钮 -->
-						<view class="form-submit">
-							<view class="submit-button-wrapper">
-								<tm-button 
-									block 
-									label="开始排盘" 
-									:color="isFormValid ? 'primary' : 'grey-4'"
-									:fontColor="isFormValid ? '#ffffff' : '#a0aec0'"
-									:round="16"
-									:height="108"
-									font-size="36"
-									:bold="true"
-									:linear="isFormValid ? 'right' : ''"
-									:shadow="isFormValid ? 8 : 2"
-									icon="tmicon-calendar-alt"
-									:disabled="!isFormValid"
-									@tap="Sumbit"
-									:class="['submit-button', isFormValid ? 'submit-button-active' : 'submit-button-inactive']"
-								></tm-button>
-								<view v-if="isFormValid" class="submit-button-glow"></view>
-							</view>
+					</view>
+
+					<!-- 提交按钮 -->
+					<view class="form-submit">
+						<view class="submit-button-wrapper">
+							<tm-button 
+								block 
+								label="开始排盘" 
+								type="primary"
+								:round="16"
+								:height="108"
+								:font-size="36"
+								:bold="true"
+								:linear="true"
+								:linearDeep="'accent'"
+								:shadow="8"
+								icon="tmicon-calendar-alt"
+								@tap="Sumbit"
+								class="submit-button"
+							></tm-button>
+							<view class="submit-button-glow"></view>
 						</view>
-					</tm-sheet>
-				</view>
+					</view>
+				</tm-sheet>
 
 				<tm-time-picker
 					v-model:show="solar_select_show"
@@ -500,11 +500,6 @@ const time_suffix = {
 		second: '秒'
 	}
 };
-
-// 表单验证：判断是否可以开始排盘
-const isFormValid = computed(() => {
-	return timestamp.value !== null;
-});
 
 watch(model, () => PullDatatimeLabel());
 watch(timestamp, () => PullDatatimeLabel());
@@ -686,37 +681,19 @@ function Sumbit ()  {
 	box-sizing: border-box;
 }
 
-.page-shell {
+.page-content {
 	width: 100%;
-	max-width: 1200px; /* 放宽容器宽度，避免左右出现大白边 */
-	padding: 32rpx 28rpx 48rpx;
+	max-width: 100%;
+	padding: 30rpx;
 	box-sizing: border-box;
 	margin: 0 auto;
-	display: flex;
-	flex-direction: column;
-	gap: 24rpx;
-}
-
-.page-nav {
-	width: 100%;
-	box-sizing: border-box;
-	padding: 8rpx 0;
-}
-
-.card-stack {
-	display: flex;
-	flex-direction: column;
-	gap: 24rpx;
 }
 
 /* 响应式容器 */
 @media screen and (min-width: 750px) {
-	.page-shell {
-		max-width: 1200px;
-		padding: 40rpx 40rpx 64rpx;
-	}
-	.card-stack {
-		gap: 28rpx;
+	.page-content {
+		max-width: 750rpx;
+		padding: 30rpx 40rpx;
 	}
 }
 
@@ -973,6 +950,11 @@ function Sumbit ()  {
 	overflow: hidden;
 }
 
+.segtab-wrapper :deep(.tm-segtab) {
+	max-width: 100%;
+	width: auto !important;
+}
+
 .info-cards {
 	display: flex;
 	flex-direction: column;
@@ -1020,21 +1002,8 @@ function Sumbit ()  {
 	transition: all 0.3s ease;
 }
 
-.submit-button-active {
-	opacity: 1;
-}
-
-.submit-button-inactive {
-	opacity: 0.6;
-}
-
 .submit-button:active {
 	transform: scale(0.98);
-}
-
-.submit-button:disabled {
-	opacity: 0.6;
-	cursor: not-allowed;
 }
 
 .submit-button-glow {

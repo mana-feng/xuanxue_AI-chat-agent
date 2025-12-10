@@ -10,9 +10,7 @@ export const language= function(key:string){
 	}
 	let i18nConfig:I18nOptions | undefined = {
 	  locale: uni.getLocale(),// 获取已设置的语言
-	  messages,
-	  legacy: false, // 使用 Composition API 模式
-	  allowComposition: true
+	  messages
 	}
 	// #ifndef APP-NVUE
 	const i18n = createI18n(i18nConfig)
@@ -32,9 +30,7 @@ export const languageByGlobal= function(){
 	}
 	let i18nConfig = {
 	  locale: uni.getLocale(),// 获取已设置的语言
-	  messages,
-	  legacy: false, // 使用 Composition API 模式
-	  allowComposition: true
+	  messages
 	}
 	const i18n = createI18n(i18nConfig)
 	return i18n

@@ -185,17 +185,11 @@ ComponentInternalInstance
 	}
 	function getEl(el:HTMLElement) {
 		if (typeof el === 'string' || typeof el === 'number') return el;
-		// #ifdef MP-WEIXIN
-		const WXEnvironment = (globalThis as any).WXEnvironment;
 		if (WXEnvironment) {
-			return (el as any).ref;
+			return el.ref;
 		} else {
-			return el instanceof HTMLElement ? el : (el as any).$el;
+			return el instanceof HTMLElement ? el : el.$el;
 		}
-		// #endif
-		// #ifndef MP-WEIXIN
-		return el instanceof HTMLElement ? el : (el as any).$el;
-		// #endif
 	}
 	function fadeInNvue(off:boolean = false) {
 		if(off==false){
@@ -204,9 +198,8 @@ ComponentInternalInstance
 			// isAniing.vale = true;
 			clearTimeout(timids)
 			timids = setTimeout(function() {
-				if (!proxy) return;
-				var testEl = (proxy as any).$refs.overlay;
-				  (animation as any).transition(testEl, {
+				var testEl = proxy.$refs.overlay;
+				  animation.transition(testEl, {
 					  styles: {
 						  backgroundColor:bgColor_rp.value,
 						  opacity:0
@@ -227,9 +220,8 @@ ComponentInternalInstance
 			emits('open');
 			clearTimeout(timids)
 			timids = setTimeout(function() {
-				if (!proxy) return;
-				var testEl = (proxy as any).$refs.overlay;
-				  (animation as any).transition(testEl, {
+				var testEl = proxy.$refs.overlay;
+				  animation.transition(testEl, {
 					  styles: {
 						  backgroundColor:bgColor_rp.value,
 						  opacity:1

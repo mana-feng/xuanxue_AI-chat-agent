@@ -1584,23 +1584,9 @@ async function bootstrap() {
 		// 确保默认管理员账号存在
 		await ensureAdminAccount();
 
-		const server = app.listen(PORT, () => {
+		app.listen(PORT, () => {
 			console.log(`Bazi backend listening on http://localhost:${PORT}`);
 			console.log(`安全特性: SQL注入防护、XSS防护、输入验证、安全HTTP头`);
-		});
-
-		// 处理端口占用错误
-		server.on('error', (err) => {
-			if (err.code === 'EADDRINUSE') {
-				console.error(`❌ 端口 ${PORT} 已被占用，请先停止占用该端口的进程`);
-				console.error(`   可以使用以下命令查找并停止进程:`);
-				console.error(`   netstat -ano | findstr :${PORT}`);
-				console.error(`   taskkill /PID <进程ID> /F`);
-				process.exit(1);
-			} else {
-				console.error('服务器启动失败:', err);
-				process.exit(1);
-			}
 		});
 	} catch (err) {
 		console.error('服务器启动失败，原因:', err.message || err);
