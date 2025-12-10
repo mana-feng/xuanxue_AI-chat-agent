@@ -10,7 +10,7 @@ import {ComponentInternalInstance} from 'vue'
  @param {Object} list 可以是url数组，也可以是对象，数据比如：["http:url"] or [{url:"https:url",...}]
  @param {Object} rangKey 如果list是对象数组，需要提供url字段。
  */
-import {preview} from "./preview.js"
+import {preview} from "./preview"
 export default preview;
 /**
 * 数据分组

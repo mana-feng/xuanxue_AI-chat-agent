@@ -83,15 +83,7 @@ export function getUserList(params: { page?: number; pageSize?: number; search?:
 	});
 }
 
-/**
- * 获取用户详情
- */
-export function getUserDetail(id: number) {
-	return request<UserInfo>(`/api/admin/users/${id}`, {
-		method: 'GET',
-		needAuth: true
-	});
-}
+// getUserDetail() 函数未在项目中使用，已删除
 
 /**
  * 更新用户角色

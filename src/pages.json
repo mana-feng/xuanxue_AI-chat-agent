@@ -3,8 +3,8 @@
 		"autoscan": true,
 		"custom": {
 			"^tm-(.*)": "@/libs/tmui/components/tm-$1/tm-$1.vue",
-			"^yx-(.*)": "@/shared/components/yx-$1/yx-$1.vue",
-			"^yxn-(.*)": "@/shared/components/yxn-$1/yxn-$1.nvue"
+			"^yx-(.*)": "@/components/yx-$1/yx-$1.vue",
+			"^yxn-(.*)": "@/components/yxn-$1/yxn-$1.nvue"
 		}
 	},
 	"_comment_pages": "pages数组中第一项表示应用启动页，参考：https://uniapp.dcloud.io/collocation/pages",

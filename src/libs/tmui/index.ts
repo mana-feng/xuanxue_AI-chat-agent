@@ -59,3 +59,4 @@ export default {
 		app.config.globalProperties.tm = $tm;
 	}
 };
+

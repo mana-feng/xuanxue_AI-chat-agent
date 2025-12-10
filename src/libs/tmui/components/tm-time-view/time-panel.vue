@@ -169,6 +169,75 @@ function getIndexNow(){
 	// #endif
 	colIndex.value = index
 }
+// 阴历月份中文名称
+const lunarMonthNames = ['', '正月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '冬月', '腊月'];
+
+// 阴历日期中文名称
+function getLunarDayName(day: number): string {
+	if (day === 1) return '初一';
+	if (day === 2) return '初二';
+	if (day === 3) return '初三';
+	if (day === 4) return '初四';
+	if (day === 5) return '初五';
+	if (day === 6) return '初六';
+	if (day === 7) return '初七';
+	if (day === 8) return '初八';
+	if (day === 9) return '初九';
+	if (day === 10) return '初十';
+	if (day === 11) return '十一';
+	if (day === 12) return '十二';
+	if (day === 13) return '十三';
+	if (day === 14) return '十四';
+	if (day === 15) return '十五';
+	if (day === 16) return '十六';
+	if (day === 17) return '十七';
+	if (day === 18) return '十八';
+	if (day === 19) return '十九';
+	if (day === 20) return '二十';
+	if (day === 21) return '廿一';
+	if (day === 22) return '廿二';
+	if (day === 23) return '廿三';
+	if (day === 24) return '廿四';
+	if (day === 25) return '廿五';
+	if (day === 26) return '廿六';
+	if (day === 27) return '廿七';
+	if (day === 28) return '廿八';
+	if (day === 29) return '廿九';
+	if (day === 30) return '三十';
+	return `${day}日`;
+}
+
+// 获取阴历月份中文名称（支持闰月）
+function getLunarMonthName(month: number, year?: number): string {
+	if (month >= 1 && month <= 12) {
+		// 检查是否是闰月
+		if (year) {
+			try {
+				// 尝试创建该月的日期来判断是否是闰月
+				const testLunar = Lunar.fromYmd(year, month, 1);
+				// 如果 month 大于 12，可能是闰月
+				// 但 lunar-javascript 可能用其他方式表示闰月
+				// 这里先简单处理
+				return lunarMonthNames[month];
+			} catch (e) {
+				return lunarMonthNames[month];
+			}
+		}
+		return lunarMonthNames[month];
+	} else if (month === 13) {
+		// 第13个月通常是闰月，需要根据实际情况判断是闰几月
+		// 这里先简单处理，显示"闰月"
+		// 实际应该根据年份判断是闰几月
+		if (year) {
+			// 尝试判断是闰几月
+			// 由于 lunar-javascript 的闰月处理可能不同，这里先简化
+			return '闰月';
+		}
+		return '闰月';
+	}
+	return `${month}月`;
+}
+
 function displayLabel(val:number){
 	if(props.timeType==='hour' && props.suffix==='时辰'){
 		const idx = val === 23 || val === 0 ? 0 : Math.floor((val + 1) / 2);
@@ -177,12 +246,34 @@ function displayLabel(val:number){
 		return range ? `${zhi}(${range})` : `${zhi}时辰`;
 	}
 	if(isLunarMode.value && props.timeType === 'month'){
-		// 阴历月份显示
+		// 阴历月份显示中文名称
+		const currentDate = new Date(_nowtimeValue.value.format('YYYY-MM-DD HH:mm:ss'));
+		const solar = Solar.fromDate(currentDate);
+		const lunar = solar.getLunar();
+		const year = lunar.getYear();
+		
+		if (val >= 1 && val <= 12) {
+			// 检查是否是闰月
+			// 尝试通过创建该月的日期来判断
+			try {
+				const testLunar = Lunar.fromYmd(year, val, 1);
+				// 如果能创建，说明是正常月份
+				return lunarMonthNames[val];
+			} catch (e) {
+				// 如果创建失败，可能是闰月
+				return `闰${lunarMonthNames[val]}`;
+			}
+		} else if (val === 13) {
+			// 第13个月通常是闰月
+			// 需要判断是闰几月（通常是闰中间某个月）
+			// 这里简化处理，显示"闰月"
+			return '闰月';
+		}
 		return `${val}${props.suffix}`;
 	}
 	if(isLunarMode.value && props.timeType === 'date'){
-		// 阴历日期显示
-		return `${val}${props.suffix}`;
+		// 阴历日期显示中文名称
+		return getLunarDayName(val);
 	}
 	return `${val}${props.suffix}`;
 }

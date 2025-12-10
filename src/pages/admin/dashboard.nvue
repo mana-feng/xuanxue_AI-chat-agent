@@ -3,7 +3,7 @@
 		<view class="page-wrapper">
 			<yx-nav-header></yx-nav-header>
 			
-			<view class="page-content">
+			<view class="page-content" :style="pageContentStyle">
 				<!-- 顶部标题 -->
 				<view class="header">
 					<tm-text
@@ -200,12 +200,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useUserStore } from '@/store/user';
 import { getAdminStats, type AdminStats } from '@/api/admin';
 
 const userStore = useUserStore();
 const stats = ref<AdminStats | null>(null);
+
+// navbar 高度（rpx），与 yx-nav-header 中的 navbarHeight 保持一致
+const navbarHeight = 40;
+
+// 计算页面内容的 padding-top，避免被 fixed 的 header 遮挡
+const pageContentStyle = computed(() => {
+	return {
+		paddingTop: `${navbarHeight + 20}rpx` // navbar高度 + 原有padding
+	};
+});
 
 onMounted(() => {
 	// 先恢复登录状态
@@ -277,6 +287,7 @@ function handleLogout() {
 
 .page-content {
 	padding: 20rpx;
+	/* padding-top 通过 :style 动态设置，与 navbar 高度联动 */
 }
 
 .header {

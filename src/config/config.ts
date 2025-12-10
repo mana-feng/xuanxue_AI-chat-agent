@@ -266,6 +266,8 @@ const tiangan = {
 
 export const API_BASE_URL = 'http://localhost:3001';
 
+export { theme } from './constants';
+
 export default {
 	tiangan,
 	dizhi

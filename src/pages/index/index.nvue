@@ -1,60 +1,37 @@
 <template>
 	<tm-app>
 		<view class="page-wrapper">
-			<yx-nav-header @open-auth="openAuth"></yx-nav-header>
-			
+			<yx-nav-header></yx-nav-header>
 			<view class="page-content">
-				<!-- 欢迎 & 说明 -->
-				<tm-sheet
-					:round="16"
-					:shadow="3"
-					:margin="[0, 20]"
-					:padding="[32, 28]"
-					class="welcome-card"
-				>
-					<view class="welcome-content">
-						<tm-text
-							:font-size="38"
-							label="欢迎使用八字排盘"
-							:bold="true"
-							color="#2d3748"
-						></tm-text>
-						<tm-text
-							class="mt-8"
-							:font-size="26"
-							color="#718096"
-							:label="isLoggedIn ? '已登录账号，可随时保存与查看排盘记录' : '登录后可保存排盘到账号，在多设备间同步与管理历史记录'"
-						></tm-text>
-					</view>
-				</tm-sheet>
-
 				<!-- 登录 / 注册区域（卡片） -->
 				<tm-sheet
+					v-if="isLoggedIn"
 					:round="16"
 					:shadow="4"
 					:margin="[0, 20]"
 					:padding="[32, 28]"
 					class="auth-card"
+					:follow-dark="true"
 				>
 					<!-- 已登录状态 -->
-					<view v-if="isLoggedIn" class="auth-logged-in">
+					<view class="auth-logged-in">
 						<view class="auth-header">
 							<view class="auth-avatar">
 								<tm-icon name="account-circle" :font-size="60" color="#667eea"></tm-icon>
 							</view>
 							<view class="auth-info">
-								<tm-text
-									:font-size="32"
-									:bold="true"
-									color="#2d3748"
-									:label="'您好，' + (user_store.email || '已登录用户')"
-								></tm-text>
-								<tm-text
-									class="mt-6"
-									:font-size="24"
-									color="#718096"
-									label="当前登录账号将自动保存您的排盘记录"
-								></tm-text>
+							<tm-text
+								:font-size="32"
+								:bold="true"
+								:follow-dark="true"
+								:label="'您好，' + (user_store.email || '已登录用户')"
+							></tm-text>
+							<tm-text
+								class="mt-6"
+								:font-size="24"
+								:follow-dark="true"
+								label="当前登录账号将自动保存您的排盘记录"
+							></tm-text>
 							</view>
 						</view>
 						<view class="auth-actions">
@@ -88,144 +65,10 @@
 							></tm-button>
 						</view>
 					</view>
-
-					<!-- 未登录状态 -->
-					<view v-else class="auth-not-logged-in">
-						<view class="auth-header">
-							<tm-text
-								:font-size="32"
-								:bold="true"
-								color="#2d3748"
-								label="账号登录 / 注册"
-							></tm-text>
-							<tm-text
-								class="mt-6"
-								:font-size="24"
-								color="#718096"
-								label="只需邮箱和密码，即可轻松管理您的八字排盘历史"
-							></tm-text>
-						</view>
-						<tm-button
-							type="primary"
-							block
-							:round="12"
-							:height="88"
-							:font-size="30"
-							:bold="true"
-							label="登录 / 注册"
-							@tap="showAuthForm = true"
-						></tm-button>
-					</view>
-
-					<!-- 登录/注册表单（未登录时显示） -->
-					<view
-						v-if="!isLoggedIn && showAuthForm"
-						class="auth-form-container"
-					>
-						<!-- 登录 / 注册切换 -->
-						<view class="auth-tabs">
-							<view 
-								class="auth-tab"
-								:class="{ active: authMode === 'login' }"
-								@tap="authMode = 'login'; authError = ''"
-							>
-								<tm-text
-									:font-size="30"
-									:bold="authMode === 'login'"
-									:color="authMode === 'login' ? '#667eea' : '#718096'"
-									label="登录"
-								></tm-text>
-							</view>
-							<view 
-								class="auth-tab"
-								:class="{ active: authMode === 'register' }"
-								@tap="authMode = 'register'; authError = ''"
-							>
-								<tm-text
-									:font-size="30"
-									:bold="authMode === 'register'"
-									:color="authMode === 'register' ? '#667eea' : '#718096'"
-									label="注册"
-								></tm-text>
-							</view>
-						</view>
-
-						<!-- 表单输入 -->
-						<view class="auth-form-fields">
-							<tm-input
-								v-model="authEmail"
-								:margin="[0, 0, 20, 0]"
-								prefix="tmicon-md-mail"
-								type="text"
-								:round="12"
-								:border="1"
-								placeholder="请输入常用邮箱，用于登录与找回账号"
-							></tm-input>
-							<tm-input
-								v-model="authPassword"
-								:margin="[0, 0, 20, 0]"
-								prefix="tmicon-md-lock"
-								type="password"
-								:round="12"
-								:border="1"
-								placeholder="设置登录密码（建议不少于 6 位，包含字母和数字）"
-							></tm-input>
-						</view>
-
-						<view class="auth-form-hint">
-							<tm-text
-								:font-size="22"
-								color="#a0aec0"
-								:label="authMode === 'login' ? '为保障安全，请在私人环境下登录账号' : '注册即表示同意相关服务条款'"
-							></tm-text>
-							<tm-text
-								v-if="authMode === 'login'"
-								:font-size="22"
-								color="#667eea"
-								label="忘记密码？"
-							></tm-text>
-						</view>
-
-						<view v-if="authError" class="auth-error">
-							<tm-icon name="close-circle" :font-size="24" color="#f56565" :margin="[0, 8, 0, 0]"></tm-icon>
-							<tm-text
-								:label="authError"
-								color="#f56565"
-								:font-size="24"
-							></tm-text>
-						</view>
-
-						<view class="auth-form-actions">
-							<tm-button
-								block
-								:loading="authLoading"
-								:disabled="authLoading"
-								:margin="[0, 0]"
-								:type="authMode === 'login' ? 'primary' : 'success'"
-								:round="12"
-								:height="88"
-								:font-size="30"
-								:bold="true"
-								:label="authMode === 'login' ? '登录' : '注册并登录'"
-								@tap="submitAuth"
-							></tm-button>
-							<tm-button
-								class="mt-16"
-								type="grey"
-								block
-								:margin="[0, 0]"
-								:round="12"
-								:height="88"
-								:font-size="30"
-								label="取消"
-								@tap="showAuthForm = false"
-							></tm-button>
-						</view>
-					</view>
 				</tm-sheet>
 
 				<!-- 排盘表单 -->
-				<tm-sheet :round="16" :shadow="4" :margin="[0, 20]" :padding="[32, 28]" class="form-card">
+				<tm-sheet :round="16" :shadow="4" :margin="[0, 20]" :padding="[32, 28]" class="form-card" :follow-dark="true">
 					<view class="form-header">
 						<view class="form-header-icon">
 							<tm-icon name="calendar-alt" :font-size="44" color="#667eea"></tm-icon>
@@ -234,12 +77,12 @@
 							<tm-text
 								:font-size="38"
 								:bold="true"
-								color="#2d3748"
+								:follow-dark="true"
 								label="排盘信息"
 							></tm-text>
 							<tm-text
 								:font-size="24"
-								color="#a0aec0"
+								:follow-dark="true"
 								label="请填写以下信息进行八字排盘"
 								:margin="[8, 0, 0, 0]"
 							></tm-text>
@@ -252,8 +95,8 @@
 							<tm-icon name="tmicon-md-person" :font-size="28" color="#667eea" :margin="[0, 8, 0, 0]"></tm-icon>
 							<tm-text
 								:font-size="28"
-								color="#2d3748"
 								:bold="true"
+								:follow-dark="true"
 								label="基本信息"
 							></tm-text>
 						</view>
@@ -343,7 +186,7 @@
 										<tm-text
 											:font-size="24"
 											color="#718096"
-											label="对应阴历"
+											:label="model === 0 ? '对应阴历' : '对应阳历'"
 											:margin="[0, 0, 0, 12]"
 										></tm-text>
 									</view>
@@ -384,18 +227,19 @@
 
 					<!-- 提交按钮 -->
 					<view class="form-submit">
-						<view class="submit-button-wrapper">
+						<view :class="['submit-button-wrapper', { disabled: !canSubmit }]">
 							<tm-button 
 								block 
 								label="开始排盘" 
-								type="primary"
+								:type="canSubmit ? 'primary' : 'grey'"
 								:round="16"
 								:height="108"
 								:font-size="36"
 								:bold="true"
-								:linear="true"
+								:linear="canSubmit ? 'right' : ''"
 								:linearDeep="'accent'"
-								:shadow="8"
+								:shadow="canSubmit ? 10 : 0"
+								:disabled="!canSubmit"
 								icon="tmicon-calendar-alt"
 								@tap="Sumbit"
 								class="submit-button"
@@ -435,11 +279,10 @@
 <script lang="ts" setup>
 import { ref, computed, watch } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
-import { Solar, Lunar } from 'lunar-javascript';
+import { Solar } from 'lunar-javascript';
 import {useUserStore} from '@/store/user.ts'
 import {useBaziStore} from '@/store/bazi.ts'
-import utils from '@/shared/utils/utils.ts';
-import { API_BASE_URL } from '@/config/config.ts';
+import utils from '@/libs/utils/utils.ts';
 
 let realname = ref('');
 let gender = ref(0);
@@ -452,14 +295,8 @@ let bazi_label = ref('');
 const user_store = useUserStore();
 const bazi_store = useBaziStore();
 
-// 登录 / 注册相关
-const authMode = ref<'login' | 'register'>('login');
-const showAuthForm = ref(false);
-const authEmail = ref('');
-const authPassword = ref('');
-const authLoading = ref(false);
-const authError = ref('');
 const isLoggedIn = computed(() => user_store.isLoggedIn);
+const canSubmit = computed(() => timestamp.value !== null);
 
 let solar_select_show = ref(false);
 let lunar_select_show = ref(false);
@@ -526,12 +363,6 @@ onLoad(() =>{
 	}
 })
 
-function openAuth(mode: 'login' | 'register') {
-	uni.navigateTo({
-		url: `/pages/auth/auth?mode=${mode}`
-	});
-}
-
 function goToHistory() {
 	uni.navigateTo({
 		url: '/pages/history/list'
@@ -541,55 +372,6 @@ function goToHistory() {
 function goToAdmin() {
 	uni.navigateTo({
 		url: '/pages/auth/auth'
-	});
-}
-
-function submitAuth() {
-	if (!authEmail.value || !authPassword.value) {
-		authError.value = '请输入邮箱和密码';
-		return;
-	}
-	authLoading.value = true;
-	authError.value = '';
-
-	const url = API_BASE_URL + (authMode.value === 'login' ? '/api/login' : '/api/register');
-
-	uni.request({
-		url,
-		method: 'POST',
-		data: {
-			email: authEmail.value,
-			password: authPassword.value
-		},
-		success(res: any) {
-			if (res.statusCode >= 200 && res.statusCode < 300 && res.data?.token) {
-				user_store.setAuth({
-					username: res.data.user?.username || null,
-					email: res.data.user?.email || authEmail.value,
-					token: res.data.token,
-					role: res.data.user?.role || 'user'
-				});
-				uni.showToast({
-					title: authMode.value === 'login' ? '登录成功' : '注册并登录成功',
-					icon: 'success',
-					duration: 1500
-				});
-				showAuthForm.value = false;
-				authPassword.value = '';
-				// 登录成功后，延迟刷新页面以更新登录状态显示
-				setTimeout(() => {
-					// 页面会自动刷新显示登录状态，无需跳转
-				}, 500);
-			} else {
-				authError.value = res.data?.error || '请求失败，请稍后重试';
-			}
-		},
-		fail() {
-			authError.value = '网络错误，请检查后端是否已启动';
-		},
-		complete() {
-			authLoading.value = false;
-		}
 	});
 }
 
@@ -653,7 +435,7 @@ function Sumbit ()  {
 	}
 
 	const params = {
-		realname: realname.value??"不知名网友",
+		realname: (realname.value || '').trim() || '佚名',
 		timestamp: datetime,
 		gender: gender.value == 0 ? 1 : 0
 	}
@@ -676,47 +458,38 @@ function Sumbit ()  {
 .page-wrapper {
 	min-height: 100vh;
 	width: 100%;
-	background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-	padding-bottom: 40rpx;
+	background: transparent; /* 使用透明背景，继承 tm-app 的背景色 */
+	padding: 30rpx 24rpx 50rpx;
 	box-sizing: border-box;
+	display: flex;
+	justify-content: center;
 }
 
 .page-content {
 	width: 100%;
-	max-width: 100%;
-	padding: 30rpx;
+	max-width: 1180rpx;
+	padding: 0;
 	box-sizing: border-box;
 	margin: 0 auto;
+	display: flex;
+	flex-direction: column;
+	gap: 28rpx;
 }
 
 /* 响应式容器 */
 @media screen and (min-width: 750px) {
 	.page-content {
-		max-width: 750rpx;
-		padding: 30rpx 40rpx;
+		gap: 32rpx;
 	}
 }
 
-.welcome-card {
-	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-	width: 100%;
-	box-sizing: border-box;
-}
-
-.welcome-content {
-	width: 100%;
-	display: flex;
-	flex-direction: column;
-}
-
-.welcome-card :deep(.tm-text) {
-	color: #ffffff !important;
-}
 
 .auth-card {
 	background: #ffffff;
 	width: 100%;
 	box-sizing: border-box;
+	border: 1rpx solid #edf2f7;
+	box-shadow: 0 10rpx 30rpx rgba(31, 41, 55, 0.08);
 }
 
 /* 已登录状态样式 */
@@ -778,6 +551,9 @@ function Sumbit ()  {
 	border-top: 1rpx solid #e2e8f0;
 	width: 100%;
 	box-sizing: border-box;
+	background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+	border-radius: 12rpx;
+	padding: 24rpx;
 }
 
 .auth-tabs {
@@ -842,6 +618,8 @@ function Sumbit ()  {
 	background: #ffffff;
 	width: 100%;
 	box-sizing: border-box;
+	border: 1rpx solid #edf2f7;
+	box-shadow: 0 10rpx 30rpx rgba(31, 41, 55, 0.08);
 }
 
 .form-header {
@@ -880,10 +658,11 @@ function Sumbit ()  {
 }
 
 .form-section-card {
-	background: #f7fafc;
+	background: linear-gradient(180deg, #fbfdff 0%, #ffffff 100%);
 	border-radius: 16rpx;
 	padding: 28rpx 24rpx;
 	border: 1rpx solid #e2e8f0;
+	box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.9);
 }
 
 .form-section:last-of-type {
@@ -901,6 +680,9 @@ function Sumbit ()  {
 
 .section-content {
 	width: 100%;
+	display: flex;
+	flex-direction: column;
+	gap: 18rpx;
 }
 
 .form-row {
@@ -956,18 +738,18 @@ function Sumbit ()  {
 }
 
 .info-cards {
-	display: flex;
-	flex-direction: column;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(280rpx, 1fr));
 	gap: 16rpx;
 	margin-top: 8rpx;
 }
 
 .info-card {
-	background: #ffffff;
-	border-radius: 12rpx;
+	background: transparent;
+	border-radius: 14rpx;
 	padding: 20rpx 24rpx;
-	border: 1rpx solid #e2e8f0;
-	box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+	border: 1rpx solid transparent;
+	box-shadow: none;
 }
 
 .info-card-header {
@@ -1002,6 +784,18 @@ function Sumbit ()  {
 	transition: all 0.3s ease;
 }
 
+.submit-button :deep(.tm-button) {
+	background: linear-gradient(135deg, #4c51bf 0%, #2a3fb8 100%) !important;
+	color: #ffffff !important;
+	box-shadow: 0 14rpx 28rpx rgba(44, 64, 180, 0.28) !important;
+}
+
+.submit-button-wrapper.disabled .submit-button :deep(.tm-button) {
+	background: #d2d6dc !important;
+	color: #a0aec0 !important;
+	box-shadow: none !important;
+}
+
 .submit-button:active {
 	transform: scale(0.98);
 }
@@ -1019,6 +813,11 @@ function Sumbit ()  {
 	z-index: 1;
 	opacity: 0.6;
 	animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.submit-button-wrapper.disabled .submit-button-glow {
+	opacity: 0.15;
+	filter: blur(10rpx);
 }
 
 @keyframes pulse-glow {

@@ -1,7 +1,6 @@
 <template>
-	<view>
-		<view class="statusHeight" :style="{height:_barHeight+'px'}"></view>
-		<view class="fixed l-0 t-0 statusHeightTop flex" :style="{width:_width+'px',height:_barHeight+'px'}">
+	<view style="margin: 0; padding: 0;">
+		<view class="fixed l-0 t-0 statusHeightTop flex" :style="{width:_width+'px',height:_barHeight+'px', top: '0px'}">
 			<tm-sheet
 				@click="emits('click', $event)"
 				:blur="_blur"
@@ -26,8 +25,6 @@
 				:width="_width"
 				unit='px'
 			>
-				<view class="statusHeight" :style="{height:statusBarHeight+'px'}"></view>
-				
 				<view class="navbar-content-wrapper">
 					<view class="navbar-left-section">
 						<tm-icon :unit="props.unit" :font-size="props.iconFontSize" _class="pointer" :color="_homeColor" @click="goback" v-if="_pages>1&&props.hideBack" name="tmicon-angle-left"></tm-icon>
@@ -62,7 +59,7 @@
 	import { useTmpiniaStore } from '../../tool/lib/tmpinia';
 	const store = useTmpiniaStore();
 	const emits = defineEmits(['click','close'])
-	const {proxy} = getCurrentInstance();
+	const {proxy} = getCurrentInstance() || {};
 	const props = defineProps({
 		...custom_props,
 		followTheme:{
@@ -169,8 +166,8 @@
 
 	const _height = computed(()=>props.height)
 	const _width = uni.getSystemInfoSync().windowWidth
-	const statusBarHeight = uni.getSystemInfoSync().statusBarHeight
-	const _barHeight = computed(()=>statusBarHeight+_height.value)
+	const statusBarHeight = uni.getSystemInfoSync().statusBarHeight || 0
+	const _barHeight = computed(()=>_height.value)
 	const _leftWidth = computed(()=>props.leftWidth)
 	const _rightWidth = computed(()=>props.rightWidth)
 	const contentwidth = computed(()=>{
@@ -266,4 +263,8 @@
 	padding-right: 24rpx;
 }
 
+.statusHeight {
+	width: 100%;
+}
 </style>
+

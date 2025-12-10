@@ -26,23 +26,7 @@ export interface AuthResponse {
 	};
 }
 
-/**
- * 登录
- */
-export function login(params: LoginParams) {
-	return request<AuthResponse>('/api/login', {
-		method: 'POST',
-		data: params
-	});
-}
-
-/**
- * 注册
- */
-export function register(params: RegisterParams) {
-	return request<AuthResponse>('/api/register', {
-		method: 'POST',
-		data: params
-	});
-}
+// 以下函数未在项目中使用（项目中直接使用 uni.request），已删除：
+// - login() - 登录函数
+// - register() - 注册函数
 

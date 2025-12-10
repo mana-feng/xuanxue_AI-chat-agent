@@ -40,31 +40,12 @@ body {
 	padding-bottom: 0 !important;
 }
 
-/* 页面统一容器：水平居中，顶部对齐，更符合含导航栏页面的常规布局 */
-.page-wrapper {
-	min-height: 100vh;
-	width: 100%;
-	display: flex;
-	justify-content: center;
-	align-items: flex-start;
-	box-sizing: border-box;
-	padding: 20px 0 30px;
-}
-
 /* 以 1200px 为基准宽度缩放，始终水平居中并铺满宽度 */
 .page-content-scale {
 	width: 100%;
 	max-width: 1200px;
 	box-sizing: border-box;
 	padding: 0 16px;
-}
-
-/* 小屏幕时适当压缩上下留白，左右由 max-width 控制 */
-@media (max-width: 600px) {
-	.page-wrapper {
-		padding-top: 12px;
-		padding-bottom: 16px;
-	}
 }
 /* #endif */
 

@@ -10,12 +10,13 @@
 					:margin="[20, 20]"
 					:padding="[32, 28]"
 					class="header-card"
+					:follow-dark="true"
 				>
 					<view class="flex flex-row items-center justify-between mb-16">
 						<tm-text
 							:font-size="38"
 							:bold="true"
-							color="#2d3748"
+							:follow-dark="true"
 							label="历史排盘记录"
 						></tm-text>
 						<view class="flex flex-row items-center">
@@ -237,7 +238,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useUserStore } from '@/store/user.ts';
 import { useBaziStore } from '@/store/bazi.ts';
 import { API_BASE_URL } from '@/config/config.ts';
-import utils from '@/shared/utils/utils.ts';
+import utils from '@/libs/utils/utils.ts';
 
 interface ChartItem {
 	id: number;
@@ -485,7 +486,7 @@ function openChart(item: ChartItem) {
 		if (useRawPayload) {
 			const u = item.rawPayload.user;
 			user_store.set({
-				realname: u.realname || item.title || '不知名网友',
+				realname: u.realname || item.title || '佚名',
 				gender: u.gender,
 				timestamp: u.timestamp
 			});
@@ -560,7 +561,7 @@ function openChart(item: ChartItem) {
 		
 		// 设置用户信息
 		user_store.set({
-			realname: item.title || '不知名网友',
+			realname: item.title || '佚名',
 			gender: gender,
 			timestamp: timestamp
 		});
@@ -669,7 +670,7 @@ function goLogin() {
 <style scoped>
 .page-wrapper {
 	min-height: 100vh;
-	background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+	background: transparent; /* 使用透明背景，继承 tm-app 的背景色 */
 	padding-bottom: 40rpx;
 }
 
@@ -678,7 +679,7 @@ function goLogin() {
 }
 
 .header-card {
-	background: #ffffff;
+	background: transparent; /* 使用透明背景，继承 tm-sheet 的背景色 */
 }
 
 .empty-state {

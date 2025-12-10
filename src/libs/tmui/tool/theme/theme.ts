@@ -8,7 +8,7 @@
 import { colortool } from './colortool';
 import { cssStyleConfig, cssstyle, colorThemeType, cssDirection , linearDirection,linearDeep,linearDirectionType } from '../lib/interface';
 //导入用户自定义的主题色值。
-import { theme } from '@/constants/index';
+import { theme } from '@/config/constants';
 var colors: Array<colorThemeType> = [];
 var colorObj: any = {
 	red: '#ff2414',

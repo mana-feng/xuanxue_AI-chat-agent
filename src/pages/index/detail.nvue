@@ -4,11 +4,11 @@
 			<view class="page-content-scale">
 				<yx-nav-header></yx-nav-header>
 
-				<tm-sheet :round="16" :shadow="4" :margin="[20, 20]" :padding="[32, 28]" class="info-card">
+				<tm-sheet :round="16" :shadow="4" :margin="[20, 20]" :padding="[32, 28]" class="info-card" :follow-dark="true">
 					<tm-text
 						:font-size="36"
 						:bold="true"
-						color="#2d3748"
+						:follow-dark="true"
 						label="基本信息"
 						:margin="[0, 0, 24, 0]"
 					></tm-text>
@@ -18,40 +18,40 @@
 							<view class="info-item">
 								<tm-text
 									:font-size="28"
-									color="#718096"
+									:follow-dark="true"
 									label="姓名"
 								></tm-text>
 								<tm-text
 									:font-size="30"
-									color="#2d3748"
 									:bold="true"
-									:label="user_store.realname"
+									:follow-dark="true"
+									:label="user_store.realname || '佚名'"
 									_class="text-overflow-1"
 								></tm-text>
 							</view>
 							<view class="info-item">
 								<tm-text
 									:font-size="28"
-									color="#718096"
+									:follow-dark="true"
 									label="生肖"
 								></tm-text>
 								<tm-text
 									:font-size="30"
-									color="#2d3748"
 									:bold="true"
+									:follow-dark="true"
 									:label="GetChineseZodiac(bazi_store.solar.year)"
 								></tm-text>
 							</view>
 							<view class="info-item">
 								<tm-text
 									:font-size="28"
-									color="#718096"
+									:follow-dark="true"
 									label="性别"
 								></tm-text>
 								<tm-text
 									:font-size="30"
-									color="#2d3748"
 									:bold="true"
+									:follow-dark="true"
 									:label="user_store.gender ? '元男' : '元女'"
 								></tm-text>
 							</view>
@@ -60,39 +60,39 @@
 							<view class="info-item">
 								<tm-text 
 									:font-size="28"
-									color="#718096"
+									:follow-dark="true"
 									label="阴历"
 								></tm-text>
 								<tm-text 
 									:font-size="30"
-									color="#2d3748"
 									:bold="true"
+									:follow-dark="true"
 									:label="bazi_store.yinli"
 								></tm-text>
 							</view>
 							<view class="info-item">
 								<tm-text
 									:font-size="28"
-									color="#718096"
+									:follow-dark="true"
 									label="阳历"
 								></tm-text>
 								<tm-text
 									:font-size="30"
-									color="#2d3748"
 									:bold="true"
+									:follow-dark="true"
 									:label="utils.HideSecond(user_store.timestamp)"
 								></tm-text>
 							</view>
 							<view class="info-item">
 								<tm-text 
 									:font-size="28"
-									color="#718096"
+									:follow-dark="true"
 									label="星座"
 								></tm-text>
 								<tm-text 
 									:font-size="30"
-									color="#2d3748"
 									:bold="true"
+									:follow-dark="true"
 									:label="bazi_store.xinzuo + '座'"
 								></tm-text>
 							</view>
@@ -142,22 +142,22 @@
 					</view>
 				</tm-sheet>
 
-				<tm-sheet :round="16" :shadow="4" :margin="[20, 0]" :padding="[32, 28]" class="table-card">
+				<tm-sheet :round="16" :shadow="4" :margin="[20, 0]" :padding="[32, 28]" class="table-card" :follow-dark="true">
 					<yx-detail-table></yx-detail-table>
 					<view class="px-0 py-24 mt-20 border-top">
 						<view class="info-item">
-							<tm-text :font-size="28" color="#718096" label="起运"></tm-text>
-							<tm-text :font-size="30" color="#2d3748" :bold="true" :label="GetStartYunLabel()"></tm-text>
+							<tm-text :font-size="28" :follow-dark="true" label="起运"></tm-text>
+							<tm-text :font-size="30" :bold="true" :follow-dark="true" :label="GetStartYunLabel()"></tm-text>
 						</view>
 						<view class="info-item mt-12">
-							<tm-text :font-size="28" color="#718096" label="起运公历"></tm-text>
-							<tm-text :font-size="30" color="#2d3748" :bold="true" :label="bazi_store.start_yun.solar"></tm-text>
+							<tm-text :font-size="28" :follow-dark="true" label="起运公历"></tm-text>
+							<tm-text :font-size="30" :bold="true" :follow-dark="true" :label="bazi_store.start_yun.solar"></tm-text>
 						</view>
 					</view>
 				</tm-sheet>
 
 				<!-- 增强分析信息 -->
-				<tm-sheet v-if="bazi_store.enhanced" :round="16" :shadow="4" :margin="[20, 0]" :padding="[32, 28]" class="analysis-card">
+				<tm-sheet v-if="bazi_store.enhanced" :round="16" :shadow="4" :margin="[20, 0]" :padding="[32, 28]" class="analysis-card" :follow-dark="true">
 					<view class="px-0 py-0 mb-24">
 						<tm-text :label="'增强分析'" :font-size="38" :bold="true" color="#667eea"></tm-text>
 					</view>
@@ -276,8 +276,8 @@ import { ref, computed } from 'vue';
 import { useBaziStore } from '@/store/bazi.ts';
 import { useYunStore } from '@/store/yun.ts';
 import { useUserStore } from '@/store/user.ts';
-import { calculateGanZhiRelationsForList } from '@/shared/utils/bazi-enhanced.ts';
-import utils from '@/shared/utils/utils.ts';
+import { calculateGanZhiRelationsForList } from '@/libs/utils/bazi-enhanced.ts';
+import utils from '@/libs/utils/utils.ts';
 import { API_BASE_URL } from '@/config/config.ts';
 
 const bazi_store = useBaziStore();
@@ -363,7 +363,7 @@ function saveToAccount() {
 
 	// 准备要发送的数据对象，确保所有值都是可序列化的
 	const requestData = {
-		name: user_store.realname || '不知名网友',
+		name: user_store.realname || '佚名',
 		gender: user_store.gender !== undefined && user_store.gender !== null ? String(user_store.gender) : null,
 		birthDatetime: user_store.timestamp !== undefined && user_store.timestamp !== null ? Number(user_store.timestamp) : null,
 		calendarType: 'solar',
@@ -440,7 +440,7 @@ function buildExportPayload() {
 			exportedAt: new Date().toISOString()
 		},
 		user: {
-			name: user_store.realname || '不知名网友',
+			name: user_store.realname || '佚名',
 			gender: user_store.gender ? '男' : '女',
 			timestamp: baseTime,
 			birthDatetime: birthStr

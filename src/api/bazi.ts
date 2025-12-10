@@ -22,44 +22,9 @@ export interface BaziRecord {
 	rawPayload?: any;
 }
 
-/**
- * 保存八字排盘
- */
-export function saveBazi(params: SaveBaziParams) {
-	return request('/api/bazi', {
-		method: 'POST',
-		data: params,
-		needAuth: true
-	});
-}
-
-/**
- * 获取八字排盘列表
- */
-export function getBaziList() {
-	return request<BaziRecord[]>('/api/bazi', {
-		method: 'GET',
-		needAuth: true
-	});
-}
-
-/**
- * 获取单个八字排盘详情
- */
-export function getBaziDetail(id: number) {
-	return request<BaziRecord>(`/api/bazi/${id}`, {
-		method: 'GET',
-		needAuth: true
-	});
-}
-
-/**
- * 删除八字排盘
- */
-export function deleteBazi(id: number) {
-	return request(`/api/bazi/${id}`, {
-		method: 'DELETE',
-		needAuth: true
-	});
-}
+// 以下函数未在项目中使用，已删除：
+// - saveBazi() - 保存八字排盘
+// - getBaziList() - 获取八字排盘列表
+// - getBaziDetail() - 获取单个八字排盘详情
+// - deleteBazi() - 删除八字排盘
 

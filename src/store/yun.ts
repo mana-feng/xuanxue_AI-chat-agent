@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { Solar, Lunar, Yun } from 'lunar-javascript';
-import utils from '@/shared/utils/utils';
+import utils from '@/libs/utils/utils';
 
 // 类型定义
 interface DayunItem {
