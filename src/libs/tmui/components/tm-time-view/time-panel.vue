@@ -46,8 +46,12 @@ dayjs.default.extend(isBetween)
 dayjs.default.extend(isSameOrBefore)
 dayjs.default.extend(isSameOrAfter)
 const DayJs = dayjs.default;
-const { proxy } = getCurrentInstance();
+const instance = getCurrentInstance();
+const proxy = instance?.proxy;
 const store = useTmpiniaStore();
+// 阴历月份与日期的显示名称
+const lunarMonthNames = ['正月','二月','三月','四月','五月','六月','七月','八月','九月','十月','冬月','腊月'];
+const lunarDayNames = ['初一','初二','初三','初四','初五','初六','初七','初八','初九','初十','十一','十二','十三','十四','十五','十六','十七','十八','十九','二十','廿一','廿二','廿三','廿四','廿五','廿六','廿七','廿八','廿九','三十'];
 const props = defineProps({
     nowtime:{
         type:String,
@@ -90,9 +94,9 @@ const props = defineProps({
 	},
 })
 //父级方法。
-let parent = proxy.$parent
+let parent: any = proxy?.$parent;
 while (parent) {
-    if (parent?.tmTimeViewName == 'tmTimeViewName' || !parent) {
+    if ((parent as any)?.tmTimeViewName == 'tmTimeViewName' || !parent) {
         break;
     } else {
         parent = parent?.$parent ?? undefined
@@ -178,13 +182,26 @@ function displayLabel(val:number){
 	}
 	if(isLunarMode.value && props.timeType === 'month'){
 		// 阴历月份显示
-		return `${val}${props.suffix}`;
+		return formatLunarMonth(val);
 	}
 	if(isLunarMode.value && props.timeType === 'date'){
 		// 阴历日期显示
-		return `${val}${props.suffix}`;
+		return formatLunarDay(val);
 	}
 	return `${val}${props.suffix}`;
+}
+
+function formatLunarMonth(val:number){
+	// 阴历月份名称（含冬月、腊月），若超出映射则回退为原值+月
+	if(val === 13) return '闰月';
+	const name = lunarMonthNames[val - 1];
+	return name ? name : `${val}月`;
+}
+
+function formatLunarDay(val:number){
+	// 阴历日名称（初一至三十），超出映射回退为原值+日
+	const name = lunarDayNames[val - 1];
+	return name ? name : `${val}日`;
 }
 function rangeTimeArray(){
     let _start = DayJs(props.start);
@@ -225,14 +242,15 @@ function rangeTimeArray(){
     }
 
     function setd(type:timeDetailType,isno=true){
-        if(_nowtimeValue.value.isSameOrBefore(_start,type)){
+        const dayjsInstance = _nowtimeValue.value as any;
+        if(dayjsInstance.isSameOrBefore(_start,type)){
             // 这是开始的数字。
             intdate = _start[props.timeType]();
 			
             tmArray.value = rangeNumber(intdate,getEndNumber(_start,true));
-        }else if(_nowtimeValue.value.isSameOrAfter(_end,type)){
+        }else if(dayjsInstance.isSameOrAfter(_end,type)){
             tmArray.value = rangeNumber(intdate,getEndNumber(_end,isno));
-        }else if(_nowtimeValue.value.isBetween(_start,_end,props.timeType,'()')){
+        }else if(dayjsInstance.isBetween(_start,_end,props.timeType,'()')){
             tmArray.value = rangeNumber(intdate,getEndNumber(_nowtimeValue.value,true));
             
         }
@@ -257,7 +275,7 @@ function rangeLunarTimeArray(){
         // 先尝试1-12月
         for(let m = 1; m <= 12; m++){
             try {
-                const testLunar = Lunar.fromYmd(year, m, 1);
+                const testLunar = (Lunar as any).fromYmd(year, m, 1);
                 months.push(m);
             } catch (e) {
                 // 如果创建失败，说明该月不存在（不应该发生）
@@ -269,7 +287,7 @@ function rangeLunarTimeArray(){
         // 实际上，我们需要检查当前年份是否有闰月
         // 通过尝试创建13个月来判断
         try {
-            const testLunar13 = Lunar.fromYmd(year, 13, 1);
+            const testLunar13 = (Lunar as any).fromYmd(year, 13, 1);
             months.push(13);
         } catch (e) {
             // 没有第13个月
@@ -284,7 +302,7 @@ function rangeLunarTimeArray(){
         let dayCount = 0;
         for(let d = 1; d <= 30; d++){
             try {
-                const testLunar = Lunar.fromYmd(year, month, d);
+                const testLunar = (Lunar as any).fromYmd(year, month, d);
                 dayCount = d;
             } catch (e) {
                 // 如果创建失败，说明该日期不存在，说明上一天就是该月的最后一天
@@ -298,7 +316,7 @@ function rangeLunarTimeArray(){
     nextTick(()=>getIndexNow())
 }
 
-function getEndNumber(d,isno=true){
+function getEndNumber(d: any, isno: boolean = true){
     let _start = DayJs(props.start);
     let _end = DayJs(props.end);
     let jh = {
@@ -345,7 +363,7 @@ function colchange(e:any){
         
         // 将阴历日期转换为阳历日期
         try {
-            const newLunar = Lunar.fromYmd(newLunarYear, newLunarMonth, newLunarDay);
+            const newLunar = (Lunar as any).fromYmd(newLunarYear, newLunarMonth, newLunarDay);
             const newSolar = newLunar.getSolar();
             const newDate = new Date(newSolar.getYear(), newSolar.getMonth() - 1, newSolar.getDay(), 
                                     currentDate.getHours(), currentDate.getMinutes(), currentDate.getSeconds());
@@ -356,30 +374,31 @@ function colchange(e:any){
             // 由于parent.setNowtime只能设置单个字段，我们需要分别设置月份和日期
             // 先设置月份
             if(props.timeType === 'month'){
-                parent?.setNowtime(newSolar.getMonth() - 1, 'month');
+                (parent as any)?.setNowtime(newSolar.getMonth() - 1, 'month');
                 // 然后在下一个tick中设置日期
                 nextTick(() => {
-                    parent?.setNowtime(newSolar.getDay(), 'date');
+                    (parent as any)?.setNowtime(newSolar.getDay(), 'date');
                 });
             }else if(props.timeType === 'date'){
                 // 设置阳历日期（1-31）
-                parent?.setNowtime(newSolar.getDay(), props.timeType);
+                (parent as any)?.setNowtime(newSolar.getDay(), props.timeType);
             }
         } catch (error) {
             console.error('阴历日期转换失败:', error);
             // 如果转换失败，使用原来的逻辑
-            parent?.setNowtime(selectedValue, props.timeType);
+            (parent as any)?.setNowtime(selectedValue, props.timeType);
         }
     }else{
         // 阳历模式或非月份/日期类型，直接使用原逻辑
-        parent?.setNowtime(selectedValue, props.timeType);
+        (parent as any)?.setNowtime(selectedValue, props.timeType);
     }
 }
 
 function nvuegetClientRect() {
     nextTick(function () {
         // #ifdef APP-PLUS-NVUE
-        dom.getComponentRect(proxy.$refs.picker, function (res) {
+        if (!proxy) return;
+        (dom as any).getComponentRect((proxy as any).$refs.picker, function (res: any) {
             if (res?.size) {
                 maskWidth.value = res.size.width;
 				

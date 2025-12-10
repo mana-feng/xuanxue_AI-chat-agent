@@ -30,7 +30,7 @@
         
         <view class="flex flex-col">
             <view v-for="(item2,index2) in _data" :key="index2">
-                <view  class="flex flex-row flex-row-center-center" :style="[{height:'120rpx',flexWrap:'wrap'}]">
+                <view  class="flex flex-row flex-row-center-center" :style="{height:'120rpx',flexWrap:'wrap'}">
                     <tm-sheet  @click="clickWeek(item)" :height="112" :shadow="0" :round="4"  
                     _class="flex-row flex-center" class="flex-3" paren-class="flex-3" 
                     :text="_nowMonth==item.month"
@@ -133,14 +133,14 @@ DayJs.extend(isoWeek)
 DayJs.extend(isSameOrBefore)
 DayJs.extend(isBetween)
 //当前的时间
-const _value = ref( DayJs(props.defaultValue[0]).isValid()?DayJs(props.defaultValue[0]):DayJs())
+const _value = ref( DayJs(String(props.defaultValue[0])).isValid()?DayJs(String(props.defaultValue[0])):DayJs())
 const _start_date = computed(()=>{
-    let isv = DayJs(props.start).isValid()
-    return isv?DayJs(props.start):DayJs('1980-1-1')
+    let isv = DayJs(String(props.start)).isValid()
+    return isv?DayJs(String(props.start)):DayJs('1980-1-1')
 })
 const _end_date = computed(()=>{
-    let isv = DayJs(props.end).isValid()
-    return isv?DayJs(props.end):DayJs('2450-1-1')
+    let isv = DayJs(String(props.end)).isValid()
+    return isv?DayJs(String(props.end)):DayJs('2450-1-1')
 })
 const _data:Ref<Array<Array<monthYearItem>>> = ref(getDataArray());
 //当前的年月
@@ -158,12 +158,13 @@ watch([
     ()=>props.start,
     ()=>props.end,
 ],()=>{
-    _value.value = DayJs(props.modelValue[0]);
+    _value.value = DayJs(String(props.modelValue[0]));
     _data.value = getDataArray();
 },{deep:true})
 
 function nowWeekClick(){
-    if(DayJs().isBetween(_start_date.value,_end_date.value,'month','[]')==false){
+    const dayjsInstance = DayJs() as any;
+    if(dayjsInstance.isBetween(_start_date.value,_end_date.value,'month','[]')==false){
         uni.showToast({title:"无法选中",icon:'none'})
         return;
     }
@@ -183,7 +184,7 @@ function clickWeek(wk:monthYearItem){
 
 //设置当前选中的日期
 function setDefault(data:Array<String|Number|Date>=[]){
-    _value.value = data?DayJs(data[0]):DayJs(props.modelValue[0]);
+    _value.value = data?DayJs(String(data[0])):DayJs(String(props.modelValue[0]));
     _data.value = getDataArray();
 
 }
@@ -192,10 +193,11 @@ function getDataArray(){
     let ar:Array<monthYearItem> = [];
     for(let i=0;i<12;i++){
         nowMonth = nowMonth.month(i);
+        const dayjsInstance = nowMonth as any;
         ar.push({
             dateStr:nowMonth.format('YYYY-MM'),
             month:nowMonth.month()+1,
-            isVaild:!nowMonth.isBetween(_start_date.value,_end_date.value,'month','[]')
+            isVaild:!dayjsInstance.isBetween(_start_date.value,_end_date.value,'month','[]')
         })
     }
     return uni.$tm.u.splitData(ar,3);

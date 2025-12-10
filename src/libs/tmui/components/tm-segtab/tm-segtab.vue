@@ -40,6 +40,10 @@
  * 分段器选项卡
  */
 import { computed, PropType , toRaw, getCurrentInstance, ref, onMounted, nextTick, watch, Ref ,inject } from 'vue'
+
+defineOptions({
+	inheritAttrs: false  // 阻止属性自动继承，修复 Vue 3.5 slots 兼容性问题
+});
 import { inputPushItem, rulesItem } from "./../tm-form-item/interface"
 
 import tmSheet from '../tm-sheet/tm-sheet.vue';
