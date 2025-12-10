@@ -1,176 +1,152 @@
 <template>
 	<tm-app>
-		<view class="page-wrapper">
-			<yx-nav-header></yx-nav-header>
-			<view class="page-content">
-				<!-- 排盘表单 -->
-				<tm-sheet :round="16" :shadow="4" :margin="[0, 20]" :padding="[32, 28]" class="form-card" :follow-dark="true">
-					<view class="form-header">
-						<view class="form-header-icon">
-							<tm-icon name="calendar-alt" :font-size="44" color="#667eea"></tm-icon>
-						</view>
-						<view class="form-header-text">
-							<tm-text
-								:font-size="38"
-								:bold="true"
-								:follow-dark="true"
-								label="排盘信息"
-							></tm-text>
-							<tm-text
-								:font-size="24"
-								:follow-dark="true"
-								label="请填写以下信息进行八字排盘"
-								:margin="[8, 0, 0, 0]"
-							></tm-text>
-						</view>
-					</view>
-					
-					<!-- 基本信息区块 -->
-					<view class="form-section form-section-card">
-						<view class="section-title">
-							<tm-icon name="tmicon-md-person" :font-size="28" color="#667eea" :margin="[0, 8, 0, 0]"></tm-icon>
-							<tm-text
-								:font-size="28"
-								:bold="true"
-								:follow-dark="true"
-								label="基本信息"
-							></tm-text>
-						</view>
-						
-						<view class="section-content">
-							<tm-input
-								v-model="realname"
-								:margin="[0, 0, 24, 0]"
-								placeholder="请输入姓名（可选）"
-								prefix="tmicon-md-person"
-								:round="12"
-								:border="1"
-								:padding="[24, 20]"
-							></tm-input>
-
-							<view class="form-group-single">
-								<view class="form-label">
-									<tm-icon name="tmicon-md-people" :font-size="24" color="#718096" :margin="[0, 6, 0, 0]"></tm-icon>
-									<tm-text
-										:font-size="26"
-										color="#718096"
-										label="性别"
-									></tm-text>
-								</view>
-								<view class="form-control">
-									<tm-radio-group v-model="gender">
-										<tm-radio label="男" :value="0" :margin="[0, 16, 0, 0]"></tm-radio>
-										<tm-radio label="女" :value="1"></tm-radio>
-									</tm-radio-group>
-								</view>
+		<view class="app-shell">
+			<yx-nav-header ref="headerRef"></yx-nav-header>
+			<view class="app-main" :style="pageWrapperStyle">
+				<view class="page-shell">
+					<view class="page-card">
+						<!-- 页面标题 -->
+						<view class="page-title-wrapper">
+							<view class="form-header-icon">
+								<tm-icon name="calendar-alt" :font-size="44" color="#667eea"></tm-icon>
+							</view>
+							<view class="form-header-text">
+								<h1 class="page-title">排盘信息</h1>
+								<p class="page-subtitle">请填写以下信息进行八字排盘</p>
 							</view>
 						</view>
-					</view>
-
-					<!-- 出生时间区块 -->
-					<view class="form-section form-section-card">
-						<view class="section-title">
-							<tm-icon name="tmicon-time" :font-size="28" color="#667eea" :margin="[0, 8, 0, 0]"></tm-icon>
-							<tm-text
-								:font-size="28"
-								color="#2d3748"
-								:bold="true"
-								label="出生时间"
-							></tm-text>
-						</view>
 						
-						<view class="section-content">
-							<!-- 日历类型选择 -->
-							<view class="form-group-single calendar-type-selector">
-								<view class="form-label">
-									<tm-icon name="tmicon-calendar-alt" :font-size="24" color="#718096" :margin="[0, 6, 0, 0]"></tm-icon>
-									<tm-text
-										:font-size="26"
-										color="#718096"
-										label="日历类型"
-									></tm-text>
-								</view>
-								<view class="form-control segtab-wrapper">
-									<tm-segtab
-										v-model="model"
-										:default-value="0"
-										:list="[{ text: '阳历' }, { text: '阴历' }]"
-										:margin="[0, 0]"
-										:width="300"
-									></tm-segtab>
-								</view>
-							</view>
-							
-							<!-- 日期时间选择 -->
-							<tm-input
-								:placeholder="model === 0 ? '请选择阳历出生日期和时间（精确到分钟）' : '请选择阴历出生日期和时间（精确到分钟）'"
-								prefix="tmicon-calendar-alt"
-								suffix="tmicon-angle-right"
-								v-model="datetime_label"
-								:margin="[0, 0, 20, 0]"
-								:round="12"
-								:border="1"
-								:padding="[24, 20]"
-								@tap="SelectTime"
-							></tm-input>
+						<!-- 基本信息区块 -->
+						<view class="section">
+							<header class="section__header">
+								<tm-icon name="tmicon-md-person" :font-size="28" color="#667eea"></tm-icon>
+								<h2 class="section__title">基本信息</h2>
+							</header>
+							<view class="section__body">
+								<tm-input
+									v-model="realname"
+									:margin="[0, 0, 24, 0]"
+									placeholder="请输入姓名（可选）"
+									prefix="tmicon-md-person"
+									:round="12"
+									:border="1"
+									:padding="[24, 20]"
+								></tm-input>
 
-							<!-- 显示信息卡片组 -->
-							<view v-if="lunar_label || bazi_label" class="info-cards">
-								<view v-if="lunar_label" class="info-card">
-									<view class="info-card-header">
-										<tm-icon name="tmicon-integral" :font-size="32" color="#48bb78"></tm-icon>
+								<view class="form-group-single">
+									<view class="form-label">
+										<tm-icon name="tmicon-md-people" :font-size="24" color="#718096" :margin="[0, 6, 0, 0]"></tm-icon>
 										<tm-text
-											:font-size="24"
+											:font-size="26"
 											color="#718096"
-											:label="model === 0 ? '对应阴历' : '对应阳历'"
-											:margin="[0, 0, 0, 12]"
+											label="性别"
 										></tm-text>
 									</view>
-									<tm-text
-										:font-size="28"
-										color="#2d3748"
-										:bold="true"
-										:label="lunar_label"
-									></tm-text>
+									<view class="form-control">
+										<tm-radio-group v-model="gender">
+											<tm-radio label="男" :value="0" :margin="[0, 16, 0, 0]"></tm-radio>
+											<tm-radio label="女" :value="1"></tm-radio>
+										</tm-radio-group>
+									</view>
+								</view>
+							</view>
+						</view>
+
+						<!-- 出生时间区块 -->
+						<view class="section">
+							<header class="section__header">
+								<tm-icon name="tmicon-time" :font-size="28" color="#667eea"></tm-icon>
+								<h2 class="section__title">出生时间</h2>
+							</header>
+							<view class="section__body">
+								<!-- 日历类型选择 -->
+								<view class="form-group-single calendar-type-selector">
+									<view class="form-label">
+										<tm-icon name="tmicon-calendar-alt" :font-size="24" color="#718096" :margin="[0, 6, 0, 0]"></tm-icon>
+										<tm-text
+											:font-size="26"
+											color="#718096"
+											label="日历类型"
+										></tm-text>
+									</view>
+									<view class="form-control segtab-wrapper">
+										<tm-segtab
+											v-model="model"
+											:default-value="0"
+											:list="[{ text: '阳历' }, { text: '阴历' }]"
+											:margin="[0, 0]"
+											:width="300"
+										></tm-segtab>
+									</view>
 								</view>
 								
-								<view v-if="bazi_label" class="info-card">
-									<view class="info-card-header">
-										<tm-icon name="tmicon-calendar" :font-size="32" color="#667eea"></tm-icon>
+								<!-- 日期时间选择 -->
+								<tm-input
+									:placeholder="model === 0 ? '请选择阳历出生日期和时间（精确到分钟）' : '请选择阴历出生日期和时间（精确到分钟）'"
+									prefix="tmicon-calendar-alt"
+									suffix="tmicon-angle-right"
+									v-model="datetime_label"
+									:margin="[0, 0, 20, 0]"
+									:round="12"
+									:border="1"
+									:padding="[24, 20]"
+									@tap="SelectTime"
+								></tm-input>
+
+								<!-- 显示信息卡片组 -->
+								<view v-if="lunar_label || bazi_label" class="info-cards">
+									<view v-if="lunar_label" class="info-card">
+										<view class="info-card-header">
+											<tm-icon name="tmicon-integral" :font-size="32" color="#48bb78"></tm-icon>
+											<tm-text
+												:font-size="24"
+												color="#718096"
+												:label="model === 0 ? '对应阴历' : '对应阳历'"
+												:margin="[0, 0, 0, 12]"
+											></tm-text>
+										</view>
 										<tm-text
-											:font-size="24"
-											color="#718096"
-											label="四柱八字"
-											:margin="[0, 0, 0, 12]"
+											:font-size="28"
+											color="#2d3748"
+											:bold="true"
+											:label="lunar_label"
 										></tm-text>
 									</view>
-									<view class="bazi-display">
-										<tm-tag
-											v-for="(item, index) in bazi_label.split(' ')"
-											:key="index"
-											:label="item"
-											type="primary"
-											:round="8"
-											:margin="[0, 8, 0, 0]"
-											:font-size="26"
-											:bold="true"
-										></tm-tag>
+									
+									<view v-if="bazi_label" class="info-card">
+										<view class="info-card-header">
+											<tm-icon name="tmicon-calendar" :font-size="32" color="#667eea"></tm-icon>
+											<tm-text
+												:font-size="24"
+												color="#718096"
+												label="四柱八字"
+												:margin="[0, 0, 0, 12]"
+											></tm-text>
+										</view>
+										<view class="bazi-display">
+											<tm-tag
+												v-for="(item, index) in bazi_label.split(' ')"
+												:key="index"
+												:label="item"
+												type="primary"
+												:round="8"
+												:margin="[0, 8, 0, 0]"
+												:font-size="26"
+												:bold="true"
+											></tm-tag>
+										</view>
 									</view>
 								</view>
 							</view>
 						</view>
-					</view>
 
-					<!-- 提交按钮 -->
-					<view class="form-submit">
-						<view :class="['submit-button-wrapper', { disabled: !canSubmit }]">
+						<!-- 提交按钮 -->
+						<view class="page-card__footer">
 							<tm-button 
-								block 
-								label="开始排盘" 
+								:class="['primary-btn', { disabled: !canSubmit }]"
+								:label="'开始排盘'"
 								:type="canSubmit ? 'primary' : 'grey'"
-								:round="16"
-								:height="108"
-								:font-size="36"
+								:round="999"
 								:bold="true"
 								:linear="canSubmit ? 'right' : ''"
 								:linearDeep="'accent'"
@@ -178,12 +154,11 @@
 								:disabled="!canSubmit"
 								icon="tmicon-calendar-alt"
 								@tap="Sumbit"
-								class="submit-button"
+								block
 							></tm-button>
-							<view class="submit-button-glow"></view>
 						</view>
 					</view>
-				</tm-sheet>
+				</view>
 
 				<tm-time-picker
 					v-model:show="solar_select_show"
@@ -213,7 +188,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, nextTick } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import { Solar } from 'lunar-javascript';
 import {useUserStore} from '@/store/user.ts'
@@ -233,6 +208,26 @@ const bazi_store = useBaziStore();
 
 const isLoggedIn = computed(() => user_store.isLoggedIn);
 const canSubmit = computed(() => timestamp.value !== null);
+
+// Header组件引用
+const headerRef = ref(null);
+
+// 动态计算页面容器的padding-top，确保内容不被sticky的header遮挡
+const pageWrapperStyle = computed(() => {
+	// 由于header使用sticky定位，不需要额外的padding-top
+	// app-main 已经有 padding-block 控制上下留白
+	return {};
+});
+
+// 动态计算内容区域的样式，确保与header贴合
+const pageContentStyle = computed(() => {
+	// 确保内容区域与header联动，不设置额外的margin或padding
+	return {
+		marginTop: '0',
+		paddingTop: '0',
+		width: '100%'
+	};
+});
 
 let solar_select_show = ref(false);
 let lunar_select_show = ref(false);
@@ -276,6 +271,13 @@ const time_suffix = {
 
 watch(model, () => PullDatatimeLabel());
 watch(timestamp, () => PullDatatimeLabel());
+
+// 监听header高度变化，实时更新页面布局
+watch(() => headerRef.value?.totalHeaderHeight, () => {
+	// header高度变化时，pageWrapperStyle会自动重新计算
+	// 这里可以添加额外的处理逻辑
+}, { immediate: true });
+
 onLoad(() =>{
 	// 恢复登录状态
 	user_store.restoreAuth();
@@ -379,59 +381,98 @@ function Sumbit ()  {
 </script>
 
 <style scoped>
-.page-wrapper {
-	min-height: 100vh;
-	width: 100%;
-	background: transparent; /* 使用透明背景，继承 tm-app 的背景色 */
-	padding: 30rpx 24rpx 50rpx;
-	box-sizing: border-box;
-	display: flex;
-	justify-content: center;
-}
+/* 页面样式已在 app-shell.css 中定义 */
+/* 这里只添加页面特定的样式 */
 
-.page-content {
-	width: 100%;
-	max-width: 1180rpx;
-	padding: 0;
-	box-sizing: border-box;
-	margin: 0 auto;
+
+/* 未登录状态样式 */
+.auth-not-logged-in {
 	display: flex;
 	flex-direction: column;
-	gap: 28rpx;
+	gap: 20rpx;
+	width: 100%;
 }
 
-/* 响应式容器 */
-@media screen and (min-width: 750px) {
-	.page-content {
-		gap: 32rpx;
-	}
-}
-
-
-.form-card {
-	background: #ffffff;
+/* 登录/注册表单样式 */
+.auth-form-container {
+	margin-top: 24rpx;
+	padding-top: 24rpx;
+	border-top: 1rpx solid #e2e8f0;
 	width: 100%;
 	box-sizing: border-box;
-	border: 1rpx solid #edf2f7;
-	box-shadow: 0 10rpx 30rpx rgba(31, 41, 55, 0.08);
+	background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+	border-radius: 12rpx;
+	padding: 24rpx;
 }
 
-.form-header {
+.auth-tabs {
 	display: flex;
 	flex-direction: row;
-	align-items: flex-start;
-	margin-bottom: 32rpx;
-	padding-bottom: 28rpx;
 	border-bottom: 2rpx solid #e2e8f0;
+	margin-bottom: 24rpx;
 	width: 100%;
-	gap: 20rpx;
+}
+
+.auth-tab {
+	flex: 1;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	padding: 20rpx 0;
+	border-bottom: 4rpx solid transparent;
+	transition: all 0.3s;
+	min-width: 0;
+}
+
+.auth-tab.active {
+	border-bottom-color: #667eea;
+}
+
+.auth-form-fields {
+	margin-bottom: 20rpx;
+	width: 100%;
+}
+
+.auth-form-hint {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 20rpx;
+	width: 100%;
+	flex-wrap: wrap;
+	gap: 8rpx;
+}
+
+.auth-error {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	padding: 16rpx 20rpx;
+	background: rgba(245, 101, 101, 0.1);
+	border-radius: 12rpx;
+	border-left: 4rpx solid #f56565;
+	margin-bottom: 20rpx;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.auth-form-actions {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+}
+
+/* 表单卡片样式 - 使用响应式类 */
+.form-card {
+	/* 已在 responsive-card 中定义 */
 }
 
 .form-header-icon {
-	width: 80rpx;
-	height: 80rpx;
-	min-width: 80rpx;
-	border-radius: 16rpx;
+	width: clamp(60px, 10vw, 80px);
+	height: clamp(60px, 10vw, 80px);
+	min-width: clamp(60px, 10vw, 80px);
+	border-radius: var(--radius-md);
 	background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
 	display: flex;
 	align-items: center;
@@ -444,39 +485,22 @@ function Sumbit ()  {
 	min-width: 0;
 	display: flex;
 	flex-direction: column;
-}
-
-.form-section {
-	margin-bottom: 32rpx;
-	width: 100%;
+	gap: clamp(4px, 0.5vw, 8px);
 }
 
 .form-section-card {
 	background: linear-gradient(180deg, #fbfdff 0%, #ffffff 100%);
-	border-radius: 16rpx;
-	padding: 28rpx 24rpx;
-	border: 1rpx solid #e2e8f0;
-	box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.9);
+	border-radius: var(--radius-md);
+	padding: clamp(20px, 3vw, 28px) clamp(20px, 3vw, 24px);
+	border: 1px solid #e2e8f0;
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
-.form-section:last-of-type {
-	margin-bottom: 0;
-}
-
-.section-title {
-	display: flex;
-	flex-direction: row;
-	align-items: center;
-	margin-bottom: 24rpx;
-	padding-bottom: 16rpx;
-	border-bottom: 1rpx solid #e2e8f0;
-}
-
-.section-content {
+.form-submit {
 	width: 100%;
+	margin-top: clamp(24px, 4vw, 32px);
 	display: flex;
-	flex-direction: column;
-	gap: 18rpx;
+	justify-content: center;
 }
 
 .form-row {
@@ -499,8 +523,7 @@ function Sumbit ()  {
 	width: 100%;
 	display: flex;
 	flex-direction: column;
-	gap: 12rpx;
-	margin-bottom: 20rpx;
+	gap: clamp(8px, 1.5vw, 12px);
 }
 
 .form-group-single.calendar-type-selector {
@@ -561,11 +584,7 @@ function Sumbit ()  {
 	gap: 8rpx;
 }
 
-.form-submit {
-	margin-top: 40rpx;
-	width: 100%;
-	padding: 0 8rpx;
-}
+/* 按钮样式已在 app-shell.css 中定义 */
 
 .submit-button-wrapper {
 	position: relative;

@@ -354,6 +354,26 @@ export interface BaziEnhancedData {
 }
 
 /**
+ * 计算某个干支所在旬的空亡支列表（用于专门的空亡行）
+ */
+export function calculateKongWangForGanZhi(ganzhi: string): string[] {
+	if (!ganzhi || ganzhi.length < 2) return [];
+	const JIAZI_60 = [
+		'甲子','乙丑','丙寅','丁卯','戊辰','己巳','庚午','辛未','壬申','癸酉',
+		'甲戌','乙亥','丙子','丁丑','戊寅','己卯','庚辰','辛巳','壬午','癸未',
+		'甲申','乙酉','丙戌','丁亥','戊子','己丑','庚寅','辛卯','壬辰','癸巳',
+		'甲午','乙未','丙申','丁酉','戊戌','己亥','庚子','辛丑','壬寅','癸卯',
+		'甲辰','乙巳','丙午','丁未','戊申','己酉','庚戌','辛亥','壬子','癸丑',
+		'甲寅','乙卯','丙辰','丁巳','戊午','己未','庚申','辛酉','壬戌','癸亥'
+	];
+	const idx = JIAZI_60.indexOf(ganzhi);
+	if (idx === -1) return [];
+	const xunStart = JIAZI_60[Math.floor(idx / 10) * 10];
+	const kongwangMap = SHEN_SHA.kongwang as { [key: string]: string[] };
+	return kongwangMap[xunStart] ? [...kongwangMap[xunStart]] : [];
+}
+
+/**
  * 获取天干对应的五行
  */
 function getGanWuxing(gan: string): string {
@@ -388,10 +408,15 @@ function getZhiWuxing(zhi: string): string {
  * @param originalZhiList 原四柱地支数组（可选，用于计算驿马）
  * @param yearZhi 年支（可选，用于计算红鸾、天喜、华盖、将星）
  * @param monthZhi 月支（可选，用于计算天德贵人、月德贵人）
+ * @param dayZhi   日支（可选，用于金神等）
+ * @param timeZhi  时支（可选，用于金神等）
  * @returns 神煞数组
  */
-export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, originalZhiList?: string[], yearZhi?: string, monthZhi?: string): string[] {
+export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, originalZhiList?: string[], yearZhi?: string, monthZhi?: string, dayZhi?: string, timeZhi?: string): string[] {
 	const shenshaList: string[] = [];
+	const pushUnique = (value?: string) => {
+		if (value && !shenshaList.includes(value)) shenshaList.push(value);
+	};
 	
 	if (!ganzhi || ganzhi.length < 2) {
 		return shenshaList;
@@ -403,18 +428,18 @@ export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, origin
 	// 天乙贵人
 	const tianyiMap = SHEN_SHA.tianyi as { [key: string]: string[] };
 	if (tianyiMap[dayGan] && tianyiMap[dayGan].includes(zhi)) {
-		shenshaList.push(`天乙贵人(${zhi})`);
+		pushUnique(`天乙贵人(${zhi})`);
 	}
 	
 	// 文昌
 	const wenchangMap = SHEN_SHA.wenchang as { [key: string]: string };
 	if (wenchangMap[dayGan] === zhi) {
-		shenshaList.push(`文昌(${zhi})`);
+		pushUnique(`文昌(${zhi})`);
 	}
 	
 	// 桃花
 	if (SHEN_SHA.taohua.includes(zhi)) {
-		shenshaList.push(`桃花(${zhi})`);
+		pushUnique(`桃花(${zhi})`);
 	}
 	
 	// 驿马（需要看原四柱地支）
@@ -424,7 +449,7 @@ export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, origin
 		// 检查原四柱地支中是否有对应的地支组合
 		for (const originalZhi of originalZhiList) {
 			if (yimaMap[originalZhi] === zhi) {
-				shenshaList.push(`驿马(${zhi})`);
+				pushUnique(`驿马(${zhi})`);
 				break; // 找到一个就够了
 			}
 		}
@@ -434,7 +459,7 @@ export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, origin
 	if (monthZhi) {
 		const tiandeMap = SHEN_SHA.tiande as { [key: string]: string };
 		if (tiandeMap[monthZhi] === gan) {
-			shenshaList.push(`天德贵人(${gan})`);
+			pushUnique(`天德贵人(${gan})`);
 		}
 	}
 	
@@ -442,63 +467,63 @@ export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, origin
 	if (monthZhi) {
 		const yuedeMap = SHEN_SHA.yuede as { [key: string]: string };
 		if (yuedeMap[monthZhi] === gan) {
-			shenshaList.push(`月德贵人(${gan})`);
+			pushUnique(`月德贵人(${gan})`);
 		}
 	}
 	
 	// 太极贵人（根据日干）
 	const taijiMap = SHEN_SHA.taiji as { [key: string]: string[] };
 	if (taijiMap[dayGan] && taijiMap[dayGan].includes(zhi)) {
-		shenshaList.push(`太极贵人(${zhi})`);
+		pushUnique(`太极贵人(${zhi})`);
 	}
 	
 	// 福星贵人（根据日干，检查天干）
 	const fuxingMap = SHEN_SHA.fuxing as { [key: string]: string };
 	if (fuxingMap[dayGan] === gan) {
-		shenshaList.push(`福星贵人(${gan})`);
+		pushUnique(`福星贵人(${gan})`);
 	}
 	
 	// 国印贵人（根据日干）
 	const guoyinMap = SHEN_SHA.guoyin as { [key: string]: string };
 	if (guoyinMap[dayGan] === zhi) {
-		shenshaList.push(`国印贵人(${zhi})`);
+		pushUnique(`国印贵人(${zhi})`);
 	}
 	
 	// 学堂（根据日干）
 	const xuetangMap = SHEN_SHA.xuetang as { [key: string]: string };
 	if (xuetangMap[dayGan] === zhi) {
-		shenshaList.push(`学堂(${zhi})`);
+		pushUnique(`学堂(${zhi})`);
 	}
 	
 	// 词馆（根据日干）
 	const ciguanMap = SHEN_SHA.ciguan as { [key: string]: string };
 	if (ciguanMap[dayGan] === zhi) {
-		shenshaList.push(`词馆(${zhi})`);
+		pushUnique(`词馆(${zhi})`);
 	}
 	
 	// 金舆（根据日干）
 	const jinyuMap = SHEN_SHA.jinyu as { [key: string]: string };
 	if (jinyuMap[dayGan] === zhi) {
-		shenshaList.push(`金舆(${zhi})`);
+		pushUnique(`金舆(${zhi})`);
 	}
 	
 	// 禄神（根据日干）
 	const lushenMap = SHEN_SHA.lushen as { [key: string]: string };
 	if (lushenMap[dayGan] === zhi) {
-		shenshaList.push(`禄神(${zhi})`);
+		pushUnique(`禄神(${zhi})`);
 	}
 	
 	// 羊刃（根据日干）
 	const yangrenMap = SHEN_SHA.yangren as { [key: string]: string };
 	if (yangrenMap[dayGan] === zhi) {
-		shenshaList.push(`羊刃(${zhi})`);
+		pushUnique(`羊刃(${zhi})`);
 	}
 	
 	// 红鸾（根据年支）
 	if (yearZhi) {
 		const hongluanMap = SHEN_SHA.hongluan as { [key: string]: string };
 		if (hongluanMap[yearZhi] === zhi) {
-			shenshaList.push(`红鸾(${zhi})`);
+			pushUnique(`红鸾(${zhi})`);
 		}
 	}
 	
@@ -506,7 +531,7 @@ export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, origin
 	if (yearZhi) {
 		const tianxiMap = SHEN_SHA.tianxi as { [key: string]: string };
 		if (tianxiMap[yearZhi] === zhi) {
-			shenshaList.push(`天喜(${zhi})`);
+			pushUnique(`天喜(${zhi})`);
 		}
 	}
 	
@@ -514,7 +539,7 @@ export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, origin
 	if (yearZhi) {
 		const huagaiMap = SHEN_SHA.huagai as { [key: string]: string };
 		if (huagaiMap[yearZhi] === zhi) {
-			shenshaList.push(`华盖(${zhi})`);
+			pushUnique(`华盖(${zhi})`);
 		}
 	}
 	
@@ -522,21 +547,21 @@ export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, origin
 	if (yearZhi) {
 		const jiangxingMap = SHEN_SHA.jiangxing as { [key: string]: string };
 		if (jiangxingMap[yearZhi] === zhi) {
-			shenshaList.push(`将星(${zhi})`);
+			pushUnique(`将星(${zhi})`);
 		}
 	}
 	
 	// 魁罡（根据日柱干支）
 	const kuigangList = SHEN_SHA.kuigang as string[];
 	if (kuigangList.includes(ganzhi)) {
-		shenshaList.push(`魁罡(${ganzhi})`);
+		pushUnique(`魁罡(${ganzhi})`);
 	}
 	
 	// 天医（根据月支）
 	if (monthZhi) {
 		const tianyiMedicalMap = SHEN_SHA.tianyi_medical as { [key: string]: string };
 		if (tianyiMedicalMap[monthZhi] === zhi) {
-			shenshaList.push(`天医(${zhi})`);
+			pushUnique(`天医(${zhi})`);
 		}
 	}
 	
@@ -544,7 +569,7 @@ export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, origin
 	if (monthZhi) {
 		const tiandeheMap = SHEN_SHA.tiandehe as { [key: string]: string };
 		if (tiandeheMap[monthZhi] === gan) {
-			shenshaList.push(`天德合(${gan})`);
+			pushUnique(`天德合(${gan})`);
 		}
 	}
 	
@@ -552,7 +577,7 @@ export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, origin
 	if (monthZhi) {
 		const yuedeheMap = SHEN_SHA.yuedehe as { [key: string]: string };
 		if (yuedeheMap[monthZhi] === gan) {
-			shenshaList.push(`月德合(${gan})`);
+			pushUnique(`月德合(${gan})`);
 		}
 	}
 	
@@ -560,7 +585,7 @@ export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, origin
 	if (yearZhi) {
 		const guchenMap = SHEN_SHA.guchen as { [key: string]: string };
 		if (guchenMap[yearZhi] === zhi) {
-			shenshaList.push(`孤辰(${zhi})`);
+			pushUnique(`孤辰(${zhi})`);
 		}
 	}
 	
@@ -568,15 +593,19 @@ export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, origin
 	if (yearZhi) {
 		const guasuMap = SHEN_SHA.guasu as { [key: string]: string };
 		if (guasuMap[yearZhi] === zhi) {
-			shenshaList.push(`寡宿(${zhi})`);
+			pushUnique(`寡宿(${zhi})`);
 		}
 	}
 	
-	// 空亡（根据日柱，需要传入日柱干支）
-	// 注意：空亡的计算需要日柱，这里暂时跳过，在 calculateShenSha 中处理
-	
 	// 金神（根据日干和时支，需要传入时支）
-	// 注意：金神的计算需要时支，这里暂时跳过，在 calculateShenSha 中处理
+	if (dayGan && timeZhi) {
+		const jinshenMap = SHEN_SHA.jinshen as { [key: string]: string[] };
+		const jinshenRizhu = ['乙巳', '己亥', '癸丑'];
+		const dayGanZhi = dayGan + (dayZhi || '');
+		if (jinshenRizhu.includes(dayGanZhi) && jinshenMap[dayGan] && jinshenMap[dayGan].includes(timeZhi)) {
+			pushUnique(`金神(${timeZhi})`);
+		}
+	}
 	
 	return shenshaList;
 }
@@ -849,36 +878,6 @@ function calculateShenSha(bazi: any): BaziEnhancedData['shensha'] {
 		shensha.guasu = [guasuMap[yearZhi]];
 		if (shensha.all) {
 			shensha.all.push(`寡宿(${guasuMap[yearZhi]})`);
-		}
-	}
-
-	// 空亡（根据日柱）
-	// 甲子旬中戌亥空，甲戌旬中申酉空，甲申旬中午未空，甲午旬中辰巳空，甲辰旬中寅卯空，甲寅旬中子丑空
-	const ganList = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
-	const zhiList = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-	const dayGanIndex = ganList.indexOf(dayGan);
-	const dayZhiIndex = zhiList.indexOf(dayZhi);
-	
-	// 计算日柱在60甲子中的位置
-	const ganzhiIndex = (dayGanIndex * 12 + dayZhiIndex) % 60;
-	// 计算所在旬的起始位置（每10个为一旬）
-	const xunStartIndex = Math.floor(ganzhiIndex / 10) * 10;
-	// 计算旬首的干支索引
-	const xunStartGanIndex = xunStartIndex % 10;
-	const xunStartZhiIndex = (xunStartIndex - xunStartGanIndex * 12 + 60) % 12;
-	const xunStartGan = ganList[xunStartGanIndex];
-	const xunStartZhi = zhiList[xunStartZhiIndex];
-	const xunKey = xunStartGan + xunStartZhi;
-	
-	const kongwangMap = SHEN_SHA.kongwang as { [key: string]: string[] };
-	if (kongwangMap[xunKey]) {
-		const kongwangZhis = kongwangMap[xunKey];
-		const foundKongwang = allZhi.filter(zhi => kongwangZhis.includes(zhi));
-		if (foundKongwang.length > 0) {
-			shensha.kongwang = foundKongwang;
-			if (shensha.all) {
-				shensha.all.push(...foundKongwang.map(z => `空亡(${z})`));
-			}
 		}
 	}
 
@@ -1778,6 +1777,7 @@ export default {
 	enhanceBaziAnalysis,
 	calculateShenSha,
 	calculateShenShaForGanZhi,
+	calculateKongWangForGanZhi,
 	calculateGeJu,
 	calculateWuxingWangshuai,
 	calculateRizhuQiangruo,
@@ -1786,6 +1786,6 @@ export default {
 	calculateGanZhiRelationsForList,
 	getHideGanForGanZhi,
 	getFuXingForGanZhi,
-	getDiShiForGanZhi
+	getDiShiForGanZhi,
+	calculateKongWangForGanZhi
 };
-

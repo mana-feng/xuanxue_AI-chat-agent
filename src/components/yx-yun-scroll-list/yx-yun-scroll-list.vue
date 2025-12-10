@@ -1,17 +1,17 @@
 <template>
 	<view>
 		<view v-for="(mitem, mindex) in map_list" :key="mitem.index">
-			<tm-sheet v-if="(yun_store as any)[mitem.list].length" class="my-20" :round="3" :shadow="2" :margin="[20, 0]">
-				<tm-text _class="font-weight-b" :label="mitem.title"></tm-text>
-				<tm-divider></tm-divider>
+				<tm-sheet v-if="(yun_store as any)[mitem.list].length" class="my-20 yun-sheet" :round="3" :shadow="2" :margin="[0, 12]">
+					<tm-text _class="font-weight-b" :label="mitem.title"></tm-text>
+					<view class="list-divider"></view>
 				<view class="scroll-container" :class="{ 'scroll-container-liuri': mindex == 3 }">
-					<scroll-view 
-						class="scroll-view" 
-						:class="{ 'scroll-view-liuri': mindex == 3 }"
-						scroll-x="true"
-						:show-scrollbar="mindex == 3"
-						:enable-flex="true"
-					>
+						<scroll-view 
+							class="scroll-view" 
+							:class="{ 'scroll-view-liuri': mindex == 3 }"
+							scroll-x="true"
+							:show-scrollbar="true"
+							:enable-flex="true"
+						>
 						<view class="scroll-view-item" v-for="(ditem, dindex) in (mindex == 3 ? limitedDayList : (yun_store as any)[mitem.list])" :key="mindex == 3 ? dindex : dindex">
 							<view
 								class="scroll-view-item-default"
@@ -361,8 +361,10 @@ function getSelectedShenSha(indexKey: string, listKey: string): string[] {
 	
 	const yearZhi = bazi_store.dizhi?.year || '';
 	const monthZhi = bazi_store.dizhi?.month || '';
+	const dayZhi = bazi_store.dizhi?.day || '';
+	const timeZhi = bazi_store.dizhi?.time || '';
 	
-	return calculateShenShaForGanZhi(bazi_store.tiangan.day, ganzhi, originalZhiList, yearZhi, monthZhi);
+	return calculateShenShaForGanZhi(bazi_store.tiangan.day, ganzhi, originalZhiList, yearZhi, monthZhi, dayZhi, timeZhi);
 }
 
 function getSelectedRelations(indexKey: string, listKey: string) {
@@ -581,21 +583,43 @@ onMounted(() => {
 <style lang="scss" scoped>
 .scroll-container {
 	width: 100%;
+	max-width: 100%;
+	overflow: hidden;
+	box-sizing: border-box;
 	
 	&.scroll-container-liuri {
-		// 流日滚动容器特殊样式
 		max-height: 400rpx;
 		overflow: hidden;
 	}
 }
 
 .scroll-view {
+	display: block;
+	box-sizing: border-box;
 	white-space: nowrap;
 	width: 100%;
+	max-width: 100%;
 	margin-bottom: 20rpx;
+	overflow-x: auto;
+	overflow-y: hidden;
+	padding: 0 6px;
+	::-webkit-scrollbar {
+		display: block;
+		height: 8rpx;
+	}
+	::-webkit-scrollbar-track {
+		background: #f1f1f1;
+		border-radius: 4rpx;
+	}
+	::-webkit-scrollbar-thumb {
+		background: #cbd5e0;
+		border-radius: 4rpx;
+		&:hover {
+			background: #a0aec0;
+		}
+	}
 	
 	&.scroll-view-liuri {
-		// 流日滚动视图特殊样式，确保滚动条可见
 		::-webkit-scrollbar {
 			display: block;
 			height: 8rpx;
@@ -617,6 +641,7 @@ onMounted(() => {
 		display: inline-block;
 		text-align: center;
 		padding: 0 10rpx;
+		box-sizing: border-box;
 		&-default {
 			padding: 10rpx;
 		}
@@ -630,8 +655,21 @@ onMounted(() => {
 	}
 }
 
-.selected-info {
-	border-top: 1px solid #e0e0e0;
-	margin-top: 10rpx;
+:deep(.yun-sheet) {
+	width: 100%;
+	box-sizing: border-box;
+	margin: 0 !important;
 }
+
+	.selected-info {
+		border-top: 1px solid #e0e0e0;
+		margin-top: 10rpx;
+	}
+	
+	.list-divider {
+		height: 1px;
+		width: 100%;
+		background-color: #e5e7eb;
+		margin: 12rpx 0;
+	}
 </style>

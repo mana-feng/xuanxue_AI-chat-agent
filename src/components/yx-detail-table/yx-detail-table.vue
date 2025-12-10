@@ -6,7 +6,7 @@
 import { computed } from 'vue';
 import { useBaziStore } from '@/store/bazi';
 import { useYunStore } from '@/store/yun';
-import { getHideGanForGanZhi, getFuXingForGanZhi, getDiShiForGanZhi, calculateShenShaForGanZhi } from '@/libs/utils/bazi-enhanced';
+import { getHideGanForGanZhi, getFuXingForGanZhi, getDiShiForGanZhi, calculateShenShaForGanZhi, calculateKongWangForGanZhi } from '@/libs/utils/bazi-enhanced';
 import config from '@/config/config';
 import utils from '@/libs/utils/utils';
 
@@ -24,6 +24,14 @@ const yunStore = useYunStore();
 const width: number = 150;
 // 四柱列宽：加宽以避免单个神煞名称换行
 const sizhuWidth: number = 200;
+// 分开行高：主星/天干/地支/星运/纳音较短，藏干/副星稍高
+const compactRows = new Set(['主星', '天干', '地支', '星运', '纳音']);
+const midRows = new Set(['藏干', '副星']);
+const compactRowHeight = 88;
+const midRowHeight = 130;
+const baseRowHeight = 120;
+const baseDayZhi = computed(() => baziStore.dizhi?.day || '');
+const baseTimeZhi = computed(() => baziStore.dizhi?.time || '');
 
 // 获取选中的大运、流年、流月、流日
 function normalizeGanZhi(value: any): string {
@@ -168,39 +176,31 @@ function toArray(value: any): string[] {
 	return [String(value)];
 }
 
-// 计算神煞行需要的最大条目数，用于动态拉高行高
-const shenshaMaxItems = computed(() => {
-	const baseTable = baziStore.table || [];
-	const shenshaRow = baseTable.find(row => row.data?.name === '神煞');
-	if (!shenshaRow) return 0;
-
+// 计算神煞行在当前场景下的最大条目数，用于按需抬高该行
+function getShenshaMaxItems(baseRowData: any, includeExtended: boolean): number {
 	const items: any[] = [];
-	['year', 'month', 'day', 'time'].forEach(key => {
-		items.push(shenshaRow.data?.[key]);
-	});
+	['year', 'month', 'day', 'time'].forEach(key => items.push(baseRowData?.[key]));
 
-	// 追加大运、流年、流月、流日的神煞
-	if (selectedDayun.value) {
-		items.push(calculateShenShaForGanZhi(dayGan.value, selectedDayun.value, originalZhiList.value, yearZhi.value, monthZhi.value));
+	if (includeExtended) {
+		if (selectedDayun.value) {
+		items.push(calculateShenShaForGanZhi(dayGan.value, selectedDayun.value, originalZhiList.value, yearZhi.value, monthZhi.value, baseDayZhi.value, baseTimeZhi.value));
 	}
 	if (selectedYear.value) {
-		items.push(calculateShenShaForGanZhi(dayGan.value, selectedYear.value, originalZhiList.value, yearZhi.value, monthZhi.value));
+		items.push(calculateShenShaForGanZhi(dayGan.value, selectedYear.value, originalZhiList.value, yearZhi.value, monthZhi.value, baseDayZhi.value, baseTimeZhi.value));
 	}
 	if (selectedMonth.value) {
-		items.push(calculateShenShaForGanZhi(dayGan.value, selectedMonth.value, originalZhiList.value, yearZhi.value, monthZhi.value));
+		items.push(calculateShenShaForGanZhi(dayGan.value, selectedMonth.value, originalZhiList.value, yearZhi.value, monthZhi.value, baseDayZhi.value, baseTimeZhi.value));
 	}
 	if (selectedDay.value) {
-		items.push(calculateShenShaForGanZhi(dayGan.value, selectedDay.value, originalZhiList.value, yearZhi.value, monthZhi.value));
+		items.push(calculateShenShaForGanZhi(dayGan.value, selectedDay.value, originalZhiList.value, yearZhi.value, monthZhi.value, baseDayZhi.value, baseTimeZhi.value));
+	}
 	}
 
 	return items.reduce((max, cur) => Math.max(max, toArray(cur).length), 0);
-});
+}
 
-// 基础行高 120，按神煞数量动态放大
-const cellHeight = computed(() => {
-	if (shenshaMaxItems.value <= 1) return 120;
-	return Math.max(120, shenshaMaxItems.value * 40);
-});
+// 基础行高（未单独指定的行）
+const cellHeight = computed(() => baseRowHeight);
 
 const tableData = computed(() => {
 	const baseTable = baziStore.table || [];
@@ -209,7 +209,7 @@ const tableData = computed(() => {
 	if (!selectedDayun.value && !selectedYear.value && !selectedMonth.value && !selectedDay.value) {
 		return baseTable.map((row, index) => {
 			const isEvenRow = index % 2 === 0;
-			const newRow = { ...row };
+			const newRow: any = { ...row };
 			const newData: any = {};
 			
 			// 格式化每个单元格数据
@@ -228,6 +228,14 @@ const tableData = computed(() => {
 			});
 			
 			newRow.data = newData;
+			if (compactRows.has(row.data.name)) {
+				newRow.rowHeight = compactRowHeight;
+			} else if (midRows.has(row.data.name)) {
+				newRow.rowHeight = midRowHeight;
+			} else if (row.data.name === '神煞') {
+				const maxItems = getShenshaMaxItems(row.data, false);
+				newRow.rowHeight = Math.max(baseRowHeight, maxItems * 32 + 24);
+			}
 			return newRow;
 		});
 	}
@@ -235,7 +243,7 @@ const tableData = computed(() => {
 		// 为每一行添加选中的大运、流年、流月、流日数据
 	return baseTable.map((row, index) => {
 		const isEvenRow = index % 2 === 0;
-		const newRow = { ...row };
+		const newRow: any = { ...row };
 		const newData: any = {};
 		
 		// 先处理原有数据
@@ -271,8 +279,10 @@ const tableData = computed(() => {
 			} else if (row.data.name === '星运') {
 				const zhi = selectedDayun.value[1] || '';
 				dayunValue = getDiShiForGanZhi(dayGan.value, zhi);
+			} else if (row.data.name === '空亡') {
+				dayunValue = calculateKongWangForGanZhi(selectedDayun.value).join('、');
 			} else if (row.data.name === '神煞') {
-				dayunValue = calculateShenShaForGanZhi(dayGan.value, selectedDayun.value, originalZhiList.value, yearZhi.value, monthZhi.value);
+				dayunValue = calculateShenShaForGanZhi(dayGan.value, selectedDayun.value, originalZhiList.value, yearZhi.value, monthZhi.value, baseDayZhi.value, baseTimeZhi.value);
 			}
 			newData.dayun = formatCellData(dayunValue, isEvenRow, true, row.data.name === '神煞');
 		}
@@ -296,8 +306,10 @@ const tableData = computed(() => {
 			} else if (row.data.name === '星运') {
 				const zhi = selectedYear.value[1] || '';
 				yearValue = getDiShiForGanZhi(dayGan.value, zhi);
+			} else if (row.data.name === '空亡') {
+				yearValue = calculateKongWangForGanZhi(selectedYear.value).join('、');
 			} else if (row.data.name === '神煞') {
-				yearValue = calculateShenShaForGanZhi(dayGan.value, selectedYear.value, originalZhiList.value, yearZhi.value, monthZhi.value);
+				yearValue = calculateShenShaForGanZhi(dayGan.value, selectedYear.value, originalZhiList.value, yearZhi.value, monthZhi.value, baseDayZhi.value, baseTimeZhi.value);
 			}
 			newData.year_yun = formatCellData(yearValue, isEvenRow, false, row.data.name === '神煞');
 		}
@@ -321,8 +333,10 @@ const tableData = computed(() => {
 			} else if (row.data.name === '星运') {
 				const zhi = selectedMonth.value[1] || '';
 				monthValue = getDiShiForGanZhi(dayGan.value, zhi);
+			} else if (row.data.name === '空亡') {
+				monthValue = calculateKongWangForGanZhi(selectedMonth.value).join('、');
 			} else if (row.data.name === '神煞') {
-				monthValue = calculateShenShaForGanZhi(dayGan.value, selectedMonth.value, originalZhiList.value, yearZhi.value, monthZhi.value);
+				monthValue = calculateShenShaForGanZhi(dayGan.value, selectedMonth.value, originalZhiList.value, yearZhi.value, monthZhi.value, baseDayZhi.value, baseTimeZhi.value);
 			}
 			newData.month_yun = formatCellData(monthValue, isEvenRow, false, row.data.name === '神煞');
 		}
@@ -346,13 +360,23 @@ const tableData = computed(() => {
 			} else if (row.data.name === '星运') {
 				const zhi = selectedDay.value[1] || '';
 				dayValue = getDiShiForGanZhi(dayGan.value, zhi);
+			} else if (row.data.name === '空亡') {
+				dayValue = calculateKongWangForGanZhi(selectedDay.value).join('、');
 			} else if (row.data.name === '神煞') {
-				dayValue = calculateShenShaForGanZhi(dayGan.value, selectedDay.value, originalZhiList.value, yearZhi.value, monthZhi.value);
+				dayValue = calculateShenShaForGanZhi(dayGan.value, selectedDay.value, originalZhiList.value, yearZhi.value, monthZhi.value, baseDayZhi.value, baseTimeZhi.value);
 			}
 			newData.day_yun = formatCellData(dayValue, isEvenRow, false, row.data.name === '神煞');
 		}
 		
 		newRow.data = newData;
+		if (compactRows.has(row.data.name)) {
+			newRow.rowHeight = compactRowHeight;
+		} else if (midRows.has(row.data.name)) {
+			newRow.rowHeight = midRowHeight;
+		} else if (row.data.name === '神煞') {
+			const maxItems = getShenshaMaxItems(row.data, true);
+			newRow.rowHeight = Math.max(baseRowHeight, maxItems * 32 + 24);
+		}
 		return newRow;
 	});
 });

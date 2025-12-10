@@ -1,35 +1,28 @@
 <template>
-	<view class="header-wrap" :style="headerWrapStyle">
-		<tm-navbar hideHome title="" :shadow="2" :margin="[0,0]" :padding="[0,0]" :height="40" :follow-dark="true">
-			<template #left></template>
-			<template #right>
-				<view :class="actionContainerClass" :style="actionContainerStyle">
-					<view class="action-item dark-toggle-wrapper" @tap="onChangeDark">
-						<view class="dark-toggle-icon-wrapper">
-							<tm-icon
-								class="dark-toggle-icon"
-								:font-size="iconSize"
-								:color="store.tmStore.dark ? '#f59e0b' : '#4a5568'"
-								:name="store.tmStore.dark ? 'tmicon-ios-sunny' : 'tmicon-md-moon'"
-								:follow-dark="true"
-							></tm-icon>
-						</view>
-					</view>
-					<!-- 用户icon和下拉菜单 -->
-					<view class="action-item user-menu-wrapper" ref="userMenuWrapper">
-						<view class="user-icon-wrapper" @tap.stop="toggleUserMenu">
-							<tm-icon
-								class="user-icon"
-								:font-size="iconSize"
-								:color="store.tmStore.dark ? '#818cf8' : '#667eea'"
-								name="tmicon-md-person"
-								:follow-dark="true"
-							></tm-icon>
-						</view>
-					</view>
+		<header class="app-header" :style="headerWrapStyle">
+			<view class="app-header__left">
+				<view class="app-header__logo" @tap="goToHome">
+					<image class="logo-icon" src="/src/assets/icons/F.png" mode="aspectFit"></image>
 				</view>
-			</template>
-		</tm-navbar>
+			</view>
+			<view class="app-header__right">
+				<view class="icon-btn" @tap="onChangeDark">
+					<tm-icon
+					:font-size="28"
+					:color="store.tmStore.dark ? '#f59e0b' : '#4a5568'"
+					:name="store.tmStore.dark ? 'tmicon-ios-sunny' : 'tmicon-md-moon'"
+					:follow-dark="true"
+				></tm-icon>
+			</view>
+			<view class="icon-btn" @tap.stop="toggleUserMenu" ref="userMenuWrapper">
+				<tm-icon
+					:font-size="28"
+					:color="store.tmStore.dark ? '#818cf8' : '#667eea'"
+					name="tmicon-md-person"
+					:follow-dark="true"
+				></tm-icon>
+			</view>
+		</view>
 		<!-- 下拉菜单 - 放在navbar外部，使用fixed定位 -->
 		<view v-if="showUserMenu" class="user-dropdown" :class="{ 'dark': store.tmStore.dark }" :style="dropdownStyle">
 			<!-- 未登录时显示登录/注册 -->
@@ -58,7 +51,7 @@
 		</view>
 		<!-- 点击外部关闭菜单的遮罩 -->
 		<view v-if="showUserMenu" class="dropdown-mask" @tap="closeUserMenu"></view>
-	</view>
+	</header>
 </template>
 
 <script lang="ts" setup>
@@ -79,14 +72,40 @@ onMounted(() => {
 	userStore.restoreAuth();
 });
 
-// navbar 高度（rpx），与 tm-navbar 的 height prop 保持一致
-const navbarHeight = 40;
+// 动态计算navbar高度，基于屏幕宽度的百分比，确保在不同屏幕下比例一致
+// rpx单位本身就是响应式的，但我们需要确保在不同屏幕下视觉比例一致
+const navbarHeight = computed(() => {
+	try {
+		// 使用固定的rpx值，uni-app会自动根据屏幕宽度转换
+		// 40rpx在750rpx设计稿中，在不同屏幕下会自动适配
+		// 为了确保视觉比例一致，我们保持40rpx不变，让uni-app自动处理
+		return 40;
+	} catch (e) {
+		// 如果计算失败，使用默认值
+		return 40;
+	}
+});
 
-// 计算图标大小，使其视觉上占满header高度
+// 计算实际header总高度（包括状态栏），用于主页面动态调整padding-top
+const totalHeaderHeight = computed(() => {
+	try {
+		const systemInfo = uni.getSystemInfoSync();
+		const statusBarHeight = systemInfo.statusBarHeight || 0;
+		// header高度：小屏48px，大屏64px
+		const headerHeight = systemInfo.windowWidth <= 640 ? 48 : 64;
+		return statusBarHeight + headerHeight;
+	} catch (e) {
+		// 如果计算失败，使用默认值
+		const systemInfo = uni.getSystemInfoSync();
+		const statusBarHeight = systemInfo.statusBarHeight || 0;
+		return statusBarHeight + 64;
+	}
+});
+
+// 计算图标大小，基于header高度的百分比
 const iconSize = computed(() => {
-	// 图标大小设为header高度的105%，确保视觉上完全占满header高度
-	// 由于图标字体本身可能有内边距，稍微超出一点能确保视觉上占满
-	return Math.floor(navbarHeight * 1.5);
+	// 图标大小设为header高度的150%，确保视觉上完全占满header高度
+	return Math.floor(navbarHeight.value * 1.5);
 });
 
 // 计算按钮容器的样式（不再需要背景，只作为布局容器）
@@ -113,6 +132,12 @@ const actionContainerClass = computed(() => {
 
 const onChangeDark = () => store.setTmVuetifyDark(!store.tmStore.dark);
 
+const goToHome = () => {
+	uni.reLaunch({
+		url: '/pages/index/index'
+	});
+};
+
 const toggleUserMenu = async () => {
 	if (!showUserMenu.value) {
 		// 打开菜单时计算位置
@@ -127,13 +152,15 @@ const calculateDropdownPosition = () => {
 		// 获取系统信息
 		const systemInfo = uni.getSystemInfoSync();
 		const statusBarHeight = systemInfo.statusBarHeight || 0;
-		const navbarHeight = 40; // navbar高度（rpx）
-		const navbarHeightPx = uni.upx2px(navbarHeight);
-		const iconContainerHeight = uni.upx2px(iconSize.value); // 图标容器高度（px）
+		const navbarHeightPx = uni.upx2px(navbarHeight.value); // navbar高度（px）
+		const iconSizeValue = iconSize.value; // 图标大小（rpx）
+		const iconContainerHeightPx = uni.upx2px(iconSizeValue); // 图标容器高度（px）
 		
 		// 计算下拉菜单位置：状态栏高度 + navbar高度 + 图标容器高度 + 间距
 		// 由于图标容器向下对齐，下拉栏应该从header底部（即图标容器底部）开始
-		const top = statusBarHeight + navbarHeightPx + iconContainerHeight + uni.upx2px(8);
+		// 统一使用px单位，确保在不同屏幕尺寸下位置一致
+		const spacing = uni.upx2px(8); // 间距（px）
+		const top = statusBarHeight + navbarHeightPx + iconContainerHeightPx + spacing;
 		const right = uni.upx2px(12); // 距离右边缘12rpx
 		
 		dropdownStyle.value = {
@@ -144,10 +171,12 @@ const calculateDropdownPosition = () => {
 		// 如果计算失败，使用默认位置
 		const systemInfo = uni.getSystemInfoSync();
 		const statusBarHeight = systemInfo.statusBarHeight || 0;
-		const iconContainerHeight = uni.upx2px(iconSize.value);
+		const navbarHeightPx = uni.upx2px(navbarHeight.value);
+		const iconContainerHeightPx = uni.upx2px(iconSize.value);
+		const spacing = uni.upx2px(8);
 		dropdownStyle.value = {
-			top: `${statusBarHeight + 40 + iconContainerHeight + 8}px`,
-			right: '12px'
+			top: `${statusBarHeight + navbarHeightPx + iconContainerHeightPx + spacing}px`,
+			right: `${uni.upx2px(12)}px`
 		};
 	}
 };
@@ -187,136 +216,40 @@ const onLogout = () => {
 		duration: 2000
 	});
 };
+
+// 暴露给父组件使用，用于动态计算内容区域的padding-top
+defineExpose({
+	navbarHeight,
+	iconSize,
+	totalHeaderHeight
+});
 </script>
 
 <style scoped>
-.header-wrap {
-	margin: 0;
-	padding: 0;
-	line-height: 1;
-	transition: background-color 0.3s ease, border-color 0.3s ease;
-	display: flex;
-	align-items: flex-end;
-}
+/* Header 样式已在 app-shell.css 中定义 */
+/* 这里只添加组件特定的样式 */
 
-/* 覆盖 navbar-right-section 的样式，让按钮向下对齐 */
-.header-wrap :deep(.navbar-right-section) {
-	padding-right: 12rpx !important;
-	align-items: flex-end !important;
-	height: 100% !important;
-	overflow: visible !important;
-}
-
-/* 确保 navbar-content-wrapper 也向下对齐 */
-.header-wrap :deep(.navbar-content-wrapper) {
-	height: 100%;
-	align-items: flex-end;
-}
-
-.action-container {
+.app-header {
 	display: flex;
 	flex-direction: row;
-	flex-wrap: nowrap;
-	align-items: flex-end;
-	justify-content: flex-end;
-	gap: 0;
-	padding: 0;
-	margin: 0;
-	background: transparent;
-	border: none;
-	box-shadow: none;
-	overflow: visible;
-	white-space: nowrap;
-	width: auto;
-	/* 移除背景，让图标直接显示在header背景上 */
+	align-items: center;
+	justify-content: space-between;
 }
 
-.action-container.dark {
-	background: transparent;
-	border: none;
-	box-shadow: none;
-}
-
-.action-item {
+.app-header__right {
 	display: flex;
 	flex-direction: row;
+	align-items: center;
 	flex-wrap: nowrap;
-	align-items: flex-end;
-	justify-content: center;
-	height: 100%;
-	min-height: 100%;
-	padding: 0;
-	position: relative;
-	flex-shrink: 0;
-	box-sizing: border-box;
-	vertical-align: bottom;
 }
 
-/* 移除分隔线，因为不再有背景容器 */
-.action-item:not(:last-child)::after {
-	display: none;
+.app-header__right .icon-btn + .icon-btn {
+	margin-left: 12rpx;
 }
 
-.dark-toggle-wrapper {
-	min-width: 64rpx;
-	padding: 0 8rpx;
-	height: 100%;
-	display: flex;
-	align-items: flex-end;
-	justify-content: center;
-	flex-shrink: 0;
-}
-
-.dark-toggle-icon-wrapper {
-	display: flex;
-	align-items: flex-end;
-	justify-content: center;
-	width: 100%;
-	height: 100%;
-	padding: 0;
-}
-
-.dark-toggle-icon {
-	transition: transform 0.2s ease;
-	line-height: 1;
-	vertical-align: middle;
-}
-
-.dark-toggle-icon-wrapper:active .dark-toggle-icon {
-	transform: scale(0.95);
-}
-
-.user-menu-wrapper {
-	position: relative;
-	min-width: 64rpx;
-	padding: 0 8rpx;
-	cursor: pointer;
-	overflow: visible;
-	z-index: 1001;
-	flex-shrink: 0;
-	height: 100%;
-	display: flex;
-	align-items: flex-end;
-	justify-content: center;
-}
-
-.user-icon-wrapper {
-	display: flex;
-	align-items: flex-end;
-	justify-content: center;
-	width: 100%;
-	height: 100%;
-	padding: 0;
-}
-
-.user-icon {
-	transition: transform 0.2s ease;
-	line-height: 1;
-	vertical-align: middle;
-}
-
-.user-icon-wrapper:active .user-icon {
-	transform: scale(0.95);
+.logo-icon {
+	width: clamp(24px, 4vw, 32px);
+	height: clamp(24px, 4vw, 32px);
 }
 
 .dropdown-mask {
@@ -325,12 +258,13 @@ const onLogout = () => {
 	left: 0;
 	right: 0;
 	bottom: 0;
-	z-index: 1000;
+	z-index: 9998;
 	background: transparent;
 	/* 在移动端，遮罩层可以帮助关闭菜单 */
 	/* #ifdef H5 */
 	background: rgba(0, 0, 0, 0.01);
 	/* #endif */
+	pointer-events: auto;
 }
 
 .user-dropdown {
@@ -340,9 +274,10 @@ const onLogout = () => {
 	border-radius: 12rpx;
 	box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.12);
 	overflow: hidden;
-	z-index: 1002;
+	z-index: 9999;
 	padding: 8rpx 0;
 	animation: slideDown 0.2s ease;
+	pointer-events: auto;
 }
 
 @keyframes slideDown {

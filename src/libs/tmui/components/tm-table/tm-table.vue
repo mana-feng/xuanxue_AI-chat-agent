@@ -72,12 +72,12 @@
 				:margin="[0, 0]"
                 :color="item.color" 
 				:text="item.light"
-                    :_class="'flex flex-row ' + item2.align" :height="item.type=='vertical-text' ? Math.max(defaultProps.cellHeight-6, (item.items?.length || 0) * 32 + 12) : (defaultProps.cellHeight-6)" :width="item.width-10"
+                    :_class="'flex flex-row ' + item2.align" :height="item.type=='vertical-text' ? Math.max((item.rowHeight ?? defaultProps.cellHeight)-6, (item.items?.length || 0) * 32 + 12) : ((item.rowHeight ?? defaultProps.cellHeight)-6)" :width="item.width-10"
                     :padding="[10, 6]">
                    <tm-text v-if="item.type=='text'" :font-size="item.fontSize || 30" :label="item.text"></tm-text>
                    <view v-if="item.type=='vertical-text'" class="flex flex-col flex-col-center-center" style="width: 100%;">
                        <tm-text v-for="(textItem, textIndex) in item.items" :key="textIndex" :font-size="item.fontSize || 30" :label="textItem" :style="{ marginBottom: textIndex < item.items.length - 1 ? '4rpx' : '0' }"></tm-text>
-                   </view>
+                    </view>
                    <tm-button @click="rowClick(index2,index)" :margin="[0,0]" size="small" :color="_col[index]?.bgColor" 
 				   :width="item.width-16" v-if="item.type=='button'" :font-size="24" :label="item.text"></tm-button>
                 </tm-sheet>
@@ -101,7 +101,7 @@
                     <tm-sheet :border="_showBottomBorder?1:0" border-direction="bottom" v-for="(item, index) in item2.data" :key="index" :margin="[0, 0]"
                        :color="item.color"
                        :text="item.light"
-                        :_class="'flex ' + item2.align" :height="item.type=='vertical-text' ? Math.max(defaultProps.cellHeight-6, (item.items?.length || 0) * 32 + 12) : (defaultProps.cellHeight-6)" :width="item.width-10"
+                        :_class="'flex ' + item2.align" :height="item.type=='vertical-text' ? Math.max((item.rowHeight ?? defaultProps.cellHeight)-6, (item.items?.length || 0) * 32 + 12) : ((item.rowHeight ?? defaultProps.cellHeight)-6)" :width="item.width-10"
                         :padding="[10, 6]">
                         <tm-text v-if="item.type=='text'" :font-size="item.fontSize || 30" :label="item.text"></tm-text>
                         <view v-if="item.type=='vertical-text'" class="flex flex-col flex-col-center-center" style="width: 100%;">
@@ -284,6 +284,7 @@ function setColData() {
 				width:_col.value[index]?.width??145,
 				light:light,
 				color:color,
+				rowHeight: el?.rowHeight
 			}
 			if(typeof d[el2.key] === 'object'){
 				cel = {...cel,...d[el2.key]}

@@ -17,6 +17,11 @@ onPageNotFound(() => {
 @import './libs/tmui/scss/noNvue.css';
 /* #endif */
 
+/* 引入响应式布局系统 */
+@import './styles/responsive-layout.css';
+/* 引入 App Shell 布局系统 */
+@import './styles/app-shell.css';
+
 /* #ifdef H5 */
 html,
 body,

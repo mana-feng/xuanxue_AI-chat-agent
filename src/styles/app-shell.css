@@ -1,0 +1,275 @@
+/**
+ * App Shell 布局系统
+ * 统一的应用框架布局
+ */
+
+/* ==================== 全局基础样式 ==================== */
+html,
+body,
+#app,
+uni-app,
+uni-page-body {
+	margin: 0;
+	padding: 0;
+	min-height: 100vh;
+	box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+/* ==================== App Shell 布局 ==================== */
+.app-shell {
+	min-height: 100vh;
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	background: #f5f7fa;
+}
+
+/* ==================== Header 布局 ==================== */
+.app-header {
+	position: sticky;
+	top: 0;
+	z-index: 1000;
+	
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	
+	height: clamp(48px, 6vh, 64px);
+	padding-inline: clamp(16px, 6vw, 64px);
+	
+	background: #ffffff;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+	box-sizing: border-box;
+}
+
+/* 小屏幕时调整 header */
+@media screen and (max-width: 640px) {
+	.app-header {
+		padding-inline: 16px;
+		height: 48px;
+	}
+}
+
+.app-header__left {
+	display: flex;
+	align-items: center;
+	gap: clamp(8px, 1.5vw, 16px);
+	flex: 1;
+	min-width: 0;
+}
+
+.app-header__logo {
+	display: flex;
+	align-items: center;
+	gap: clamp(8px, 1.5vw, 12px);
+	cursor: pointer;
+	text-decoration: none;
+	color: inherit;
+}
+
+.app-header__logo img {
+	width: clamp(24px, 4vw, 32px);
+	height: clamp(24px, 4vw, 32px);
+	object-fit: contain;
+}
+
+.app-header__title {
+	font-size: clamp(16px, 2vw, 20px);
+	font-weight: 600;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	color: #1a202c;
+}
+
+.app-header__right {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: nowrap;
+	flex-shrink: 0;
+}
+
+.icon-btn {
+	border: none;
+	background: transparent;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border-radius: 999px;
+	transition: background-color 0.2s ease;
+	padding: 0;
+	margin: 0;
+}
+
+.icon-btn:hover,
+.icon-btn:active {
+	background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* ==================== Main 内容区域 ==================== */
+.app-main {
+	flex: 1;
+	width: 100%;
+	padding-block: clamp(16px, 4vh, 40px);
+	padding-inline: clamp(16px, 6vw, 80px);
+	display: flex;
+	justify-content: center;
+	box-sizing: border-box;
+}
+
+/* 小屏幕时调整 main 内边距 */
+@media screen and (max-width: 640px) {
+	.app-main {
+		padding-inline: 16px;
+		padding-block: clamp(12px, 3vh, 24px);
+	}
+}
+
+/* ==================== 页面容器 ==================== */
+.page-shell {
+	width: 100%;
+	display: flex;
+	justify-content: center;
+	box-sizing: border-box;
+}
+
+.page-card {
+	width: min(100%, 960px);
+	margin-inline: auto;
+	border-radius: 24px;
+	background: #ffffff;
+	box-shadow: 0 12px 40px rgba(15, 23, 42, 0.06);
+	
+	padding: clamp(24px, 3vw, 40px);
+	display: flex;
+	flex-direction: column;
+	gap: clamp(20px, 3vh, 32px);
+	box-sizing: border-box;
+}
+
+/* 小屏幕时调整卡片 */
+@media screen and (max-width: 640px) {
+	.page-card {
+		border-radius: 16px;
+		padding: clamp(16px, 4vw, 24px);
+		gap: clamp(16px, 2.5vh, 24px);
+	}
+}
+
+/* ==================== 页面标题 ==================== */
+.page-title-wrapper {
+	display: flex;
+	align-items: flex-start;
+	gap: clamp(12px, 2vw, 20px);
+	margin-bottom: clamp(16px, 2.5vh, 24px);
+	padding-bottom: clamp(16px, 2.5vh, 24px);
+	border-bottom: 2px solid #e5e7eb;
+}
+
+.page-title {
+	font-size: clamp(20px, 2.6vw, 26px);
+	font-weight: 700;
+	margin: 0;
+	margin-bottom: 4px;
+	line-height: 1.3;
+	color: #1a202c;
+}
+
+.page-subtitle {
+	font-size: clamp(13px, 1.4vw, 14px);
+	color: #6b7280;
+	margin: 0;
+	line-height: 1.5;
+}
+
+/* ==================== Section 样式 ==================== */
+.section {
+	background: #f9fafb;
+	border-radius: 16px;
+	padding: clamp(16px, 2.5vw, 24px);
+	display: flex;
+	flex-direction: column;
+	gap: clamp(12px, 2vw, 16px);
+	box-sizing: border-box;
+}
+
+.section__header {
+	display: flex;
+	align-items: center;
+	gap: clamp(8px, 1.5vw, 12px);
+	margin-bottom: clamp(8px, 1.5vw, 12px);
+	padding-bottom: clamp(8px, 1.5vw, 12px);
+	border-bottom: 1px solid #e5e7eb;
+}
+
+.section__title {
+	font-size: clamp(16px, 2vw, 18px);
+	font-weight: 600;
+	margin: 0;
+	line-height: 1.4;
+	color: #1a202c;
+}
+
+.section__body {
+	display: flex;
+	flex-direction: column;
+	gap: clamp(12px, 2vw, 16px);
+	width: 100%;
+}
+
+/* ==================== 表单布局 ==================== */
+.form-row {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: clamp(12px, 2vw, 16px);
+	width: 100%;
+}
+
+@media screen and (min-width: 640px) {
+	.form-row {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+.form-group {
+	display: flex;
+	flex-direction: column;
+	gap: clamp(6px, 1vw, 8px);
+	width: 100%;
+}
+
+/* ==================== 按钮区域 ==================== */
+.page-card__footer {
+	display: flex;
+	justify-content: center;
+	margin-top: clamp(8px, 2vh, 16px);
+	width: 100%;
+}
+
+.primary-btn {
+	width: 100%;
+	max-width: 100%;
+}
+
+.primary-btn :deep(.tm-button) {
+	height: clamp(40px, 6vh, 52px) !important;
+	font-size: clamp(14px, 1.6vw, 16px) !important;
+	border-radius: 999px !important;
+}
+
+.primary-btn.disabled :deep(.tm-button) {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+

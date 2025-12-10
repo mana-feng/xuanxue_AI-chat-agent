@@ -1,175 +1,146 @@
 <template>
 	<tm-app>
-		<view class="page-wrapper">
-			<view class="page-content-scale">
-				<yx-nav-header></yx-nav-header>
+		<view class="app-shell">
+			<yx-nav-header></yx-nav-header>
+			<view class="app-main">
+				<view class="page-shell">
+					<view class="page-card history-card">
+						<view class="page-title-wrapper history-header">
+							<view class="form-header-icon">
+								<tm-icon name="tmicon-md-time" :font-size="40" color="#667eea"></tm-icon>
+							</view>
+							<view class="form-header-text">
+								<h1 class="page-title">历史排盘记录</h1>
+								<p class="page-subtitle">查看、筛选并管理已保存的排盘</p>
+							</view>
+							<view class="header-actions">
+								<tm-button
+									size="small"
+									type="grey"
+									:round="12"
+									:padding="[18, 18]"
+									icon="tmicon-md-refresh"
+									label="刷新"
+									@tap="fetchCharts"
+								></tm-button>
+								<tm-button
+									v-if="isLoggedIn && user_store.isAdmin"
+									size="small"
+									type="warning"
+									:round="12"
+									:padding="[18, 18]"
+									label="管理员后台"
+									@tap="goToAdmin"
+								></tm-button>
+							</view>
+						</view>
 
-				<tm-sheet
-					:round="16"
-					:shadow="4"
-					:margin="[20, 20]"
-					:padding="[32, 28]"
-					class="header-card"
-					:follow-dark="true"
-				>
-					<view class="flex flex-row items-center justify-between mb-16">
-						<tm-text
-							:font-size="38"
-							:bold="true"
-							:follow-dark="true"
-							label="历史排盘记录"
-						></tm-text>
-						<view class="flex flex-row items-center">
+						<view v-if="!isLoggedIn" class="empty-state">
+							<tm-icon name="account-circle" :font-size="80" color="#cbd5e0" :margin="[0, 0, 20, 0]"></tm-icon>
+							<tm-text
+								:font-size="28"
+								color="#718096"
+								label="登录后可查看和管理您保存的八字排盘记录"
+								:margin="[0, 0, 30, 0]"
+							></tm-text>
 							<tm-button
-								size="small"
-								type="success"
-								:margin="[0, 8]"
-								:padding="[20, 20]"
+								type="primary"
 								:round="12"
-								icon="tmicon-md-home"
-								label="返回主页"
-								@tap="goToHome"
-							></tm-button>
-							<tm-button
-								v-if="isLoggedIn && user_store.isAdmin"
-								size="small"
-								type="warning"
-								:margin="[0, 8]"
-								:padding="[20, 20]"
-								:round="12"
-								label="管理员后台"
-								@tap="goToAdmin"
-							></tm-button>
-							<tm-button
-								size="small"
-								type="grey"
-								:margin="[0, 0]"
-								:padding="[20, 20]"
-								:round="12"
-								label="刷新"
-								@tap="fetchCharts"
+								:padding="[28, 24]"
+								:bold="true"
+								label="去登录"
+								@tap="goLogin"
 							></tm-button>
 						</view>
-					</view>
 
-					<view v-if="!isLoggedIn" class="empty-state">
-						<tm-icon name="account-circle" :font-size="80" color="#cbd5e0" :margin="[0, 0, 20, 0]"></tm-icon>
-						<tm-text
-							:font-size="28"
-							color="#718096"
-							label="登录后可查看和管理您保存的八字排盘记录"
-							:margin="[0, 0, 30, 0]"
-						></tm-text>
-						<tm-button
-							type="primary"
-							:round="12"
-							:height="88"
-							:font-size="30"
-							:bold="true"
-							label="去登录"
-							@tap="goLogin"
-						></tm-button>
-					</view>
-
-					<view v-else>
-						<!-- 搜索和筛选区域 -->
-						<view class="mb-12">
-						<!-- 搜索框 -->
-						<tm-input
-							v-model="searchKeyword"
-							:margin="[0, 12]"
-							prefix="tmicon-md-search"
-							placeholder="搜索姓名..."
-							@input="onSearchInput"
-							clearable
-							:round="12"
-							:border="1"
-						></tm-input>
-							
-							<!-- 筛选和排序 -->
-							<view class="flex flex-row items-center mt-8">
-								<!-- 性别筛选 -->
-								<view class="flex-1 mr-8">
-									<tm-text :font-size="22" color="#666666" label="性别：" class="mb-4"></tm-text>
-									<tm-radio-group v-model="genderFilter">
-										<tm-radio label="全部" :value="''"></tm-radio>
-										<tm-radio label="男" :value="'0'"></tm-radio>
-										<tm-radio label="女" :value="'1'"></tm-radio>
-									</tm-radio-group>
-								</view>
-								
-								<!-- 排序方式 -->
-								<view class="flex-1">
-									<tm-text :font-size="22" color="#666666" label="排序：" class="mb-4"></tm-text>
-									<tm-segtab
-										v-model="sortByIndex"
-										:list="[
-											{ text: '时间' },
-											{ text: '姓名' }
-										]"
-										:margin="[0, 0]"
-									></tm-segtab>
+						<view v-else>
+							<view class="section filters-card">
+								<header class="section__header">
+									<tm-icon name="tmicon-md-search" :font-size="26" color="#667eea"></tm-icon>
+									<h2 class="section__title">筛选与排序</h2>
+								</header>
+								<view class="section__body filters-grid">
+									<view class="filter-block search-block">
+										<tm-input
+											v-model="searchKeyword"
+											prefix="tmicon-md-search"
+											placeholder="搜索姓名..."
+											@input="onSearchInput"
+											clearable
+											:round="12"
+											:border="1"
+										></tm-input>
+									</view>
+									<view class="filter-block">
+										<tm-text :font-size="22" color="#666666" label="性别：" class="mb-6"></tm-text>
+										<tm-radio-group v-model="genderFilter">
+											<tm-radio label="全部" :value="''"></tm-radio>
+											<tm-radio label="男" :value="'0'"></tm-radio>
+											<tm-radio label="女" :value="'1'"></tm-radio>
+										</tm-radio-group>
+									</view>
+									<view class="filter-block">
+										<tm-text :font-size="22" color="#666666" label="排序：" class="mb-6"></tm-text>
+										<tm-segtab
+											v-model="sortByIndex"
+											:list="[
+												{ text: '时间' },
+												{ text: '姓名' }
+											]"
+											:margin="[0, 0]"
+											:width="260"
+										></tm-segtab>
+									</view>
+									<view class="filter-actions">
+										<tm-button
+											:type="sortOrder === 'DESC' ? 'primary' : 'grey'"
+											size="small"
+											:padding="[16, 14]"
+											:round="12"
+											:label="sortOrder === 'DESC' ? '↓ 降序' : '↑ 升序'"
+											@tap="toggleSortOrder"
+										></tm-button>
+										<tm-button
+											v-if="searchKeyword || genderFilter"
+											type="danger"
+											size="small"
+											:padding="[16, 14]"
+											:round="12"
+											label="清除筛选"
+											@tap="clearFilters"
+										></tm-button>
+										<tm-text
+											v-if="totalCount > 0"
+											class="filters-count"
+											:font-size="22"
+											color="#999999"
+											:label="`共找到${totalCount} 条记录`"
+										></tm-text>
+									</view>
 								</view>
 							</view>
-							
-							<!-- 排序方向 -->
-							<view class="flex flex-row items-center mt-8">
-								<tm-button
-									:type="sortOrder === 'DESC' ? 'primary' : 'grey'"
-									size="small"
-									:margin="[0, 4]"
-									:padding="[16, 12]"
-									shape="round"
-									:label="sortOrder === 'DESC' ? '↓ 降序' : '↑ 升序'"
-									@tap="toggleSortOrder"
-								></tm-button>
-								<tm-button
-									v-if="searchKeyword || genderFilter"
-									type="danger"
-									size="small"
-									:margin="[0, 4]"
-									:padding="[16, 12]"
-									shape="round"
-									label="清除筛选"
-									@tap="clearFilters"
-								></tm-button>
+
+							<view v-if="loading" class="py-20 text-center">
+								<tm-text label="加载中..." color="#999999"></tm-text>
 							</view>
-							
-							<!-- 统计信息 -->
-							<view v-if="totalCount > 0" class="mt-8">
-								<tm-text
-									:font-size="22"
+							<view v-else-if="charts.length === 0" class="py-20 text-center">
+								<tm-text 
+									:label="searchKeyword || genderFilter ? '未找到符合条件的记录' : '暂无保存记录，可在排盘结果页点击「保存到账号」哦'" 
 									color="#999999"
-									:label="`共找到 ${totalCount} 条记录`"
 								></tm-text>
 							</view>
-						</view>
-
-						<!-- 列表内容 -->
-						<view v-if="loading" class="py-20">
-							<tm-text label="加载中..." color="#999999"></tm-text>
-						</view>
-						<view v-else-if="charts.length === 0" class="py-20">
-							<tm-text 
-								:label="searchKeyword || genderFilter ? '未找到符合条件的记录' : '暂无保存记录，可在排盘结果页点击「保存到账号」。'" 
-								color="#999999"
-							></tm-text>
-						</view>
-						<view v-else>
-							<view
-								v-for="item in charts"
-								:key="item.id"
-								class="mb-12"
-							>
+							<view v-else class="records-list">
 								<tm-sheet
+									v-for="item in charts"
+									:key="item.id"
 									:round="16"
-									:shadow="3"
+									:shadow="2"
 									:margin="[0, 0]"
-									:padding="[28, 24]"
+									:padding="[24, 20]"
 									class="record-card"
 								>
-									<view class="flex flex-row items-center justify-between">
-										<view class="flex-1 mr-16">
+									<view class="record-card__header">
+										<view class="record-meta">
 											<tm-text
 												:bold="true"
 												:font-size="30"
@@ -178,13 +149,13 @@
 												_class="text-overflow-1"
 											></tm-text>
 											<tm-text
-												class="mt-8"
+												class="mt-6"
 												:font-size="26"
 												color="#718096"
 												:label="formatBirth(item) || ''"
 												_class="text-overflow-1"
 											></tm-text>
-											<view class="flex flex-row items-center mt-8">
+											<view class="record-meta__row">
 												<tm-text
 													:font-size="22"
 													color="#a0aec0"
@@ -199,12 +170,11 @@
 												></tm-text>
 											</view>
 										</view>
-										<view class="flex flex-column items-end gap-8">
+										<view class="record-actions">
 											<tm-button
 												size="small"
 												type="primary"
-												:margin="[0, 0]"
-												:padding="[20, 24]"
+												:padding="[18, 20]"
 												:round="12"
 												label="查看"
 												@tap="openChart(item)"
@@ -212,9 +182,8 @@
 											<tm-button
 												size="small"
 												type="danger"
-												:padding="[20, 24]"
+												:padding="[18, 20]"
 												:round="12"
-												:margin="[0, 4]"
 												label="删除"
 												@tap="removeChart(item)"
 											></tm-button>
@@ -222,12 +191,12 @@
 									</view>
 								</tm-sheet>
 							</view>
-						</view>
-						<view v-if="error" class="mt-10">
-							<tm-text :label="error" color="red"></tm-text>
+							<view v-if="error" class="mt-10">
+								<tm-text :label="error" color="red"></tm-text>
+							</view>
 						</view>
 					</view>
-				</tm-sheet>
+				</view>
 			</view>
 		</view>
 	</tm-app>
@@ -258,19 +227,16 @@ const loading = ref(false);
 const error = ref('');
 const totalCount = ref(0);
 
-// 搜索和筛选
 const searchKeyword = ref('');
 const genderFilter = ref('');
 const sortByIndex = ref(0); // 0: 时间, 1: 姓名
-const sortBy = computed(() => sortByIndex.value === 0 ? 'created_at' : 'name');
+const sortBy = computed(() => (sortByIndex.value === 0 ? 'created_at' : 'name'));
 const sortOrder = ref<'ASC' | 'DESC'>('DESC');
 
-// 防抖定时器
 let searchTimer: any = null;
 
 const isLoggedIn = computed(() => user_store.isLoggedIn);
 
-// 监听筛选条件变化
 watch([genderFilter, sortByIndex, sortOrder], () => {
 	if (user_store.isLoggedIn) {
 		fetchCharts();
@@ -285,7 +251,6 @@ onMounted(() => {
 });
 
 function onSearchInput() {
-	// 防抖处理，500ms后执行搜索
 	if (searchTimer) {
 		clearTimeout(searchTimer);
 	}
@@ -313,7 +278,6 @@ function fetchCharts() {
 	loading.value = true;
 	error.value = '';
 
-	// 构建查询参数
 	const params: Record<string, string> = {};
 	if (searchKeyword.value) {
 		params.keyword = searchKeyword.value;
@@ -341,10 +305,8 @@ function fetchCharts() {
 		success(res: any) {
 			try {
 				if (res.statusCode >= 200 && res.statusCode < 300) {
-					// 兼容新旧API格式
 					let data = res.data;
 					if (Array.isArray(data)) {
-						// 旧格式：直接返回数组
 						charts.value = data.map((it: any) => {
 							try {
 								return {
@@ -360,7 +322,6 @@ function fetchCharts() {
 						});
 						totalCount.value = charts.value.length;
 					} else if (data && data.list) {
-						// 新格式：返回对象包含list和total
 						charts.value = data.list.map((it: any) => {
 							try {
 								return {
@@ -408,8 +369,7 @@ function formatDateTime(iso: string) {
 		if (isNaN(d.getTime())) {
 			return '';
 		}
-		const result = utils.HideSecond(d.getTime());
-		return result || '';
+		return utils.HideSecond(d.getTime()) || '';
 	} catch (e) {
 		return '';
 	}
@@ -431,39 +391,43 @@ function formatBirth(item: ChartItem) {
 
 function openChart(item: ChartItem) {
 	try {
-		// 验证 rawPayload 数据完整性，并检查是否与数据库中的基本字段一致
 		let useRawPayload = false;
 		if (item.rawPayload && item.rawPayload.user && item.rawPayload.bazi) {
 			const u = item.rawPayload.user;
 			const b = item.rawPayload.bazi;
-			
-			// 检查关键字段是否存在（包括 table 字段，这是详情页显示表格必需的）
-			if (u.timestamp && u.gender !== undefined && u.gender !== null &&
-				b.solar && b.solar.year && b.sizhu && b.sizhu.year && 
-				b.yinli && b.xinzuo && b.table && Array.isArray(b.table) && b.table.length > 0) {
-				
-				// 检查 rawPayload 中的性别是否与数据库中的性别一致
-				// 数据库：'1'=男, '0'=女；rawPayload：1=男, 0=女
-				// 统一转换为数字进行比较：1=男, 0=女
+
+			if (
+				u.timestamp &&
+				u.gender !== undefined &&
+				u.gender !== null &&
+				b.solar &&
+				b.solar.year &&
+				b.sizhu &&
+				b.sizhu.year &&
+				b.yinli &&
+				b.xinzuo &&
+				b.table &&
+				Array.isArray(b.table) &&
+				b.table.length > 0
+			) {
 				let rawPayloadGender: number;
 				if (u.gender === null || u.gender === undefined) {
-					rawPayloadGender = 0; // 默认值（女）
+					rawPayloadGender = 0;
 				} else if (typeof u.gender === 'string') {
 					rawPayloadGender = u.gender === '1' ? 1 : 0;
 				} else {
 					rawPayloadGender = u.gender === 1 ? 1 : 0;
 				}
-				
+
 				let dbGender: number;
 				if (item.gender === null || item.gender === undefined) {
-					dbGender = 0; // 默认值（女）
+					dbGender = 0;
 				} else if (typeof item.gender === 'string') {
 					dbGender = item.gender === '1' ? 1 : 0;
 				} else {
 					dbGender = item.gender === 1 ? 1 : 0;
 				}
-				
-				// 检查 rawPayload 中的时间戳是否与数据库中的出生时间一致
+
 				let dbTimestamp: number;
 				if (typeof item.birthDatetime === 'string') {
 					const date = new Date(item.birthDatetime);
@@ -473,16 +437,14 @@ function openChart(item: ChartItem) {
 				} else {
 					dbTimestamp = 0;
 				}
-				
-				// 如果性别或时间戳不一致，说明数据已更新，需要重新计算
-				// 注意：时间戳比较允许1秒的误差（因为可能存在精度问题）
+
 				const timestampDiff = Math.abs((u.timestamp || 0) - dbTimestamp);
 				if (rawPayloadGender === dbGender && timestampDiff < 1000) {
 					useRawPayload = true;
 				}
 			}
 		}
-		
+
 		if (useRawPayload) {
 			const u = item.rawPayload.user;
 			user_store.set({
@@ -491,8 +453,7 @@ function openChart(item: ChartItem) {
 				timestamp: u.timestamp
 			});
 			bazi_store.$patch(item.rawPayload.bazi);
-			
-			// 延迟跳转，确保状态更新完成
+
 			setTimeout(() => {
 				uni.navigateTo({
 					url: '/pages/index/detail'
@@ -500,8 +461,7 @@ function openChart(item: ChartItem) {
 			}, 100);
 			return;
 		}
-		
-		// 如果 rawPayload 不存在或不完整，从基本信息重新计算
+
 		if (!item.birthDatetime) {
 			uni.showToast({
 				title: '该记录缺少出生时间数据',
@@ -510,8 +470,7 @@ function openChart(item: ChartItem) {
 			});
 			return;
 		}
-		
-		// 转换时间戳并验证有效性
+
 		let timestamp: number;
 		if (typeof item.birthDatetime === 'string') {
 			const date = new Date(item.birthDatetime);
@@ -542,50 +501,43 @@ function openChart(item: ChartItem) {
 			});
 			return;
 		}
-		
-		// 转换性别：数据库中 '1'=男, '0'=女；user_store 中 1=男, 0=女
-		// 所以数据库 '1' -> user_store 1, 数据库 '0' -> user_store 0
+
 		let gender: number;
 		if (item.gender === null || item.gender === undefined) {
-			gender = 0; // 默认值（女）
+			gender = 0;
 		} else if (typeof item.gender === 'string') {
-			gender = item.gender === '1' ? 1 : 0; // '1'=男=1, '0'=女=0
+			gender = item.gender === '1' ? 1 : 0;
 		} else {
-			gender = item.gender === 1 ? 1 : 0; // 1=男=1, 0=女=0
+			gender = item.gender === 1 ? 1 : 0;
 		}
-		
-		// 显示加载提示
+
 		uni.showLoading({
 			title: '排盘中，请稍后！'
 		});
-		
-		// 设置用户信息
+
 		user_store.set({
 			realname: item.title || '佚名',
 			gender: gender,
 			timestamp: timestamp
 		});
-		
-		// 重新计算八字盘（调用和主界面一样的方法）
+
 		try {
 			bazi_store.pull({
 				timestamp: timestamp,
 				gender: gender
 			});
-		} catch (pullError) {
+		} catch (pullError: any) {
 			uni.hideLoading();
 			uni.showToast({
-				title: '排盘计算失败：' + (pullError.message || '未知错误'),
+				title: '排盘计算失败：' + (pullError?.message || '未知错误'),
 				icon: 'none',
 				duration: 2000
 			});
 			return;
 		}
-		
-		// 延迟跳转，确保计算完成（增加延迟时间，确保异步计算完成）
+
 		setTimeout(() => {
 			uni.hideLoading();
-			// 验证关键数据是否存在
 			if (!bazi_store.solar || !bazi_store.solar.year) {
 				uni.showToast({
 					title: '排盘数据不完整，请重试',
@@ -597,11 +549,11 @@ function openChart(item: ChartItem) {
 			uni.navigateTo({
 				url: '/pages/index/detail'
 			});
-		}, 200); // 增加延迟时间，确保异步计算完成
-	} catch (e) {
+		}, 200);
+	} catch (e: any) {
 		uni.hideLoading();
 		uni.showToast({
-			title: '打开排盘记录失败：' + (e.message || '未知错误'),
+			title: '打开排盘记录失败：' + (e?.message || '未知错误'),
 			icon: 'none',
 			duration: 2000
 		});
@@ -668,18 +620,100 @@ function goLogin() {
 </script>
 
 <style scoped>
-.page-wrapper {
-	min-height: 100vh;
-	background: transparent; /* 使用透明背景，继承 tm-app 的背景色 */
-	padding-bottom: 40rpx;
+.history-card {
+	display: flex;
+	flex-direction: column;
+	gap: clamp(16px, 2vw, 20px);
 }
 
-.page-content-scale {
-	padding: 30rpx 0;
+.history-header {
+	align-items: center;
 }
 
-.header-card {
-	background: transparent; /* 使用透明背景，继承 tm-sheet 的背景色 */
+.header-actions {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+}
+
+.filters-card {
+	background: #f9fafb;
+	border-radius: 16px;
+	border: 1px solid #edf2f7;
+}
+
+.filters-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 12px;
+}
+
+.filter-block {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.search-block {
+	grid-column: 1 / -1;
+}
+
+.filter-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+}
+
+.filters-count {
+	margin-left: auto;
+}
+
+.records-list {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.record-card {
+	background: #ffffff;
+	transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.record-card:active {
+	transform: translateY(1px);
+}
+
+.record-card__header {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	gap: 16px;
+}
+
+.record-meta {
+	flex: 1;
+	min-width: 0;
+}
+
+.record-meta__row {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	margin-top: 8rpx;
+	flex-wrap: wrap;
+	gap: 8rpx;
+}
+
+.record-actions {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	align-items: flex-end;
+	justify-content: center;
 }
 
 .empty-state {
@@ -691,12 +725,30 @@ function goLogin() {
 	text-align: center;
 }
 
-.record-card {
-	background: #ffffff;
-	transition: transform 0.2s, box-shadow 0.2s;
+.text-center {
+	text-align: center;
 }
 
-.record-card:active {
-	transform: scale(0.98);
+@media screen and (max-width: 640px) {
+	.history-header {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 12px;
+	}
+
+	.header-actions {
+		width: 100%;
+		justify-content: flex-start;
+	}
+
+	.record-card__header {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.record-actions {
+		flex-direction: row;
+		align-items: center;
+	}
 }
 </style>

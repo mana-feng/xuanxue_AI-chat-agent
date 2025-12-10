@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { useYunStore } from '@/store/yun';
 import { Solar, Yun } from 'lunar-javascript';
 import utils from '@/libs/utils/utils';
-import { enhanceBaziAnalysis, BaziEnhancedData, calculateShenShaForGanZhi } from '@/libs/utils/bazi-enhanced';
+import { enhanceBaziAnalysis, BaziEnhancedData, calculateShenShaForGanZhi, calculateKongWangForGanZhi } from '@/libs/utils/bazi-enhanced';
 
 interface PullData {
 	timestamp: number;
@@ -284,17 +284,19 @@ export const useBaziStore = defineStore('bazi', {
 			const dayGan = bazi.getDayGan();
 			const yearZhi = this.dizhi.year || '';
 			const monthZhi = this.dizhi.month || '';
+			const dayZhi = this.dizhi.day || '';
+			const timeZhi = this.dizhi.time || '';
 			const allZhi = [
 				yearZhi,
 				monthZhi,
-				this.dizhi.day || '',
-				this.dizhi.time || ''
+				dayZhi,
+				timeZhi
 			];
 			const shensha = {
-				year: calculateShenShaForGanZhi(dayGan, this.sizhu.year || '', allZhi, yearZhi, monthZhi),
-				month: calculateShenShaForGanZhi(dayGan, this.sizhu.month || '', allZhi, yearZhi, monthZhi),
-				day: calculateShenShaForGanZhi(dayGan, this.sizhu.day || '', allZhi, yearZhi, monthZhi),
-				time: calculateShenShaForGanZhi(dayGan, this.sizhu.time || '', allZhi, yearZhi, monthZhi)
+				year: calculateShenShaForGanZhi(dayGan, this.sizhu.year || '', allZhi, yearZhi, monthZhi, dayZhi, timeZhi),
+				month: calculateShenShaForGanZhi(dayGan, this.sizhu.month || '', allZhi, yearZhi, monthZhi, dayZhi, timeZhi),
+				day: calculateShenShaForGanZhi(dayGan, this.sizhu.day || '', allZhi, yearZhi, monthZhi, dayZhi, timeZhi),
+				time: calculateShenShaForGanZhi(dayGan, this.sizhu.time || '', allZhi, yearZhi, monthZhi, dayZhi, timeZhi)
 			};
 
 			const table = [];
@@ -356,6 +358,16 @@ export const useBaziStore = defineStore('bazi', {
 					month: this.dishi.month,
 					day: this.dishi.day,
 					time: this.dishi.time
+				}
+			});
+
+			table.push({
+				data: {
+					name: '空亡',
+					year: calculateKongWangForGanZhi(this.sizhu.year || '').join('、') || '',
+					month: calculateKongWangForGanZhi(this.sizhu.month || '').join('、') || '',
+					day: calculateKongWangForGanZhi(this.sizhu.day || '').join('、') || '',
+					time: calculateKongWangForGanZhi(this.sizhu.time || '').join('、') || ''
 				}
 			});
 

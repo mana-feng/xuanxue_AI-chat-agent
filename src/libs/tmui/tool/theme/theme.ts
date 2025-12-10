@@ -43,9 +43,15 @@ var colorObj: any = {
 	'grey-darken-3': '#424242',
 	'grey-darken-4': '#212121',
 	'grey-darken-5': '#131313',
-	'grey-darken-6': '#0a0a0a',
-	...theme
-};
+		'grey-darken-6': '#0a0a0a',
+		// 扩展常用业务色，避免主题缺失警告
+		success: '#4caf50',
+		warning: '#f59e0b',
+		danger: '#f56565',
+		info: '#3b82f6',
+		accent: '#667eea',
+		...theme
+	};
 for (const key in colorObj) {
 	if (Object.prototype.hasOwnProperty.call(colorObj, key)) {
 		const element: string = String(colorObj[key]);
@@ -69,15 +75,38 @@ function isCssColor(color:string) {
 	return reg1.test(color) || reg2.test(color);
 }
 function getColor(colorName:string){
+		// 如果传入的是合法的 CSS 颜色值（# / rgb / rgba），动态生成一个临时主题色，避免报错
+		if (isCssColor(colorName)) {
+			const rgba = colortool.cssToRgba(colorName);
+			return {
+				name: colorName,
+				value: colorName,
+				hsva: colortool.rgbaToHsva(rgba),
+				rgba,
+				hsla: colortool.rgbaToHsla(rgba),
+				csscolor: colortool.rgbaToCss(rgba)
+			};
+		}
 		let isHand: number = colors.findIndex(function(el, index) {
 			return el.name == colorName;
 		});
 		if (isHand == -1) {
+			// 静默回退到 primary，避免在表达式颜色或缺失配置时反复报错
 			colorName = "primary";
 			isHand = colors.findIndex(function(el, index) {
 				return el.name == colorName;
 			});
-			console.error('主题中不存在相关名称的主题。');
+			if (isHand === -1) {
+				// 最终兜底：返回第一个颜色或黑色
+				return colors[0] || {
+					name: 'fallback',
+					value: '#000000',
+					hsva: colortool.rgbaToHsva(colortool.cssToRgba('#000')),
+					rgba: colortool.cssToRgba('#000'),
+					hsla: colortool.rgbaToHsla(colortool.cssToRgba('#000')),
+					csscolor: '#000'
+				};
+			}
 		}
 		
 		
@@ -94,11 +123,9 @@ class themeColors {
 			return el.name == colorName;
 		});
 		if (isHand.length > 0) {
-			console.error('已存在相关颜色名称!!!');
 			return this.colors;
 		}
 		if(!value){
-			console.error('颜色值必填!!!');
 			return this.colors;
 		}
 		let rgba = colortool.cssToRgba(value);
@@ -120,30 +147,37 @@ class themeColors {
 		let isHand: number = this.colors.findIndex(function(el, index) {
 			return el.name == colorName;
 		});
-		if (isHand == -1) {
-			console.error('删除失败，主题中不存在相关名称的主题。');
-			return;
+		if (isHand != -1) {
+			this.colors.splice(isHand, 1);
 		}
-		this.colors.splice(isHand, 1);
 	}
-	public getColor(colorName:string):colorThemeType{
-		let isHand: number = this.colors.findIndex(function(el, index) {
-			return el.name == colorName;
-		});
-		if (isHand == -1) {
-			colorName = "primary";
-			isHand = this.colors.findIndex(function(el, index) {
+		public getColor(colorName:string):colorThemeType{
+			let isHand: number = this.colors.findIndex(function(el, index) {
 				return el.name == colorName;
 			});
-			console.error('主题中不存在相关名称的主题。');
+			if (isHand == -1) {
+				colorName = "primary";
+				isHand = this.colors.findIndex(function(el, index) {
+					return el.name == colorName;
+				});
+				if (isHand == -1) {
+					// 最终兜底
+					return this.colors[0] || {
+						name: 'fallback',
+						value: '#000000',
+						hsva: colortool.rgbaToHsva(colortool.cssToRgba('#000')),
+						rgba: colortool.cssToRgba('#000'),
+						hsla: colortool.rgbaToHsla(colortool.cssToRgba('#000')),
+						csscolor: '#000'
+					};
+				}
+			}
+			
+			
+			return this.colors[isHand];
 		}
-		
-		
-		return this.colors[isHand];
-	}
 	public getTheme(config: cssStyleConfig = { colorname: 'primary',dark:false }): cssstyle {
 		if (!config['colorname']) {
-			console.error('颜色名称必填');
 			config.colorname = 'primary';
 		}
 		
@@ -185,8 +219,24 @@ class themeColors {
 		}
 		// 如果仍然找不到有效的颜色，抛出错误
 		if(index==-1 || !this.colors[index]){
-			console.error('无法找到有效的主题颜色');
-			throw new Error('主题颜色配置错误：无法找到有效的主题颜色');
+			const fallback = this.colors.find(el => el.name == 'primary') || this.colors[0];
+			if (fallback) {
+				index = this.colors.findIndex(el => el.name == fallback.name);
+				config.colorname = fallback.name;
+			} else {
+				const rgba = colortool.cssToRgba('#000');
+				const fallbackColor: colorThemeType = {
+					name: 'fallback',
+					value: '#000000',
+					hsva: colortool.rgbaToHsva(rgba),
+					rgba,
+					hsla: colortool.rgbaToHsla(rgba),
+					csscolor: colortool.rgbaToCss(rgba)
+				};
+				this.colors = [fallbackColor];
+				index = 0;
+				config.colorname = fallbackColor.name;
+			}
 		}
 		let isBlack = false;
 		let isWhite = false;
@@ -197,14 +247,24 @@ class themeColors {
 		
 		// 确保 nowColor 有必要的属性
 		if (!nowColor || !nowColor.hsla || typeof nowColor.hsla.h === 'undefined') {
-			console.error('主题颜色对象不完整，使用默认 primary 主题');
 			const primaryIndex = this.colors.findIndex(el => el.name == 'primary');
 			if(primaryIndex !== -1 && this.colors[primaryIndex]){
 				nowColor = { ...this.colors[primaryIndex] };
 			} else if(this.colors.length > 0 && this.colors[0]){
 				nowColor = { ...this.colors[0] };
 			} else {
-				throw new Error('主题颜色配置错误：无法初始化主题颜色');
+				const rgba = colortool.cssToRgba('#000');
+				nowColor = {
+					name: 'fallback',
+					value: '#000000',
+					hsva: colortool.rgbaToHsva(rgba),
+					rgba,
+					hsla: colortool.rgbaToHsla(rgba),
+					csscolor: colortool.rgbaToCss(rgba)
+				};
+				this.colors = [nowColor];
+				index = 0;
+				config.colorname = nowColor.name;
 			}
 		}
 		
