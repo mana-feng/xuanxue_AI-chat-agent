@@ -5,15 +5,12 @@
 			<view class="app-main">
 				<view class="page-shell">
 					<view class="page-card detail-card">
-						<view class="page-title-wrapper">
-							<view class="form-header-icon">
-								<tm-icon name="tmicon-md-analytics" :font-size="44" color="#667eea"></tm-icon>
-							</view>
-							<view class="form-header-text">
-								<h1 class="page-title">排盘结果</h1>
-								<p class="page-subtitle">查看、保存或导出您的排盘信息</p>
-							</view>
-						</view>
+            <view class="page-title-wrapper">
+              <view class="form-header-text">
+                <h1 class="page-title">排盘结果</h1>
+                <p class="page-subtitle">查看、保存或导出您的排盘信息</p>
+              </view>
+            </view>
 
 						<view class="section info-summary">
 							<header class="section__header">
@@ -57,13 +54,20 @@
 									label="保存到账号"
 									@tap="saveToAccount"
 								></tm-button>
-								<tm-button
-									type="grey"
-									:round="12"
-									:padding="[24, 20]"
-									label="导出为 JSON"
-									@tap="exportJson"
-								></tm-button>
+                <tm-button
+                  type="grey"
+                  :round="12"
+                  :padding="[24, 20]"
+                  label="导出为 JSON"
+                  @tap="exportJson"
+                ></tm-button>
+                <tm-button
+                  type="primary"
+                  :round="12"
+                  :padding="[24, 20]"
+                  label="AI 解答"
+                  @tap="goToChat"
+                ></tm-button>
 							</view>
 							<view v-if="saveError" class="mt-12 error-message">
 								<tm-text :label="saveError" color="#f56565" :font-size="24"></tm-text>
@@ -101,21 +105,17 @@
 								<h2 class="section__title">增强分析</h2>
 							</header>
 							<view class="section__body analysis-grid">
-								<view v-if="bazi_store.enhanced.shensha?.all?.length" class="analysis-block">
-									<tm-text :font-size="24" color="#718096" label="神煞"></tm-text>
-									<tm-text :label="bazi_store.enhanced.shensha.all.join('、')" :font-size="28" color="#2d3748" :bold="true"></tm-text>
-								</view>
-								<view v-if="bazi_store.enhanced.geju?.type" class="analysis-block">
+								<view class="analysis-block">
 									<tm-text :font-size="24" color="#718096" label="格局"></tm-text>
 									<tm-text :label="bazi_store.enhanced.geju.type" :font-size="28" color="#2d3748" :bold="true"></tm-text>
 									<tm-text v-if="bazi_store.enhanced.geju.description" :label="bazi_store.enhanced.geju.description" :font-size="24" color="#718096" class="mt-4"></tm-text>
 								</view>
-								<view v-if="bazi_store.enhanced.rizhuQiangruo?.level" class="analysis-block">
+								<view class="analysis-block">
 									<tm-text :font-size="24" color="#718096" label="日主强弱"></tm-text>
 									<tm-text :label="bazi_store.enhanced.rizhuQiangruo.level" :font-size="28" color="#2d3748" :bold="true"></tm-text>
 									<tm-text v-if="bazi_store.enhanced.rizhuQiangruo.description" :label="bazi_store.enhanced.rizhuQiangruo.description" :font-size="24" color="#718096" class="mt-4"></tm-text>
 								</view>
-								<view v-if="bazi_store.enhanced.wuxingWangshuai" class="analysis-block">
+								<view class="analysis-block">
 									<tm-text label="五行旺衰" :font-size="24" color="#718096"></tm-text>
 									<view class="wuxing-tags">
 										<view 
@@ -132,42 +132,10 @@
 										</view>
 									</view>
 								</view>
-								<view v-if="bazi_store.enhanced.yongshen?.suggest" class="analysis-block">
-									<tm-text :font-size="24" color="#718096" label="用神建议"></tm-text>
-									<tm-text :label="bazi_store.enhanced.yongshen.suggest" :font-size="24" color="#718096"></tm-text>
-									<view v-if="bazi_store.enhanced.yongshen.suggested?.length" class="mt-6">
-										<tm-text :label="'宜用：' + bazi_store.enhanced.yongshen.suggested.join('、')" :font-size="24" color="#48bb78" :bold="true"></tm-text>
-									</view>
-									<view v-if="bazi_store.enhanced.yongshen.avoid?.length" class="mt-4">
-										<tm-text :label="'忌用：' + bazi_store.enhanced.yongshen.avoid.join('、')" :font-size="24" color="#f56565" :bold="true"></tm-text>
-									</view>
-								</view>
-								<view v-if="combinedGanZhiRelations" class="analysis-block">
-									<tm-text label="天干地支关系" :font-size="24" color="#718096"></tm-text>
-									<view v-if="combinedGanZhiRelations.sanHe?.length" class="relation-item">
-										<tm-text :label="'三合：' + combinedGanZhiRelations.sanHe.join('、')" :font-size="24" color="#667eea" :bold="true"></tm-text>
-									</view>
-									<view v-if="combinedGanZhiRelations.sanXing?.length" class="relation-item">
-										<tm-text :label="'三刑：' + combinedGanZhiRelations.sanXing.join('、')" :font-size="24" color="#ed8936" :bold="true"></tm-text>
-									</view>
-									<view v-if="combinedGanZhiRelations.sanHui?.length" class="relation-item">
-										<tm-text :label="'三会：' + combinedGanZhiRelations.sanHui.join('、')" :font-size="24" color="#667eea" :bold="true"></tm-text>
-									</view>
-									<view v-if="combinedGanZhiRelations.ganHe?.length" class="relation-item">
-										<tm-text :label="'天干合化：' + combinedGanZhiRelations.ganHe.join('、')" :font-size="24" color="#48bb78" :bold="true"></tm-text>
-									</view>
-									<view v-if="combinedGanZhiRelations.zhiHe?.length" class="relation-item">
-										<tm-text :label="'地支六合：' + combinedGanZhiRelations.zhiHe.join('、')" :font-size="24" color="#48bb78" :bold="true"></tm-text>
-									</view>
-									<view v-if="combinedGanZhiRelations.chong?.length" class="relation-item">
-										<tm-text :label="'冲：' + combinedGanZhiRelations.chong.join('、')" :font-size="24" color="#f56565" :bold="true"></tm-text>
-									</view>
-									<view v-if="combinedGanZhiRelations.hai?.length" class="relation-item">
-										<tm-text :label="'害：' + combinedGanZhiRelations.hai.join('、')" :font-size="24" color="#ed8936" :bold="true"></tm-text>
-									</view>
-								</view>
 							</view>
 						</view>
+
+						
 
 						<view class="section flow-section">
 							<header class="section__header">
@@ -190,7 +158,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { useBaziStore } from '@/store/bazi.ts';
 import { useYunStore } from '@/store/yun.ts';
 import { useUserStore } from '@/store/user.ts';
-import { calculateGanZhiRelationsForList } from '@/libs/utils/bazi-enhanced.ts';
+import { calculateGanZhiRelationsForList, buildGanZhiDiagram } from '@/libs/utils/bazi-enhanced.ts';
 import utils from '@/libs/utils/utils.ts';
 import { API_BASE_URL } from '@/config/config.ts';
 
@@ -215,6 +183,111 @@ const combinedGanZhiRelations = computed(() => {
 
 	if (list.length < 2) return null;
 	return calculateGanZhiRelationsForList(list);
+});
+
+const baziRelationData = computed(() => {
+	const pillarsOrder: { key: 'liunian' | 'dayun' | 'year' | 'month' | 'day' | 'hour'; title: string }[] = [
+		{ key: 'liunian', title: '流年' },
+		{ key: 'dayun', title: '大运' },
+		{ key: 'year', title: '年柱' },
+		{ key: 'month', title: '月柱' },
+		{ key: 'day', title: '日柱' },
+		{ key: 'hour', title: '时柱' }
+	];
+
+	const liunianGz = yun_store.year_list?.[yun_store.year_index]?.ganzhi || '';
+	const dayunGz = yun_store.dayun_list?.[yun_store.current_index]?.ganzhi || '';
+
+	const pillars = pillarsOrder
+		.map(p => {
+			if (p.key === 'liunian') {
+				return {
+					key: p.key,
+					title: p.title,
+					stem: liunianGz ? liunianGz[0] : '',
+					branch: liunianGz ? liunianGz[1] : ''
+				};
+			}
+			if (p.key === 'dayun') {
+				return {
+					key: p.key,
+					title: p.title,
+					stem: dayunGz ? dayunGz[0] : '',
+					branch: dayunGz ? dayunGz[1] : ''
+				};
+			}
+			const stem = (bazi_store.tiangan as any)?.[p.key === 'hour' ? 'time' : p.key] || '';
+			const branch = (bazi_store.dizhi as any)?.[p.key === 'hour' ? 'time' : p.key] || '';
+			return {
+				key: p.key,
+				title: p.title,
+				stem: stem || '',
+				branch: branch || ''
+			};
+		})
+		.filter(p => p.stem && p.branch);
+
+	if (pillars.length < 2) return { pillars: [], relations: [] };
+
+	const gzList = pillars.map(p => `${p.stem}${p.branch}`);
+	const labels = pillars.map(p => p.title);
+	const diagram = buildGanZhiDiagram(gzList, labels);
+
+	type RelationType =
+		| 'ke'
+		| 'he'
+		| 'hua'
+		| 'sanhe'
+		| 'sanmeeting'
+		| 'xing'
+		| 'po'
+		| 'hai'
+		| 'chong'
+		| 'banhe'
+		| 'anhe'
+		| 'gonghe';
+
+	const mapType = (edgeType: string): RelationType => {
+		if (edgeType === 'ganHe' || edgeType === 'zhiHe') return 'he';
+		if (edgeType === 'ganKe' || edgeType === 'zhiKe') return 'ke';
+		if (edgeType === 'sanHe') return 'sanhe';
+		if (edgeType === 'sanHui') return 'sanmeeting';
+		if (edgeType === 'banHe') return 'banhe';
+		if (edgeType === 'anHe') return 'anhe';
+		if (edgeType === 'chong') return 'chong';
+		if (edgeType === 'xing') return 'xing';
+		if (edgeType === 'hai') return 'hai';
+		return 'he';
+	};
+
+	const relations: any[] = [];
+	diagram.ganEdges.forEach((edge, idx) => {
+		const fromPillar = pillars[edge.from];
+		const toPillar = pillars[edge.to];
+		if (!fromPillar || !toPillar) return;
+		relations.push({
+			id: `gan-${idx}`,
+			type: mapType(edge.type),
+			label: edge.label,
+			from: { pillarKey: fromPillar.key, level: 'stem', char: fromPillar.stem },
+			to: { pillarKey: toPillar.key, level: 'stem', char: toPillar.stem }
+		});
+	});
+
+	diagram.zhiEdges.forEach((edge, idx) => {
+		const fromPillar = pillars[edge.from];
+		const toPillar = pillars[edge.to];
+		if (!fromPillar || !toPillar) return;
+		relations.push({
+			id: `zhi-${idx}`,
+			type: mapType(edge.type),
+			label: edge.label,
+			from: { pillarKey: fromPillar.key, level: 'branch', char: fromPillar.branch },
+			to: { pillarKey: toPillar.key, level: 'branch', char: toPillar.branch }
+		});
+	});
+
+	return { pillars, relations };
 });
 
 const saving = ref(false);
@@ -504,6 +577,12 @@ function exportJson() {
 	});
 }
 
+function goToChat() {
+	uni.navigateTo({
+		url: '/pages/chat/index'
+	});
+}
+
 function goToHome() {
 	uni.reLaunch({
 		url: '/pages/index/index'
@@ -627,18 +706,22 @@ const GetChineseZodiac = year => utils.GetChineseZodiac(year);
 
 .analysis-card .analysis-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-	gap: 10px;
+	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	gap: 14px;
+}
+
+.chart-section :deep(.bazi-chart) {
+	min-height: 260px;
 }
 
 .analysis-block {
-	padding: 8px 10px;
+	padding: 10px 12px;
 	border: 1px solid #e5e7eb;
 	border-radius: 12px;
 	background: #f9fafb;
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: 6px;
 	line-height: 1.3;
 }
 
@@ -662,6 +745,7 @@ const GetChineseZodiac = year => utils.GetChineseZodiac(year);
 .relation-item {
 	margin-top: 0;
 }
+
 
 .error-message {
 	padding: 8px 10px;

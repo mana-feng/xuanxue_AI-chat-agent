@@ -1,0 +1,152 @@
+<template>
+  <tm-app>
+    <view class="page-wrapper">
+      <yx-nav-header></yx-nav-header>
+
+      <view class="page-content">
+        <view class="header">
+          <tm-text :font-size="36" :bold="true" color="#2d3748" label="大模型管理"></tm-text>
+          <tm-text :font-size="24" color="#6b7280" label="配置聊天界面对接的大模型 API"></tm-text>
+        </view>
+
+        <tm-sheet :round="12" :shadow="4" :padding="[24, 20]" class="form-card">
+          <view class="form-group">
+            <tm-text :font-size="26" color="#4b5563" label="API Base URL"></tm-text>
+            <tm-input v-model="form.baseUrl" placeholder="https://api.example.com" :margin="[0, 12, 0, 0]" :round="10"></tm-input>
+          </view>
+
+          <view class="form-group">
+            <tm-text :font-size="26" color="#4b5563" label="API Key"></tm-text>
+            <tm-input
+              v-model="form.apiKey"
+              placeholder="输入密钥"
+              :password="true"
+              :margin="[0, 12, 0, 0]"
+              :round="10"
+            ></tm-input>
+          </view>
+
+          <view class="form-group">
+            <tm-text :font-size="26" color="#4b5563" label="模型名称"></tm-text>
+            <tm-input v-model="form.model" placeholder="如 gpt-4o, claude-3.5" :margin="[0, 12, 0, 0]" :round="10"></tm-input>
+          </view>
+
+          <view class="form-group">
+            <tm-text :font-size="26" color="#4b5563" label="额外参数（JSON 可选）"></tm-text>
+            <tm-input
+              v-model="form.extra"
+              type="textarea"
+              placeholder='如：{ "temperature": 0.7 }'
+              :height="120"
+              :margin="[0, 12, 0, 0]"
+              :round="10"
+            ></tm-input>
+          </view>
+
+          <view class="actions">
+            <tm-button
+              type="primary"
+              :round="12"
+              :padding="[20, 22]"
+              :loading="saving"
+              :disabled="saving"
+              label="保存配置"
+              @tap="handleSave"
+            ></tm-button>
+          </view>
+        </tm-sheet>
+      </view>
+    </view>
+  </tm-app>
+</template>
+
+<script setup lang="ts">
+import { reactive, ref } from 'vue';
+import { useUserStore } from '@/store/user';
+
+const userStore = useUserStore();
+const saving = ref(false);
+
+const form = reactive({
+  baseUrl: '',
+  apiKey: '',
+  model: '',
+  extra: ''
+});
+
+const STORAGE_KEY = 'llm-config';
+
+function loadConfig() {
+  try {
+    const cfg = uni.getStorageSync(STORAGE_KEY);
+    if (cfg && typeof cfg === 'object') {
+      form.baseUrl = cfg.baseUrl || '';
+      form.apiKey = cfg.apiKey || '';
+      form.model = cfg.model || '';
+      form.extra = cfg.extra || '';
+    }
+  } catch (err) {
+    console.warn('加载本地 LLM 配置失败:', err);
+  }
+}
+loadConfig();
+
+// TODO: 替换为真实的后端接口
+async function handleSave() {
+  if (!userStore.isAdmin) {
+    uni.showToast({ title: '仅管理员可操作', icon: 'none' });
+    return;
+  }
+  saving.value = true;
+  try {
+    // 示例：直接存本地（请替换为后端存储接口）
+    uni.setStorageSync(STORAGE_KEY, { ...form });
+    uni.showToast({ title: '已保存', icon: 'success', duration: 1500 });
+  } catch (err) {
+    console.error(err);
+    uni.showToast({ title: '保存失败', icon: 'none' });
+  } finally {
+    saving.value = false;
+  }
+}
+</script>
+
+<style scoped>
+.page-wrapper {
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+.page-content {
+  padding: 20px 16px 32px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.form-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+</style>

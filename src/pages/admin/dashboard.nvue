@@ -171,31 +171,54 @@
 						></tm-text>
 					</tm-sheet>
 
-					<tm-sheet
-						:round="4"
-						:shadow="2"
-						:padding="[20, 20]"
-						:margin="[0, 0, 20, 0]"
-						@tap="goToEmailConfig"
-					>
-						<view class="menu-item">
-							<tm-text
-								:font-size="28"
-								:bold="true"
-								label="邮箱服务配置"
-							></tm-text>
-							<tm-icon name="chevron-right" :font-size="24"></tm-icon>
-						</view>
-						<tm-text
-							class="mt-8"
-							:font-size="22"
-							color="#999"
-							label="后台设置验证码邮箱服务（仅管理员）"
-						></tm-text>
-					</tm-sheet>
-				</view>
-			</view>
-		</view>
+          <tm-sheet
+            :round="4"
+            :shadow="2"
+            :padding="[20, 20]"
+            :margin="[0, 0, 20, 0]"
+            @tap="goToEmailConfig"
+          >
+            <view class="menu-item">
+              <tm-text
+                :font-size="28"
+                :bold="true"
+                label="邮箱服务配置"
+              ></tm-text>
+              <tm-icon name="chevron-right" :font-size="24"></tm-icon>
+            </view>
+            <tm-text
+              class="mt-8"
+              :font-size="22"
+              color="#999"
+              label="后台设置验证码邮箱服务（仅管理员）"
+            ></tm-text>
+          </tm-sheet>
+
+          <tm-sheet
+            :round="4"
+            :shadow="2"
+            :padding="[20, 20]"
+            :margin="[0, 0, 20, 0]"
+            @tap="goToLLMConfig"
+          >
+            <view class="menu-item">
+              <tm-text
+                :font-size="28"
+                :bold="true"
+                label="大模型管理"
+              ></tm-text>
+              <tm-icon name="chevron-right" :font-size="24"></tm-icon>
+            </view>
+            <tm-text
+              class="mt-8"
+              :font-size="22"
+              color="#999"
+              label="配置聊天界面对接的 API 信息"
+            ></tm-text>
+          </tm-sheet>
+        </view>
+      </view>
+    </view>
 	</tm-app>
 </template>
 
@@ -256,6 +279,12 @@ function goToUsers() {
 function goToRecords() {
 	uni.navigateTo({
 		url: '/pages/admin/records'
+	});
+}
+
+function goToLLMConfig() {
+	uni.navigateTo({
+		url: '/pages/admin/llm-config'
 	});
 }
 
@@ -398,4 +427,3 @@ function handleLogout() {
 	flex-direction: column;
 }
 </style>
-

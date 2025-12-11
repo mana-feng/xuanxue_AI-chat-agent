@@ -1,0 +1,108 @@
+<template>
+	<view class="chat-page-shell">
+		<yx-nav-header></yx-nav-header>
+		<chat-panel class="chat-panel-wrapper" @send="handleSend" ref="panelRef" />
+	</view>
+</template>
+
+<script lang="ts" setup>
+import { ref } from 'vue';
+import ChatPanel from '@/chat/ChatPanel.vue';
+
+const panelRef = ref<InstanceType<typeof ChatPanel> | null>(null);
+const config = ref<{ baseUrl: string; apiKey: string; model: string; extra?: string }>({
+	baseUrl: '',
+	apiKey: '',
+	model: '',
+	extra: ''
+});
+
+function handleSend(text: string) {
+	sendToLLM(text);
+}
+
+function loadConfig() {
+	try {
+		const cfg = uni.getStorageSync('llm-config');
+		if (cfg && typeof cfg === 'object') {
+			config.value = {
+				baseUrl: cfg.baseUrl || '',
+				apiKey: cfg.apiKey || '',
+				model: cfg.model || '',
+				extra: cfg.extra || ''
+			};
+		}
+	} catch (err) {
+		console.warn('加载 LLM 配置失败', err);
+	}
+}
+loadConfig();
+
+async function sendToLLM(text: string) {
+	const panel = panelRef.value;
+	if (!panel) return;
+	panel.setSending(true);
+
+	if (!config.value.baseUrl || !config.value.apiKey || !config.value.model) {
+		uni.showToast({ title: '请先在大模型管理中配置接口', icon: 'none' });
+		panel.setSending(false);
+		return;
+	}
+
+	let extraPayload: Record<string, any> = {};
+	if (config.value.extra) {
+		try {
+			extraPayload = JSON.parse(config.value.extra);
+		} catch (err) {
+			console.warn('额外参数 JSON 解析失败，已忽略', err);
+		}
+	}
+
+	try {
+		const res = await new Promise<any>((resolve, reject) => {
+			uni.request({
+				url: config.value.baseUrl,
+				method: 'POST',
+				header: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${config.value.apiKey}`
+				},
+				data: {
+					model: config.value.model,
+					prompt: text,
+					...extraPayload
+				},
+				success: resolve,
+				fail: reject
+			});
+		});
+
+		const reply =
+			res?.data?.reply ||
+			res?.data?.choices?.[0]?.message?.content ||
+			res?.data?.choices?.[0]?.text ||
+			JSON.stringify(res?.data ?? {});
+
+		panel.appendAssistant(String(reply), 'ready');
+	} catch (err: any) {
+		console.error('调用大模型接口失败', err);
+		const msg = err?.errMsg || err?.message || '调用失败';
+		panel.appendAssistant(`调用失败：${msg}`, 'error');
+	} finally {
+		panel.setSending(false);
+	}
+}
+</script>
+
+<style scoped>
+.chat-page-shell {
+	min-height: 100vh;
+	background: #f3f4f6;
+	display: flex;
+	flex-direction: column;
+}
+
+.chat-panel-wrapper {
+	flex: 1;
+}
+</style>

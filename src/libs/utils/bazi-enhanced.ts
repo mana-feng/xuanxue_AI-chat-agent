@@ -353,6 +353,27 @@ export interface BaziEnhancedData {
 	};
 }
 
+export interface GanZhiDiagramNode {
+	index: number;
+	label: string;
+	gan: string;
+	zhi: string;
+	key: string;
+}
+
+export interface GanZhiDiagramEdge {
+	from: number;
+	to: number;
+	type: string;
+	label: string;
+}
+
+export interface GanZhiDiagramData {
+	nodes: GanZhiDiagramNode[];
+	ganEdges: GanZhiDiagramEdge[];
+	zhiEdges: GanZhiDiagramEdge[];
+}
+
 /**
  * 计算某个干支所在旬的空亡支列表（用于专门的空亡行）
  */
@@ -1224,6 +1245,31 @@ const WUXING_KE: { [key: string]: string } = {
 	'火': '金'
 };
 
+const ZHI_SAN_HE_GROUPS = [
+	{ members: ['申', '子', '辰'], wuxing: '水' },
+	{ members: ['亥', '卯', '未'], wuxing: '木' },
+	{ members: ['寅', '午', '戌'], wuxing: '火' },
+	{ members: ['巳', '酉', '丑'], wuxing: '金' }
+];
+
+const ZHI_AN_HE_PAIRS: Record<string, string> = {
+	'子未': '暗合',
+	'未子': '暗合',
+	'丑申': '暗合',
+	'申丑': '暗合',
+	'寅酉': '暗合',
+	'酉寅': '暗合',
+	'卯午': '暗合',
+	'午卯': '暗合',
+	'辰亥': '暗合',
+	'亥辰': '暗合',
+	'巳戌': '暗合',
+	'戌巳': '暗合',
+	// 兼容常见用法：申午暗合（示例数据中出现）
+	'申午': '暗合',
+	'午申': '暗合'
+};
+
 /**
  * 检查天干合化
  */
@@ -1248,6 +1294,29 @@ function checkZhiLiuHe(zhi1: string, zhi2: string): string | null {
 	if (ZHI_LIU_HE_MAP[key1] || ZHI_LIU_HE_MAP[key2]) {
 		return `${zhi1}${zhi2}合`;
 	}
+	return null;
+}
+
+/**
+ * 检查地支半合（同属三合局任意两支）
+ */
+function checkZhiBanHe(zhi1: string, zhi2: string): string | null {
+	for (const group of ZHI_SAN_HE_GROUPS) {
+		if (group.members.includes(zhi1) && group.members.includes(zhi2)) {
+			return `${zhi1}${zhi2}半合${group.wuxing}`;
+		}
+	}
+	return null;
+}
+
+/**
+ * 检查地支暗合（按固定暗合对）
+ */
+function checkZhiAnHe(zhi1: string, zhi2: string): string | null {
+	const key1 = zhi1 + zhi2;
+	const key2 = zhi2 + zhi1;
+	if (ZHI_AN_HE_PAIRS[key1]) return `${zhi1}${zhi2}${ZHI_AN_HE_PAIRS[key1]}`;
+	if (ZHI_AN_HE_PAIRS[key2]) return `${zhi2}${zhi1}${ZHI_AN_HE_PAIRS[key2]}`;
 	return null;
 }
 
@@ -1682,6 +1751,109 @@ export function calculateGanZhiRelationsForList(ganzhiList: string[]): BaziEnhan
 }
 
 /**
+ * 构建干支关系图数据（节点 + 边），用于智能图示
+ */
+export function buildGanZhiDiagram(ganzhiList: string[], labels: string[] = []): GanZhiDiagramData {
+	const nodes: GanZhiDiagramNode[] = [];
+	const ganEdges: GanZhiDiagramEdge[] = [];
+	const zhiEdges: GanZhiDiagramEdge[] = [];
+
+	const validList = (ganzhiList || []).filter(gz => gz && gz.length >= 2);
+	validList.forEach((gz, idx) => {
+		nodes.push({
+			index: idx,
+			label: labels[idx] || `节点${idx + 1}`,
+			gan: gz[0],
+			zhi: gz[1],
+			key: gz
+		});
+	});
+
+	const edgeSeen = new Set<string>();
+	const addEdge = (collection: GanZhiDiagramEdge[], from: number, to: number, type: string, label: string) => {
+		const key = `${Math.min(from, to)}-${Math.max(from, to)}-${type}-${label}`;
+		if (edgeSeen.has(key)) return;
+		edgeSeen.add(key);
+		collection.push({ from, to, type, label });
+	};
+
+	// 天干合 & 克
+	for (let i = 0; i < nodes.length; i++) {
+		for (let j = i + 1; j < nodes.length; j++) {
+			const rel = checkGanHe(nodes[i].gan, nodes[j].gan);
+			if (rel) {
+				addEdge(ganEdges, i, j, 'ganHe', rel);
+			}
+			// 天干克：按五行克制关系生成（方向只按克表，不会出现反向如“木克金”）
+			const ganWx1 = getGanWuxing(nodes[i].gan);
+			const ganWx2 = getGanWuxing(nodes[j].gan);
+			const ganKeLabel =
+				WUXING_KE[ganWx1] === ganWx2
+					? `${nodes[i].gan}克${nodes[j].gan}`
+					: WUXING_KE[ganWx2] === ganWx1
+						? `${nodes[j].gan}克${nodes[i].gan}`
+						: null;
+			if (ganKeLabel) {
+				addEdge(ganEdges, i, j, 'ganKe', ganKeLabel);
+			}
+		}
+	}
+
+	// 地支关系：三合/三会（三个节点之间全部连线）、六合、冲、刑、害
+	for (let i = 0; i < nodes.length - 2; i++) {
+		for (let j = i + 1; j < nodes.length - 1; j++) {
+			for (let k = j + 1; k < nodes.length; k++) {
+				const zhis = [nodes[i].zhi, nodes[j].zhi, nodes[k].zhi];
+				const sanHe = checkZhiSanHe(zhis);
+				if (sanHe) {
+					addEdge(zhiEdges, i, j, 'sanHe', sanHe);
+					addEdge(zhiEdges, i, k, 'sanHe', sanHe);
+					addEdge(zhiEdges, j, k, 'sanHe', sanHe);
+				}
+				const sanHui = checkZhiSanHui(zhis);
+				if (sanHui) {
+					addEdge(zhiEdges, i, j, 'sanHui', sanHui);
+					addEdge(zhiEdges, i, k, 'sanHui', sanHui);
+					addEdge(zhiEdges, j, k, 'sanHui', sanHui);
+				}
+			}
+		}
+	}
+
+	for (let i = 0; i < nodes.length; i++) {
+		for (let j = i + 1; j < nodes.length; j++) {
+			const zhi1 = nodes[i].zhi;
+			const zhi2 = nodes[j].zhi;
+
+			const he = checkZhiLiuHe(zhi1, zhi2);
+			if (he) addEdge(zhiEdges, i, j, 'zhiHe', he);
+			const banHe = checkZhiBanHe(zhi1, zhi2);
+			if (banHe) addEdge(zhiEdges, i, j, 'banHe', banHe);
+			const anHe = checkZhiAnHe(zhi1, zhi2);
+			if (anHe) addEdge(zhiEdges, i, j, 'anHe', anHe);
+
+			if (checkZhiLiuChong(zhi1, zhi2)) addEdge(zhiEdges, i, j, 'chong', `${zhi1}${zhi2}冲`);
+			if (checkZhiXing(zhi1, zhi2)) addEdge(zhiEdges, i, j, 'xing', `${zhi1}${zhi2}刑`);
+			if (checkZhiHai(zhi1, zhi2)) addEdge(zhiEdges, i, j, 'hai', `${zhi1}${zhi2}害`);
+			// 地支克：按五行克制关系生成
+			const zhiWx1 = getZhiWuxing(zhi1);
+			const zhiWx2 = getZhiWuxing(zhi2);
+			const zhiKeLabel =
+				WUXING_KE[zhiWx1] === zhiWx2
+					? `${zhi1}${zhi2}克`
+					: WUXING_KE[zhiWx2] === zhiWx1
+						? `${zhi2}${zhi1}克`
+						: null;
+			if (zhiKeLabel) {
+				addEdge(zhiEdges, i, j, 'zhiKe', zhiKeLabel);
+			}
+		}
+	}
+
+	return { nodes, ganEdges, zhiEdges };
+}
+
+/**
  * 地支藏干映射表（固定）
  */
 const ZHI_HIDE_GAN_MAP: { [key: string]: string[] } = {
@@ -1787,5 +1959,5 @@ export default {
 	getHideGanForGanZhi,
 	getFuXingForGanZhi,
 	getDiShiForGanZhi,
-	calculateKongWangForGanZhi
+	buildGanZhiDiagram
 };
