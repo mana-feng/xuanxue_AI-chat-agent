@@ -1,13 +1,19 @@
 <template>
-		<header class="app-header" :style="headerWrapStyle">
-			<view class="app-header__left">
-				<view class="app-header__logo" @tap="goToHome">
-					<image class="logo-icon" src="/src/assets/icons/F.png" mode="aspectFit"></image>
-				</view>
+	<header class="app-header" :style="headerWrapStyle">
+		<view class="app-header__left">
+			<view class="app-header__logo" @tap="goToHome">
+				<image class="logo-icon" src="/static/icons/F.png" mode="aspectFit"></image>
 			</view>
-			<view class="app-header__right">
-				<view class="icon-btn" @tap="onChangeDark">
-					<tm-icon
+		</view>
+		<view class="app-header__nav">
+			<view class="nav-btn" :class="{ dark: store.tmStore.dark }" @tap="goToHome">八字排盘</view>
+			<view class="nav-btn" :class="{ dark: store.tmStore.dark }" @tap="goLiuyao">六爻排盘</view>
+			<view class="nav-btn" :class="{ dark: store.tmStore.dark }" @tap="goQimen">奇门排盘</view>
+			<view class="nav-btn" :class="{ dark: store.tmStore.dark }" @tap="goAbout">关于</view>
+		</view>
+		<view class="app-header__right">
+			<view class="icon-btn" @tap="onChangeDark">
+				<tm-icon
 					:font-size="28"
 					:color="store.tmStore.dark ? '#f59e0b' : '#4a5568'"
 					:name="store.tmStore.dark ? 'tmicon-ios-sunny' : 'tmicon-md-moon'"
@@ -24,12 +30,27 @@
 			</view>
 		</view>
 		<!-- 下拉菜单 - 放在navbar外部，使用fixed定位 -->
-		<view v-if="showUserMenu" class="user-dropdown" :class="{ 'dark': store.tmStore.dark }" :style="dropdownStyle">
+		<view
+			v-if="showUserMenu"
+			class="user-dropdown"
+			:class="{ dark: store.tmStore.dark }"
+			:style="dropdownStyle"
+		>
 			<!-- 未登录时显示登录/注册 -->
 			<template v-if="!userStore.isLoggedIn">
 				<view class="dropdown-item" @tap="onAuth">
-					<tm-icon name="tmicon-md-person" :font-size="28" :margin="[0, 12, 0, 0]" :color="store.tmStore.dark ? '#818cf8' : '#667eea'"></tm-icon>
-					<tm-text :font-size="28" :follow-dark="true" :color="store.tmStore.dark ? '#818cf8' : '#667eea'" label="登录/注册"></tm-text>
+					<tm-icon
+						name="tmicon-md-person"
+						:font-size="28"
+						:margin="[0, 12, 0, 0]"
+						:color="store.tmStore.dark ? '#818cf8' : '#667eea'"
+					></tm-icon>
+					<tm-text
+						:font-size="28"
+						:follow-dark="true"
+						:color="store.tmStore.dark ? '#818cf8' : '#667eea'"
+						label="登录/注册"
+					></tm-text>
 				</view>
 			</template>
 			<!-- 已登录时显示用户菜单 -->
@@ -44,7 +65,12 @@
 				</view>
 				<view class="dropdown-divider"></view>
 				<view class="dropdown-item" @tap="onLogout">
-					<tm-icon name="tmicon-md-log-out" :font-size="28" :margin="[0, 12, 0, 0]" color="#f56565"></tm-icon>
+					<tm-icon
+						name="tmicon-md-log-out"
+						:font-size="28"
+						:margin="[0, 12, 0, 0]"
+						color="#f56565"
+					></tm-icon>
 					<tm-text :font-size="28" color="#f56565" label="退出登录"></tm-text>
 				</view>
 			</template>
@@ -113,7 +139,7 @@ const actionContainerStyle = computed(() => {
 	return {
 		height: 'auto',
 		minHeight: 'auto',
-		maxHeight: 'none'
+		maxHeight: 'none',
 	};
 });
 
@@ -122,7 +148,7 @@ const headerWrapStyle = computed(() => {
 	const isDark = store.tmStore.dark;
 	return {
 		background: isDark ? '#1a1a1a' : '#ffffff',
-		borderBottom: `1rpx solid ${isDark ? '#2d2d2d' : '#e5e7eb'}`
+		borderBottom: `1rpx solid ${isDark ? '#2d2d2d' : '#e5e7eb'}`,
 	};
 });
 
@@ -134,7 +160,7 @@ const onChangeDark = () => store.setTmVuetifyDark(!store.tmStore.dark);
 
 const goToHome = () => {
 	uni.reLaunch({
-		url: '/pages/index/index'
+		url: '/pages/index/index',
 	});
 };
 
@@ -155,17 +181,17 @@ const calculateDropdownPosition = () => {
 		const navbarHeightPx = uni.upx2px(navbarHeight.value); // navbar高度（px）
 		const iconSizeValue = iconSize.value; // 图标大小（rpx）
 		const iconContainerHeightPx = uni.upx2px(iconSizeValue); // 图标容器高度（px）
-		
+
 		// 计算下拉菜单位置：状态栏高度 + navbar高度 + 图标容器高度 + 间距
 		// 由于图标容器向下对齐，下拉栏应该从header底部（即图标容器底部）开始
 		// 统一使用px单位，确保在不同屏幕尺寸下位置一致
 		const spacing = uni.upx2px(8); // 间距（px）
 		const top = statusBarHeight + navbarHeightPx + iconContainerHeightPx + spacing;
 		const right = uni.upx2px(12); // 距离右边缘12rpx
-		
+
 		dropdownStyle.value = {
 			top: `${top}px`,
-			right: `${right}px`
+			right: `${right}px`,
 		};
 	} catch (e) {
 		// 如果计算失败，使用默认位置
@@ -176,7 +202,7 @@ const calculateDropdownPosition = () => {
 		const spacing = uni.upx2px(8);
 		dropdownStyle.value = {
 			top: `${statusBarHeight + navbarHeightPx + iconContainerHeightPx + spacing}px`,
-			right: `${uni.upx2px(12)}px`
+			right: `${uni.upx2px(12)}px`,
 		};
 	}
 };
@@ -189,21 +215,21 @@ const onAuth = () => {
 	closeUserMenu();
 	// 跳转到登录/注册页面
 	uni.navigateTo({
-		url: '/pages/auth/auth'
+		url: '/pages/auth/auth',
 	});
 };
 
 const goToHistory = () => {
 	closeUserMenu();
 	uni.navigateTo({
-		url: '/pages/history/list'
+		url: '/pages/history/list',
 	});
 };
 
 const goToAdmin = () => {
 	closeUserMenu();
 	uni.navigateTo({
-		url: '/pages/auth/auth'
+		url: '/pages/auth/auth',
 	});
 };
 
@@ -213,7 +239,28 @@ const onLogout = () => {
 	uni.showToast({
 		title: '已退出登录',
 		icon: 'success',
-		duration: 2000
+		duration: 2000,
+	});
+};
+
+const goLiuyao = () => {
+	uni.showToast({
+		title: '六爻排盘即将上线',
+		icon: 'none',
+	});
+};
+
+const goQimen = () => {
+	uni.showToast({
+		title: '奇门排盘即将上线',
+		icon: 'none',
+	});
+};
+
+const goAbout = () => {
+	closeUserMenu();
+	uni.navigateTo({
+		url: '/pages/about/index',
 	});
 };
 
@@ -221,7 +268,7 @@ const onLogout = () => {
 defineExpose({
 	navbarHeight,
 	iconSize,
-	totalHeaderHeight
+	totalHeaderHeight,
 });
 </script>
 
@@ -234,6 +281,36 @@ defineExpose({
 	flex-direction: row;
 	align-items: center;
 	justify-content: space-between;
+}
+
+.app-header__nav {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	margin-left: 24rpx;
+}
+
+.nav-btn {
+	padding: 12rpx 16rpx;
+	border-radius: 12rpx;
+	font-size: 28rpx;
+	color: #4a5568;
+}
+
+.nav-btn + .nav-btn {
+	margin-left: 12rpx;
+}
+
+.nav-btn:active {
+	background: rgba(102, 126, 234, 0.12);
+}
+
+.nav-btn.dark {
+	color: #e5e7eb;
+}
+
+.nav-btn.dark:active {
+	background: rgba(129, 140, 248, 0.12);
 }
 
 .app-header__right {

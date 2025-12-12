@@ -1,21 +1,38 @@
 <template>
 	<view>
 		<view v-for="(mitem, mindex) in map_list" :key="mitem.index">
-				<tm-sheet v-if="(yun_store as any)[mitem.list].length" class="my-20 yun-sheet" :round="3" :shadow="2" :margin="[0, 12]">
-					<tm-text _class="font-weight-b" :label="mitem.title"></tm-text>
-					<view class="list-divider"></view>
+			<tm-sheet
+				v-if="(yun_store as any)[mitem.list].length"
+				class="my-20 yun-sheet"
+				:round="3"
+				:shadow="2"
+				:margin="[0, 12]"
+			>
+				<tm-text _class="font-weight-b" :label="mitem.title"></tm-text>
+				<view class="list-divider"></view>
 				<view class="scroll-container" :class="{ 'scroll-container-liuri': mindex == 3 }">
-						<scroll-view 
-							class="scroll-view" 
-							:class="{ 'scroll-view-liuri': mindex == 3 }"
-							scroll-x="true"
-							:show-scrollbar="true"
-							:enable-flex="true"
+					<scroll-view
+						class="scroll-view"
+						:class="{ 'scroll-view-liuri': mindex == 3 }"
+						scroll-x="true"
+						:show-scrollbar="true"
+						:enable-flex="true"
+					>
+						<view
+							class="scroll-view-item"
+							v-for="(ditem, dindex) in mindex == 3
+								? limitedDayList
+								: (yun_store as any)[mitem.list]"
+							:key="mindex == 3 ? dindex : dindex"
 						>
-						<view class="scroll-view-item" v-for="(ditem, dindex) in (mindex == 3 ? limitedDayList : (yun_store as any)[mitem.list])" :key="mindex == 3 ? dindex : dindex">
 							<view
 								class="scroll-view-item-default"
-								:class="{ 'scroll-view-item-active': (mindex == 3 ? (yun_store as any)[mitem.index] == getOriginalDayIndex(dindex) : (yun_store as any)[mitem.index] == dindex) && mindex < 4 }"
+								:class="{
+									'scroll-view-item-active':
+										(mindex == 3
+											? (yun_store as any)[mitem.index] == getOriginalDayIndex(dindex)
+											: (yun_store as any)[mitem.index] == dindex) && mindex < 4,
+								}"
 								@click="ScrollItemClick(mindex, mindex == 3 ? getOriginalDayIndex(dindex) : dindex)"
 							>
 								<view v-if="mindex == 0">
@@ -42,85 +59,99 @@
 									<view><tm-text :label="ditem.ganzhi"></tm-text></view>
 									<view><tm-text :label="ditem.shishen"></tm-text></view>
 								</view>
-								<view v-if="mindex == 4">
-									<view><tm-text :label="ditem.time"></tm-text></view>
-									<view><tm-text :label="ditem.ganzhi"></tm-text></view>
-									<view><tm-text :label="ditem.shishen"></tm-text></view>
-								</view>
 							</view>
 						</view>
 					</scroll-view>
-					
+
 					<!-- 在选中项下方显示神煞和关系（仅对大运、流年、流月、流日） -->
 					<view v-if="mindex < 4 && (yun_store as any)[mitem.index] >= 0" class="selected-info">
 						<!-- 显示选中项的神煞 -->
-						<view v-if="getSelectedShenSha(mitem.index, mitem.list).length > 0" class="px-20 py-10">
-							<tm-text label="神煞：" :font-size="32" color="primary" _class="font-weight-b"></tm-text>
-							<tm-text 
-								:label="getSelectedShenSha(mitem.index, mitem.list).join('、')" 
-								:font-size="30" 
+						<view v-if="getCachedShenSha(mindex).length > 0" class="px-20 py-10">
+							<tm-text
+								label="神煞："
+								:font-size="32"
+								color="primary"
+								_class="font-weight-b"
+							></tm-text>
+							<tm-text
+								:label="getCachedShenSha(mindex).join('、')"
+								:font-size="30"
 								color="grey-darken-1"
 								class="ml-10"
 							></tm-text>
 						</view>
-						
+
 						<!-- 显示选中项与原局的关系 -->
-						<view v-if="hasRelations(mitem.index, mitem.list)" class="px-20 py-10">
-							<tm-text label="关系：" :font-size="32" color="primary" _class="font-weight-b"></tm-text>
+						<view v-if="getCachedHasRelations(mindex)" class="px-20 py-10">
+							<tm-text
+								label="关系："
+								:font-size="32"
+								color="primary"
+								_class="font-weight-b"
+							></tm-text>
 							<view class="mt-6">
 								<!-- 天干合化 -->
-								<view v-if="getRelationValue(mitem.index, mitem.list, 'ganHe')" class="mb-6">
-									<tm-text 
-										:label="getRelationValue(mitem.index, mitem.list, 'ganHe')" 
-										:font-size="30" 
+								<view v-if="getCachedRelationValue(mindex, 'ganHe')" class="mb-6">
+									<tm-text
+										:label="getCachedRelationValue(mindex, 'ganHe')"
+										:font-size="30"
 										color="orange"
 									></tm-text>
 								</view>
 								<!-- 地支六合 -->
-								<view v-if="getRelationValue(mitem.index, mitem.list, 'zhiLiuHe')" class="mb-6">
-									<tm-text 
-										:label="getRelationValue(mitem.index, mitem.list, 'zhiLiuHe')" 
-										:font-size="30" 
+								<view v-if="getCachedRelationValue(mindex, 'zhiLiuHe')" class="mb-6">
+									<tm-text
+										:label="getCachedRelationValue(mindex, 'zhiLiuHe')"
+										:font-size="30"
 										color="green"
 									></tm-text>
 								</view>
 								<!-- 地支三合 -->
-								<view v-if="getRelationValue(mitem.index, mitem.list, 'zhiSanHe')" class="mb-6">
-									<tm-text 
-										:label="getRelationValue(mitem.index, mitem.list, 'zhiSanHe')" 
-										:font-size="30" 
+								<view v-if="getCachedRelationValue(mindex, 'zhiSanHe')" class="mb-6">
+									<tm-text
+										:label="getCachedRelationValue(mindex, 'zhiSanHe')"
+										:font-size="30"
 										color="blue"
 									></tm-text>
 								</view>
 								<!-- 地支三会 -->
-								<view v-if="getRelationValue(mitem.index, mitem.list, 'zhiSanHui')" class="mb-6">
-									<tm-text 
-										:label="getRelationValue(mitem.index, mitem.list, 'zhiSanHui')" 
-										:font-size="30" 
+								<view v-if="getCachedRelationValue(mindex, 'zhiSanHui')" class="mb-6">
+									<tm-text
+										:label="getCachedRelationValue(mindex, 'zhiSanHui')"
+										:font-size="30"
 										color="purple"
 									></tm-text>
 								</view>
 								<!-- 地支六冲 -->
-								<view v-if="getRelationArray(mitem.index, mitem.list, 'zhiLiuChong').length > 0" class="mb-6">
-									<tm-text 
-										:label="'冲：' + getRelationArray(mitem.index, mitem.list, 'zhiLiuChong').join('、')" 
-										:font-size="30" 
+								<view
+									v-if="getCachedRelationArray(mindex, 'zhiLiuChong').length > 0"
+									class="mb-6"
+								>
+									<tm-text
+										:label="'冲：' + getCachedRelationArray(mindex, 'zhiLiuChong').join('、')"
+										:font-size="30"
 										color="red"
 									></tm-text>
 								</view>
 								<!-- 地支相刑 -->
-								<view v-if="getRelationArray(mitem.index, mitem.list, 'zhiXing').length > 0" class="mb-6">
-									<tm-text 
-										:label="'刑：' + getRelationArray(mitem.index, mitem.list, 'zhiXing').join('、')" 
-										:font-size="30" 
+								<view
+									v-if="getCachedRelationArray(mindex, 'zhiXing').length > 0"
+									class="mb-6"
+								>
+									<tm-text
+										:label="'刑：' + getCachedRelationArray(mindex, 'zhiXing').join('、')"
+										:font-size="30"
 										color="red-darken-1"
 									></tm-text>
 								</view>
 								<!-- 地支相害 -->
-								<view v-if="getRelationArray(mitem.index, mitem.list, 'zhiHai').length > 0" class="mb-6">
-									<tm-text 
-										:label="'害：' + getRelationArray(mitem.index, mitem.list, 'zhiHai').join('、')" 
-										:font-size="30" 
+								<view
+									v-if="getCachedRelationArray(mindex, 'zhiHai').length > 0"
+									class="mb-6"
+								>
+									<tm-text
+										:label="'害：' + getCachedRelationArray(mindex, 'zhiHai').join('、')"
+										:font-size="30"
 										color="orange-darken-1"
 									></tm-text>
 								</view>
@@ -147,18 +178,18 @@ const limitedDayList = computed(() => {
 	const dayList = yun_store.day_list || [];
 	const monthList = yun_store.month_list || [];
 	const monthIndex = yun_store.month_index;
-	
+
 	// 如果没有流月数据或索引无效，返回全部流日
 	if (!monthList.length || monthIndex < 0 || monthIndex >= monthList.length) {
 		return dayList;
 	}
-	
+
 	// 获取当前流月的数据
 	const currentMonth = monthList[monthIndex] as any;
 	if (!currentMonth || !currentMonth.date) {
 		return dayList;
 	}
-	
+
 	// 获取当前流年的年份
 	const yearList = yun_store.year_list || [];
 	const yearIndex = yun_store.year_index;
@@ -166,11 +197,11 @@ const limitedDayList = computed(() => {
 		return dayList;
 	}
 	const currentYear = (yearList[yearIndex] as any).year;
-	
+
 	// 计算当前流月的日期范围
 	// currentMonth.date 格式如 "2/4"，表示月/日
 	// currentMonth.next_jieqi_date 格式如 "3/5"，表示下一个节气的月/日
-	
+
 	// 特殊处理：小寒流月（索引为11）应该是下一年的1月6号到2月3号
 	let startYear, startMonth, startDay, endYear, endMonth, endDay;
 	if (monthIndex === 11) {
@@ -187,7 +218,7 @@ const limitedDayList = computed(() => {
 		startYear = currentYear;
 		startMonth = month;
 		startDay = day;
-		
+
 		// 结束日期：使用下一个节气的日期
 		// 如果流月索引>=10，说明下一个节气是下一年的
 		endYear = monthIndex < 10 ? currentYear : currentYear + 1;
@@ -195,11 +226,11 @@ const limitedDayList = computed(() => {
 		endMonth = nextMonth;
 		endDay = nextDay;
 	}
-	
+
 	// 构建日期范围字符串用于比较（格式：YYYY/M/D）
 	const startDateStr = `${startYear}/${startMonth}/${startDay}`;
 	const endDateStr = `${endYear}/${endMonth}/${endDay}`;
-	
+
 	// 解析日期对象（用于比较，只比较年月日，忽略时间部分）
 	const parseDate = (dateStr: string): Date => {
 		// 统一格式为 YYYY/M/D
@@ -213,18 +244,18 @@ const limitedDayList = computed(() => {
 		}
 		return new Date(normalized);
 	};
-	
+
 	const startDate = parseDate(startDateStr);
 	const endDate = parseDate(endDateStr);
-	
+
 	// 过滤流日：只保留在当前流月日期范围内的
 	// 对于小寒流月：包含起始日期和结束日期（2月3号）
 	// 对于其他流月：包含起始日期，不包含结束日期（因为结束日期是下一个流月的起始日期）
 	const filteredDays = dayList.filter((day: any) => {
 		if (!day.date) return false;
-		
+
 		const dayDate = parseDate(day.date);
-		
+
 		// 比较日期（只比较年月日，忽略时间部分）
 		if (monthIndex === 11) {
 			// 小寒流月：包含2月3号
@@ -234,7 +265,7 @@ const limitedDayList = computed(() => {
 			return dayDate >= startDate && dayDate < endDate;
 		}
 	});
-	
+
 	return filteredDays.length > 0 ? filteredDays : dayList;
 });
 
@@ -242,12 +273,12 @@ const limitedDayList = computed(() => {
 const dayListStartOffset = computed(() => {
 	const dayList = yun_store.day_list || [];
 	const limitedList = limitedDayList.value;
-	
+
 	// 如果过滤后的列表等于原列表，偏移量为0
 	if (limitedList.length === dayList.length) {
 		return 0;
 	}
-	
+
 	// 找到过滤后列表的第一个元素在原列表中的索引
 	if (limitedList.length > 0 && dayList.length > 0) {
 		const firstLimitedDay = limitedList[0] as any;
@@ -256,7 +287,7 @@ const dayListStartOffset = computed(() => {
 		});
 		return originalIndex >= 0 ? originalIndex : 0;
 	}
-	
+
 	return 0;
 });
 
@@ -264,12 +295,12 @@ const dayListStartOffset = computed(() => {
 function getOriginalDayIndex(displayIndex: number): number {
 	const dayList = yun_store.day_list || [];
 	const limitedList = limitedDayList.value;
-	
+
 	// 如果过滤后的列表等于原列表，直接返回显示索引
 	if (limitedList.length === dayList.length) {
 		return displayIndex;
 	}
-	
+
 	// 获取显示列表中对应索引的日期
 	if (displayIndex >= 0 && displayIndex < limitedList.length) {
 		const displayDay = limitedList[displayIndex] as any;
@@ -278,24 +309,24 @@ function getOriginalDayIndex(displayIndex: number): number {
 		});
 		return originalIndex >= 0 ? originalIndex : displayIndex;
 	}
-	
+
 	return displayIndex;
 }
 
 // 格式化阳历日期显示
 function formatSolarDate(dateStr: string | undefined): string {
 	if (!dateStr) return '';
-	
+
 	// 日期格式可能是 "2024/2/4" 或 "2024/02/04"
 	const date = new Date(dateStr.replace(/-/g, '/'));
 	if (isNaN(date.getTime())) {
 		// 如果解析失败，返回原始字符串
 		return dateStr;
 	}
-	
+
 	const month = date.getMonth() + 1;
 	const day = date.getDate();
-	
+
 	// 格式化为 "2月4日" 的格式
 	return `${month}月${day}日`;
 }
@@ -304,93 +335,174 @@ const map_list: Array<{ title: string; list: string; index: string }> = [
 	{
 		title: '大运',
 		list: 'dayun_list',
-		index: 'current_index'
+		index: 'current_index',
 	},
 	{
 		title: '流年',
 		list: 'year_list',
-		index: 'year_index'
+		index: 'year_index',
 	},
 	{
 		title: '流月',
 		list: 'month_list',
-		index: 'month_index'
+		index: 'month_index',
 	},
 	{
 		title: '流日',
 		list: 'day_list',
-		index: 'day_index'
+		index: 'day_index',
 	},
-	{
-		title: '流时',
-		list: 'time_list',
-		index: 'time_index'
-	}
 ];
+
+// 缓存神煞和关系计算结果，避免重复计算
+const shenShaCache: { [key: number]: string[] } = {};
+const relationsCache: { [key: number]: any } = {};
+const cacheKeys: { [key: number]: string } = {};
+
+function getCacheKey(mindex: number): string {
+	const mitem = map_list[mindex];
+	const selectedIndex = (yun_store as any)[mitem.index];
+	return `${mitem.index}_${selectedIndex}`;
+}
+
+function getCachedShenSha(mindex: number): string[] {
+	const cacheKey = getCacheKey(mindex);
+	if (cacheKeys[mindex] === cacheKey && shenShaCache[mindex]) {
+		return shenShaCache[mindex];
+	}
+	const mitem = map_list[mindex];
+	const result = getSelectedShenSha(mitem.index, mitem.list);
+	shenShaCache[mindex] = result;
+	cacheKeys[mindex] = cacheKey;
+	return result;
+}
+
+function getCachedRelations(mindex: number): any {
+	const cacheKey = getCacheKey(mindex);
+	if (cacheKeys[mindex] === cacheKey && relationsCache[mindex]) {
+		return relationsCache[mindex];
+	}
+	const mitem = map_list[mindex];
+	const result = getSelectedRelations(mitem.index, mitem.list);
+	relationsCache[mindex] = result;
+	cacheKeys[mindex] = cacheKey;
+	return result;
+}
+
+function getCachedHasRelations(mindex: number): boolean {
+	const relations = getCachedRelations(mindex);
+	if (!relations) return false;
+	return !!(
+		relations.ganHe ||
+		relations.zhiLiuHe ||
+		relations.zhiSanHe ||
+		relations.zhiSanHui ||
+		(relations.zhiLiuChong && relations.zhiLiuChong.length > 0) ||
+		(relations.zhiXing && relations.zhiXing.length > 0) ||
+		(relations.zhiHai && relations.zhiHai.length > 0)
+	);
+}
+
+function getCachedRelationValue(
+	mindex: number,
+	key: 'ganHe' | 'zhiLiuHe' | 'zhiSanHe' | 'zhiSanHui'
+): string {
+	const relations = getCachedRelations(mindex);
+	return relations?.[key] || '';
+}
+
+function getCachedRelationArray(
+	mindex: number,
+	key: 'zhiLiuChong' | 'zhiXing' | 'zhiHai'
+): string[] {
+	const relations = getCachedRelations(mindex);
+	return relations?.[key] || [];
+}
 
 function ScrollItemClick(e: number, index: number) {
 	if (e > 3) return;
-	const key_list = ['current_index', 'year_index', 'month_index', 'day_index', 'time_index'];
-	const methods_list = ['resolveLiuYear', 'resolveLiuMonth', 'resolveLiuDay', 'resolveLiuTime'];
+	const key_list = ['current_index', 'year_index', 'month_index', 'day_index'];
+	const methods_list = ['resolveLiuYear', 'resolveLiuMonth', 'resolveLiuDay'];
+	
+	// 检查索引是否真的改变了，避免重复计算
+	const currentIndex = (yun_store as any)[key_list[e]];
+	if (currentIndex === index) return;
+	
 	(yun_store as any)[key_list[e]] = index;
-	(yun_store as any)[key_list[e + 1]] = 0;
+	if (e < 3) {
+		(yun_store as any)[key_list[e + 1]] = 0;
+	}
 	// 标记用户已手动选择时间，禁用自动定位
 	yun_store.markManualSelection();
-	(yun_store as any)[methods_list[e]]();
+	
+	// 使用 nextTick 延迟执行，避免阻塞UI
+	if (e < methods_list.length) {
+		nextTick(() => {
+			(yun_store as any)[methods_list[e]]();
+		});
+	}
 }
 
 function getSelectedShenSha(indexKey: string, listKey: string): string[] {
 	const selectedIndex = (yun_store as any)[indexKey];
 	const list = (yun_store as any)[listKey];
-	
+
 	if (selectedIndex < 0 || !list || !list[selectedIndex] || !list[selectedIndex].ganzhi) {
 		return [];
 	}
-	
+
 	const ganzhi = list[selectedIndex].ganzhi;
 	if (!bazi_store.tiangan?.day) {
 		return [];
 	}
-	
+
 	// 获取原四柱地支用于计算驿马
 	const originalZhiList: string[] = [];
 	if (bazi_store.dizhi?.year) originalZhiList.push(bazi_store.dizhi.year);
 	if (bazi_store.dizhi?.month) originalZhiList.push(bazi_store.dizhi.month);
 	if (bazi_store.dizhi?.day) originalZhiList.push(bazi_store.dizhi.day);
 	if (bazi_store.dizhi?.time) originalZhiList.push(bazi_store.dizhi.time);
-	
+
 	const yearZhi = bazi_store.dizhi?.year || '';
 	const monthZhi = bazi_store.dizhi?.month || '';
 	const dayZhi = bazi_store.dizhi?.day || '';
 	const timeZhi = bazi_store.dizhi?.time || '';
-	
-	return calculateShenShaForGanZhi(bazi_store.tiangan.day, ganzhi, originalZhiList, yearZhi, monthZhi, dayZhi, timeZhi);
+
+	return calculateShenShaForGanZhi(
+		bazi_store.tiangan.day,
+		ganzhi,
+		originalZhiList,
+		yearZhi,
+		monthZhi,
+		dayZhi,
+		timeZhi
+	);
 }
 
 function getSelectedRelations(indexKey: string, listKey: string) {
 	const selectedIndex = (yun_store as any)[indexKey];
 	const list = (yun_store as any)[listKey];
-	
+
 	if (selectedIndex < 0 || !list || !list[selectedIndex] || !list[selectedIndex].ganzhi) {
 		return null;
 	}
-	
+
 	const ganzhi = list[selectedIndex].ganzhi;
 	if (!ganzhi || ganzhi.length < 2) {
 		return null;
 	}
-	
+
 	// 获取原局四柱干支
 	const originalGanZhi: string[] = [];
 	if (bazi_store.sizhu?.year) originalGanZhi.push(bazi_store.sizhu.year);
 	if (bazi_store.sizhu?.month) originalGanZhi.push(bazi_store.sizhu.month);
 	if (bazi_store.sizhu?.day) originalGanZhi.push(bazi_store.sizhu.day);
 	if (bazi_store.sizhu?.time) originalGanZhi.push(bazi_store.sizhu.time);
-	
+
 	if (originalGanZhi.length === 0) {
 		return null;
 	}
-	
+
 	return calculateGanZhiRelations(ganzhi, originalGanZhi);
 }
 
@@ -408,12 +520,20 @@ function hasRelations(indexKey: string, listKey: string): boolean {
 	);
 }
 
-function getRelationValue(indexKey: string, listKey: string, key: 'ganHe' | 'zhiLiuHe' | 'zhiSanHe' | 'zhiSanHui'): string {
+function getRelationValue(
+	indexKey: string,
+	listKey: string,
+	key: 'ganHe' | 'zhiLiuHe' | 'zhiSanHe' | 'zhiSanHui'
+): string {
 	const relations = getSelectedRelations(indexKey, listKey);
 	return relations?.[key] || '';
 }
 
-function getRelationArray(indexKey: string, listKey: string, key: 'zhiLiuChong' | 'zhiXing' | 'zhiHai'): string[] {
+function getRelationArray(
+	indexKey: string,
+	listKey: string,
+	key: 'zhiLiuChong' | 'zhiXing' | 'zhiHai'
+): string[] {
 	const relations = getSelectedRelations(indexKey, listKey);
 	return relations?.[key] || [];
 }
@@ -424,12 +544,12 @@ function autoLocateToCurrentTime() {
 	if (yun_store.autoLocated) {
 		return;
 	}
-	
+
 	const now = new Date();
 	const currentYear = now.getFullYear();
 	const currentMonth = now.getMonth() + 1; // 1-12
 	const currentDay = now.getDate();
-	
+
 	// 定位大运：找到 start_year <= 当前年份的最大索引
 	if (yun_store.dayun_list && yun_store.dayun_list.length > 0) {
 		let dayunIndex = 0;
@@ -446,7 +566,7 @@ function autoLocateToCurrentTime() {
 			yun_store.resolveLiuYear();
 		}
 	}
-	
+
 	// 等待流年数据加载完成后再定位流年
 	nextTick(() => {
 		// 定位流年：找到匹配当前年份的索引
@@ -457,7 +577,7 @@ function autoLocateToCurrentTime() {
 				yun_store.resolveLiuMonth();
 			}
 		}
-		
+
 		// 等待流月数据加载完成后再定位流月
 		nextTick(() => {
 			// 定位流月：找到包含当前日期的流月（使用完整的日期范围比较）
@@ -466,17 +586,17 @@ function autoLocateToCurrentTime() {
 				const currentYear = now.getFullYear();
 				const currentMonthNum = now.getMonth() + 1;
 				const currentDayNum = now.getDate();
-				
+
 				// 获取当前流年的年份
 				const yearList = yun_store.year_list || [];
 				const yearIndex = yun_store.year_index;
 				if (yearList.length && yearIndex >= 0 && yearIndex < yearList.length) {
 					const year = (yearList[yearIndex] as any).year;
-					
+
 					for (let i = 0; i < yun_store.month_list.length; i++) {
 						const item = yun_store.month_list[i] as any;
 						if (!item.date || !item.next_jieqi_date) continue;
-						
+
 						// 计算流月的日期范围
 						let startYear, startMonth, startDay, endYear, endMonth, endDay;
 						if (i === 11) {
@@ -493,18 +613,18 @@ function autoLocateToCurrentTime() {
 							startYear = year;
 							startMonth = month;
 							startDay = day;
-							
+
 							endYear = i < 10 ? year : year + 1;
 							const [nextMonth, nextDay] = item.next_jieqi_date.split('/').map(Number);
 							endMonth = nextMonth;
 							endDay = nextDay;
 						}
-						
+
 						// 判断当前日期是否在这个流月范围内
 						const currentDate = new Date(currentYear, currentMonthNum - 1, currentDayNum);
 						const startDate = new Date(startYear, startMonth - 1, startDay);
 						const endDate = new Date(endYear, endMonth - 1, endDay);
-						
+
 						// 对于非小寒流月，结束日期不包含（因为结束日期是下一个流月的起始日期）
 						if (i === 11) {
 							// 小寒流月：包含结束日期
@@ -521,13 +641,13 @@ function autoLocateToCurrentTime() {
 						}
 					}
 				}
-				
+
 				if (monthIndex >= 0 && yun_store.month_index !== monthIndex) {
 					yun_store.month_index = monthIndex;
 					yun_store.resolveLiuDay();
 				}
 			}
-			
+
 			// 等待流日数据加载完成后再定位流日
 			nextTick(() => {
 				// 定位流日：找到匹配当前日期的索引
@@ -535,16 +655,18 @@ function autoLocateToCurrentTime() {
 					// 格式化当前日期为 YYYY/M/D 或 YYYY/MM/DD 格式
 					const currentDateStr1 = `${currentYear}/${currentMonth}/${currentDay}`;
 					const currentDateStr2 = `${currentYear}/${currentMonth.toString().padStart(2, '0')}/${currentDay.toString().padStart(2, '0')}`;
-					
+
 					const dayIndex = yun_store.day_list.findIndex((item: any) => {
 						if (item.date) {
 							// 格式化日期字符串进行比较（统一格式）
 							const itemDate = item.date.replace(/-/g, '/');
 							// 尝试多种格式匹配
-							return itemDate === currentDateStr1 || 
-							       itemDate === currentDateStr2 ||
-							       itemDate.startsWith(currentDateStr1) ||
-							       itemDate.startsWith(currentDateStr2);
+							return (
+								itemDate === currentDateStr1 ||
+								itemDate === currentDateStr2 ||
+								itemDate.startsWith(currentDateStr1) ||
+								itemDate.startsWith(currentDateStr2)
+							);
 						}
 						return false;
 					});
@@ -573,7 +695,12 @@ watch(
 
 // 组件挂载时也尝试定位（只在首次加载时执行）
 onMounted(() => {
-	if (yun_store.dayun_list && yun_store.dayun_list.length > 0 && !hasAutoLocated && !yun_store.autoLocated) {
+	if (
+		yun_store.dayun_list &&
+		yun_store.dayun_list.length > 0 &&
+		!hasAutoLocated &&
+		!yun_store.autoLocated
+	) {
 		hasAutoLocated = true;
 		autoLocateToCurrentTime();
 	}
@@ -586,7 +713,7 @@ onMounted(() => {
 	max-width: 100%;
 	overflow: hidden;
 	box-sizing: border-box;
-	
+
 	&.scroll-container-liuri {
 		max-height: 400rpx;
 		overflow: hidden;
@@ -618,7 +745,7 @@ onMounted(() => {
 			background: #a0aec0;
 		}
 	}
-	
+
 	&.scroll-view-liuri {
 		::-webkit-scrollbar {
 			display: block;
@@ -636,7 +763,7 @@ onMounted(() => {
 			}
 		}
 	}
-	
+
 	&-item {
 		display: inline-block;
 		text-align: center;
@@ -661,15 +788,15 @@ onMounted(() => {
 	margin: 0 !important;
 }
 
-	.selected-info {
-		border-top: 1px solid #e0e0e0;
-		margin-top: 10rpx;
-	}
-	
-	.list-divider {
-		height: 1px;
-		width: 100%;
-		background-color: #e5e7eb;
-		margin: 12rpx 0;
-	}
+.selected-info {
+	border-top: 1px solid #e0e0e0;
+	margin-top: 10rpx;
+}
+
+.list-divider {
+	height: 1px;
+	width: 100%;
+	background-color: #e5e7eb;
+	margin: 12rpx 0;
+}
 </style>

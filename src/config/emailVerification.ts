@@ -43,7 +43,7 @@ export function sendEmailVerificationCode(
 			method: 'POST',
 			data: {
 				email: email.trim().toLowerCase(),
-				type
+				type,
 			},
 			success(res: any) {
 				if (res.statusCode >= 200 && res.statusCode < 300) {
@@ -51,16 +51,16 @@ export function sendEmailVerificationCode(
 				} else {
 					reject({
 						success: false,
-						message: res.data?.error || '发送验证码失败，请稍后重试'
+						message: res.data?.error || '发送验证码失败，请稍后重试',
 					});
 				}
 			},
-			fail(err: any) {
+			fail() {
 				reject({
 					success: false,
-					message: '网络错误，请检查后端是否已启动'
+					message: '网络错误，请检查后端是否已启动',
 				});
-			}
+			},
 		});
 	});
 }
@@ -94,7 +94,7 @@ export function verifyEmailCode(
 			data: {
 				email: email.trim().toLowerCase(),
 				code: code.trim(),
-				type
+				type,
 			},
 			success(res: any) {
 				if (res.statusCode >= 200 && res.statusCode < 300) {
@@ -102,17 +102,16 @@ export function verifyEmailCode(
 				} else {
 					reject({
 						success: false,
-						message: res.data?.error || '验证码验证失败'
+						message: res.data?.error || '验证码验证失败',
 					});
 				}
 			},
-			fail(err: any) {
+			fail() {
 				reject({
 					success: false,
-					message: '网络错误，请检查后端是否已启动'
+					message: '网络错误，请检查后端是否已启动',
 				});
-			}
+			},
 		});
 	});
 }
-

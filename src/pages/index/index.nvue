@@ -30,6 +30,16 @@
 									:padding="[24, 20]"
 								></tm-input>
 
+								<tm-input
+									v-model="birthPlace"
+									:margin="[0, 0, 24, 0]"
+									placeholder="请输入出生地（可选，如：北京市、广东省深圳市）"
+									prefix="tmicon-location"
+									:round="12"
+									:border="1"
+									:padding="[24, 20]"
+								></tm-input>
+
 								<view class="form-group-single">
 									<view class="form-label">
 										<tm-icon name="tmicon-md-people" :font-size="24" color="#718096" :margin="[0, 6, 0, 0]"></tm-icon>
@@ -188,11 +198,12 @@
 import { ref, computed, watch, onMounted, nextTick } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import { Solar } from 'lunar-javascript';
-import {useUserStore} from '@/store/user.ts'
-import {useBaziStore} from '@/store/bazi.ts'
-import utils from '@/libs/utils/utils.ts';
+import {useUserStore} from '@/store/user'
+import {useBaziStore} from '@/store/bazi'
+import utils from '@/libs/utils/utils';
 
 let realname = ref('');
+let birthPlace = ref('');
 let gender = ref(0);
 let model = ref(0);
 let timestamp = ref(null);
@@ -284,9 +295,10 @@ onLoad(() =>{
 		let data = null
 		try {
 			data = JSON.parse(cache);
-			realname.value = data.realname
-			gender.value = data.gender== 0 ? 1 : 0
-			timestamp.value = data.timestamp
+		realname.value = data.realname
+		birthPlace.value = data.birthPlace || ''
+		gender.value = data.gender== 0 ? 1 : 0
+		timestamp.value = data.timestamp
 			PullDatatimeLabel()
 		} catch (e) {
 			uni.removeStorageSync('info');
@@ -359,21 +371,60 @@ function Sumbit ()  {
 
 	const params = {
 		realname: (realname.value || '').trim() || '佚名',
+		birthPlace: (birthPlace.value || '').trim() || null,
 		timestamp: datetime,
 		gender: gender.value == 0 ? 1 : 0
 	}
 	uni.showLoading({
 		title:"排盘中，请稍后！"
 	})
-	uni.setStorageSync('info', JSON.stringify(params));
-	user_store.set(params)
-	bazi_store.pull(params);
-	setTimeout(()=>{
-		uni.hideLoading()
-		uni.navigateTo({
-			url:"/pages/index/detail"
-		})
-	},0)
+	
+	try {
+		uni.setStorageSync('info', JSON.stringify(params));
+		user_store.set(params);
+		
+		// 执行排盘计算
+		bazi_store.pull(params);
+		
+		// 延迟跳转，确保排盘计算完成并验证结果
+		setTimeout(() => {
+			uni.hideLoading();
+			
+			// 验证排盘结果是否完整
+			if (!bazi_store.solar || !bazi_store.solar.year) {
+				uni.showToast({
+					title: '排盘数据不完整，请重试',
+					icon: 'none',
+					duration: 2000
+				});
+				return;
+			}
+			
+			// 跳转到详情页
+			uni.navigateTo({
+				url: '/pages/index/detail',
+				success: () => {
+					// 跳转成功
+				},
+				fail: (err) => {
+					console.error('跳转失败:', err);
+					uni.showToast({
+						title: '跳转失败，请重试',
+						icon: 'none',
+						duration: 2000
+					});
+				}
+			});
+		}, 200); // 增加延迟到 200ms，确保计算完成
+	} catch (error: any) {
+		uni.hideLoading();
+		console.error('排盘失败:', error);
+		uni.showToast({
+			title: '排盘计算失败：' + (error?.message || '未知错误'),
+			icon: 'none',
+			duration: 2000
+		});
+	}
 };
 </script>
 
@@ -438,7 +489,15 @@ function Sumbit ()  {
 	margin-bottom: 20rpx;
 	width: 100%;
 	flex-wrap: wrap;
-	gap: 8rpx;
+}
+
+.auth-form-hint > view {
+	margin-right: 8rpx;
+	margin-bottom: 8rpx;
+}
+
+.auth-form-hint > view:last-child {
+	margin-right: 0;
 }
 
 .auth-error {
@@ -451,7 +510,6 @@ function Sumbit ()  {
 	border-left: 4rpx solid #f56565;
 	margin-bottom: 20rpx;
 	width: 100%;
-	box-sizing: border-box;
 }
 
 .auth-form-actions {
@@ -467,23 +525,28 @@ function Sumbit ()  {
 
 .form-header-text {
   flex: 1;
-  min-width: 0;
   display: flex;
   flex-direction: column;
-	gap: clamp(4px, 0.5vw, 8px);
+}
+
+.form-header-text > view {
+	margin-bottom: 6px;
+}
+
+.form-header-text > view:last-child {
+	margin-bottom: 0;
 }
 
 .form-section-card {
 	background: linear-gradient(180deg, #fbfdff 0%, #ffffff 100%);
-	border-radius: var(--radius-md);
-	padding: clamp(20px, 3vw, 28px) clamp(20px, 3vw, 24px);
+	border-radius: 12px;
+	padding: 24px 22px;
 	border: 1px solid #e2e8f0;
-	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .form-submit {
 	width: 100%;
-	margin-top: clamp(24px, 4vw, 32px);
+	margin-top: 28px;
 	display: flex;
 	justify-content: center;
 }
@@ -491,24 +554,46 @@ function Sumbit ()  {
 .form-row {
 	display: flex;
 	flex-direction: row;
-	gap: 24rpx;
 	width: 100%;
 	flex-wrap: wrap;
 }
 
+.form-row > view {
+	margin-right: 24rpx;
+	margin-bottom: 24rpx;
+}
+
+.form-row > view:last-child {
+	margin-right: 0;
+}
+
 .form-group {
 	flex: 1;
-	min-width: 240rpx;
+	width: 240rpx;
 	display: flex;
 	flex-direction: column;
-	gap: 12rpx;
+}
+
+.form-group > view {
+	margin-bottom: 12rpx;
+}
+
+.form-group > view:last-child {
+	margin-bottom: 0;
 }
 
 .form-group-single {
 	width: 100%;
 	display: flex;
 	flex-direction: column;
-	gap: clamp(8px, 1.5vw, 12px);
+}
+
+.form-group-single > view {
+	margin-bottom: 10px;
+}
+
+.form-group-single > view:last-child {
+	margin-bottom: 0;
 }
 
 .form-group-single.calendar-type-selector {
@@ -523,8 +608,6 @@ function Sumbit ()  {
 
 .form-control {
 	width: 100%;
-	min-width: 0;
-	box-sizing: border-box;
 }
 
 .segtab-wrapper {
@@ -535,15 +618,24 @@ function Sumbit ()  {
 }
 
 .segtab-wrapper :deep(.tm-segtab) {
-	max-width: 100%;
-	width: auto !important;
+	width: 100%;
 }
 
 .info-cards {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(280rpx, 1fr));
-	gap: 16rpx;
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
 	margin-top: 8rpx;
+}
+
+.info-cards > view {
+	width: calc(50% - 8rpx);
+	margin-right: 16rpx;
+	margin-bottom: 16rpx;
+}
+
+.info-cards > view:nth-child(2n) {
+	margin-right: 0;
 }
 
 .info-card {
@@ -566,7 +658,15 @@ function Sumbit ()  {
 	flex-direction: row;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 8rpx;
+}
+
+.bazi-display > view {
+	margin-right: 8rpx;
+	margin-bottom: 8rpx;
+}
+
+.bazi-display > view:last-child {
+	margin-right: 0;
 }
 
 /* 按钮样式已在 app-shell.css 中定义 */
@@ -579,7 +679,6 @@ function Sumbit ()  {
 .submit-button {
 	position: relative;
 	z-index: 2;
-	transition: all 0.3s ease;
 }
 
 .submit-button :deep(.tm-button) {
@@ -607,26 +706,12 @@ function Sumbit ()  {
 	height: 100%;
 	background: linear-gradient(135deg, rgba(102, 126, 234, 0.4) 0%, rgba(118, 75, 162, 0.4) 100%);
 	border-radius: 16rpx;
-	filter: blur(20rpx);
 	z-index: 1;
 	opacity: 0.6;
-	animation: pulse-glow 2s ease-in-out infinite;
 }
 
 .submit-button-wrapper.disabled .submit-button-glow {
 	opacity: 0.15;
-	filter: blur(10rpx);
-}
-
-@keyframes pulse-glow {
-	0%, 100% {
-		opacity: 0.4;
-		transform: translate(-50%, -50%) scale(1);
-	}
-	50% {
-		opacity: 0.8;
-		transform: translate(-50%, -50%) scale(1.05);
-	}
 }
 
 .error-container {
@@ -635,6 +720,5 @@ function Sumbit ()  {
 	border-radius: 12rpx;
 	border-left: 4rpx solid #f56565;
 	width: 100%;
-	box-sizing: border-box;
 }
 </style>

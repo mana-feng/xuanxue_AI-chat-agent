@@ -82,6 +82,14 @@
       }
     },
     {
+      "path": "pages/about/index",
+      "style": {
+        "navigationBarTitleText": "关于",
+        "enablePullDownRefresh": false,
+        "navigationStyle": "custom"
+      }
+    },
+    {
       "path": "pages/chat/index",
       "style": {
         "navigationBarTitleText": "AI 聊天",

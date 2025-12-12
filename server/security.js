@@ -22,7 +22,7 @@ class SecurityUtils {
 			maxLength = 1000,
 			allowSpecialChars = false,
 			trim = true,
-			removeNullBytes = true
+			removeNullBytes = true,
 		} = options;
 
 		let sanitized = String(input);
@@ -80,7 +80,7 @@ class SecurityUtils {
 		}
 
 		const sanitized = this.sanitizeString(username, { maxLength: 50 });
-		
+
 		if (sanitized.length < 2) {
 			return { valid: false, error: '用户名长度不能少于 2 个字符' };
 		}
@@ -163,11 +163,14 @@ class SecurityUtils {
 	 * @returns {Object} { sortBy: string, sortOrder: string }
 	 */
 	static validateSort(sortBy, sortOrder, allowedFields = []) {
-		const validFields = allowedFields.length > 0 ? allowedFields : ['created_at', 'name', 'birth_datetime'];
+		const validFields =
+			allowedFields.length > 0 ? allowedFields : ['created_at', 'name', 'birth_datetime'];
 		const validSortFields = ['created_at', 'name', 'birth_datetime'];
-		
+
 		const field = validFields.includes(sortBy) ? sortBy : 'created_at';
-		const order = ['ASC', 'DESC'].includes(sortOrder?.toUpperCase()) ? sortOrder.toUpperCase() : 'DESC';
+		const order = ['ASC', 'DESC'].includes(sortOrder?.toUpperCase())
+			? sortOrder.toUpperCase()
+			: 'DESC';
 
 		return { sortBy: field, sortOrder: order };
 	}
@@ -187,7 +190,7 @@ class SecurityUtils {
 			'<': '&lt;',
 			'>': '&gt;',
 			'"': '&quot;',
-			"'": '&#039;'
+			"'": '&#039;',
 		};
 
 		return text.replace(/[&<>"']/g, (m) => map[m]);
@@ -292,10 +295,10 @@ class SecurityUtils {
 
 		// 移除 SQL 特殊字符，但保留通配符 % 和 _
 		let sanitized = keyword.trim();
-		
+
 		// 移除危险字符
 		sanitized = sanitized.replace(/[;'"\\]/g, '');
-		
+
 		// 限制长度
 		if (sanitized.length > 100) {
 			sanitized = sanitized.substring(0, 100);
@@ -355,10 +358,10 @@ class SecurityUtils {
 			/\/\*/,
 			/;\s*(DROP|DELETE|UPDATE|INSERT)/i,
 			/(\bOR\b|\bAND\b)\s+\d+\s*=\s*\d+/i,
-			/(\bOR\b|\bAND\b)\s+['"]\s*=\s*['"]/i
+			/(\bOR\b|\bAND\b)\s+['"]\s*=\s*['"]/i,
 		];
 
-		return sqlPatterns.some(pattern => pattern.test(input));
+		return sqlPatterns.some((pattern) => pattern.test(input));
 	}
 
 	/**
@@ -381,12 +384,11 @@ class SecurityUtils {
 			/<img[^>]+src[^>]*=.*javascript:/i,
 			/<svg/i,
 			/eval\s*\(/i,
-			/expression\s*\(/i
+			/expression\s*\(/i,
 		];
 
-		return xssPatterns.some(pattern => pattern.test(input));
+		return xssPatterns.some((pattern) => pattern.test(input));
 	}
 }
 
 module.exports = SecurityUtils;
-

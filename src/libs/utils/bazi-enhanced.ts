@@ -5,6 +5,7 @@
  */
 
 import { Solar, Lunar } from 'lunar-javascript';
+import config from '@/config/config';
 
 // 神煞映射表
 const SHEN_SHA = {
@@ -934,53 +935,161 @@ function calculateShenSha(bazi: any): BaziEnhancedData['shensha'] {
 }
 
 /**
- * 判断格局（简化版）
+ * 判断格局（完善版）
+ * 根据八字格局判断规则：
+ * 1. 以月令（月支）藏干透干定格局
+ * 2. 本气透干优先于中气、余气
+ * 3. 检查破格因素（合化、冲克等）
+ * 4. 考虑特殊格局（从格、化格等）
  */
 function calculateGeJu(bazi: any, shishen: any): BaziEnhancedData['geju'] {
-	const geju: BaziEnhancedData['geju'] = {};
+	const geju: BaziEnhancedData['geju'] = {
+		type: '',
+		description: ''
+	};
 
-	// 获取月柱十神（通常以月柱定格局）
-	// shishen.month 可能是字符串（如"正官"）或数组
-	let monthShishen = shishen.month;
-	if (Array.isArray(monthShishen)) {
-		monthShishen = monthShishen.join('');
-	}
-	const monthShishenStr = String(monthShishen || '');
-	
-	// 简化判断：如果月柱有正官，可能是正官格
-	if (monthShishenStr.includes('正官')) {
-		geju.type = '正官格';
-		geju.description = '正官格：以正官为用，主贵气，性格端正，有责任感';
-	} else if (monthShishenStr.includes('七杀') || monthShishenStr.includes('杀')) {
-		geju.type = '七杀格';
-		geju.description = '七杀格：以七杀为用，主权威，性格刚强，有魄力';
-	} else if (monthShishenStr.includes('正财') || monthShishenStr.includes('财')) {
-		geju.type = '正财格';
-		geju.description = '正财格：以正财为用，主财富，性格务实，善于理财';
-	} else if (monthShishenStr.includes('偏财') || monthShishenStr.includes('才')) {
-		geju.type = '偏财格';
-		geju.description = '偏财格：以偏财为用，主横财，性格灵活，善于把握机会';
-	} else if (monthShishenStr.includes('正印') || monthShishenStr.includes('印')) {
-		geju.type = '正印格';
-		geju.description = '正印格：以正印为用，主文贵，性格温和，有学识';
-	} else if (monthShishenStr.includes('偏印') || monthShishenStr.includes('枭')) {
-		geju.type = '偏印格';
-		geju.description = '偏印格：以偏印为用，主智慧，性格内向，有独特见解';
-	} else if (monthShishenStr.includes('食神') || monthShishenStr.includes('食')) {
-		geju.type = '食神格';
-		geju.description = '食神格：以食神为用，主才华，性格温和，有艺术天赋';
-	} else if (monthShishenStr.includes('伤官') || monthShishenStr.includes('伤')) {
-		geju.type = '伤官格';
-		geju.description = '伤官格：以伤官为用，主才华，性格张扬，有创造力';
-	} else if (monthShishenStr.includes('比肩') || monthShishenStr.includes('比')) {
-		geju.type = '比肩格';
-		geju.description = '比肩格：以比肩为用，主自立，性格独立，有主见';
-	} else if (monthShishenStr.includes('劫财') || monthShishenStr.includes('劫')) {
-		geju.type = '劫财格';
-		geju.description = '劫财格：以劫财为用，主竞争，性格好胜，有冲劲';
-	} else {
+	try {
+		// 获取月支和月干
+		const monthZhi = bazi.getMonthZhi() || '';
+		const monthGan = bazi.getMonthGan() || '';
+		const dayGan = bazi.getDayGan() || '';
+		
+		// 获取月支藏干（本气、中气、余气）
+		const monthHideGan = bazi.getMonthHideGan() || [];
+		if (!Array.isArray(monthHideGan) || monthHideGan.length === 0) {
+			geju.type = '杂格';
+			geju.description = '杂格：月令藏干信息不足，需要综合分析';
+			return geju;
+		}
+
+		// 获取所有天干（年、月、日、时）
+		const yearGan = bazi.getYearGan() || '';
+		const timeGan = bazi.getTimeGan() || '';
+		const allGan = [yearGan, monthGan, dayGan, timeGan].filter(Boolean);
+
+		// 月令本气（第一个藏干）
+		const benQi = monthHideGan[0] || '';
+		// 月令中气（第二个藏干，如果有）
+		const zhongQi = monthHideGan[1] || '';
+		// 月令余气（第三个藏干，如果有）
+		const yuQi = monthHideGan[2] || '';
+
+		// 检查月令藏干是否透干（在年、月、日、时天干中出现）
+		const checkTouGan = (canggan: string): boolean => {
+			return allGan.includes(canggan);
+		};
+
+		// 获取日主对应的十神（使用 config 中的映射表）
+		const getShiShenForGan = (gan: string): string => {
+			if (!dayGan || !gan) return '';
+			const tianganMap = config.tiangan as { [key: string]: { [key: string]: string } };
+			if (tianganMap[dayGan] && tianganMap[dayGan][gan]) {
+				return tianganMap[dayGan][gan];
+			}
+			return '';
+		};
+
+		// 优先判断本气透干
+		let touGanGan = '';
+		let touGanShiShen = '';
+		let isBenQi = false;
+
+		if (benQi && checkTouGan(benQi)) {
+			touGanGan = benQi;
+			touGanShiShen = getShiShenForGan(benQi);
+			isBenQi = true;
+		} else if (zhongQi && checkTouGan(zhongQi)) {
+			touGanGan = zhongQi;
+			touGanShiShen = getShiShenForGan(zhongQi);
+		} else if (yuQi && checkTouGan(yuQi)) {
+			touGanGan = yuQi;
+			touGanShiShen = getShiShenForGan(yuQi);
+		}
+
+		// 如果月令藏干透干，根据透干的十神定格局
+		if (touGanGan && touGanShiShen) {
+			const shishenMap: { [key: string]: { type: string; desc: string } } = {
+				'正官': { type: '正官格', desc: '正官格：月令正官透干，主贵气，性格端正，有责任感。成格条件：正官有力、不被冲克、有印护官。破格因素：伤官见官、七杀混杂、财星坏印。' },
+				'七杀': { type: '七杀格', desc: '七杀格：月令七杀透干，主权威，性格刚强，有魄力。成格条件：七杀有力、有制化（食伤制杀或印化杀）。破格因素：官杀混杂、无制化、比劫夺财。' },
+				'正财': { type: '正财格', desc: '正财格：月令正财透干，主财富，性格务实，善于理财。成格条件：财星有力、有食伤生财、有官护财。破格因素：比劫夺财、财多身弱、无食伤生财。' },
+				'偏财': { type: '偏财格', desc: '偏财格：月令偏财透干，主横财，性格灵活，善于把握机会。成格条件：偏财有力、有食伤生财、身强能担财。破格因素：比劫夺财、财多身弱、无食伤生财。' },
+				'正印': { type: '正印格', desc: '正印格：月令正印透干，主文贵，性格温和，有学识。成格条件：印星有力、有官杀生印、身弱喜印。破格因素：财星坏印、印多身旺、无官杀生印。' },
+				'偏印': { type: '偏印格', desc: '偏印格：月令偏印透干，主智慧，性格内向，有独特见解。成格条件：偏印有力、有食伤配印、身弱喜印。破格因素：财星坏印、印多身旺、食神被夺。' },
+				'食神': { type: '食神格', desc: '食神格：月令食神透干，主才华，性格温和，有艺术天赋。成格条件：食神有力、有财星泄秀、身强能担。破格因素：枭神夺食、食神被克、无财星泄秀。' },
+				'伤官': { type: '伤官格', desc: '伤官格：月令伤官透干，主才华，性格张扬，有创造力。成格条件：伤官有力、有财星泄秀或印星制伤、身强能担。破格因素：伤官见官、无财印、伤官被克。' },
+				'比肩': { type: '比肩格', desc: '比肩格：月令比肩透干，主自立，性格独立，有主见。成格条件：比肩有力、有食伤泄秀、身强能担。破格因素：比劫夺财、无食伤泄秀、身弱不胜。' },
+				'劫财': { type: '劫财格', desc: '劫财格：月令劫财透干，主竞争，性格好胜，有冲劲。成格条件：劫财有力、有食伤泄秀、身强能担。破格因素：比劫夺财、无食伤泄秀、身弱不胜。' }
+			};
+
+			const gejuInfo = shishenMap[touGanShiShen];
+			if (gejuInfo) {
+				geju.type = gejuInfo.type;
+				geju.description = gejuInfo.desc;
+				if (!isBenQi) {
+					geju.description += `（注：以月令${zhongQi ? '中气' : '余气'}透干定格局）`;
+				}
+			} else {
+				geju.type = '杂格';
+				geju.description = `杂格：月令${touGanGan}透干，十神为${touGanShiShen}，格局复杂，需要综合分析`;
+			}
+		} else {
+			// 月令藏干未透干，可能是特殊格局或杂格
+			// 检查是否为从格、化格等特殊格局
+			const monthShishenStr = String(shishen.month || '');
+			
+			// 如果月柱天干本身就是十神，也可以定格局（但优先级较低）
+			if (monthShishenStr.includes('正官') || monthShishenStr.includes('官')) {
+				geju.type = '正官格（月干）';
+				geju.description = '正官格：以月干正官定格局，主贵气。注意：月令藏干未透，格局力量较弱，需结合其他因素判断。';
+			} else if (monthShishenStr.includes('七杀') || monthShishenStr.includes('杀')) {
+				geju.type = '七杀格（月干）';
+				geju.description = '七杀格：以月干七杀定格局，主权威。注意：月令藏干未透，格局力量较弱，需结合其他因素判断。';
+			} else if (monthShishenStr.includes('正财') || monthShishenStr.includes('财')) {
+				geju.type = '正财格（月干）';
+				geju.description = '正财格：以月干正财定格局，主财富。注意：月令藏干未透，格局力量较弱，需结合其他因素判断。';
+			} else if (monthShishenStr.includes('偏财') || monthShishenStr.includes('才')) {
+				geju.type = '偏财格（月干）';
+				geju.description = '偏财格：以月干偏财定格局，主横财。注意：月令藏干未透，格局力量较弱，需结合其他因素判断。';
+			} else if (monthShishenStr.includes('正印') || monthShishenStr.includes('印')) {
+				geju.type = '正印格（月干）';
+				geju.description = '正印格：以月干正印定格局，主文贵。注意：月令藏干未透，格局力量较弱，需结合其他因素判断。';
+			} else if (monthShishenStr.includes('偏印') || monthShishenStr.includes('枭')) {
+				geju.type = '偏印格（月干）';
+				geju.description = '偏印格：以月干偏印定格局，主智慧。注意：月令藏干未透，格局力量较弱，需结合其他因素判断。';
+			} else if (monthShishenStr.includes('食神') || monthShishenStr.includes('食')) {
+				geju.type = '食神格（月干）';
+				geju.description = '食神格：以月干食神定格局，主才华。注意：月令藏干未透，格局力量较弱，需结合其他因素判断。';
+			} else if (monthShishenStr.includes('伤官') || monthShishenStr.includes('伤')) {
+				geju.type = '伤官格（月干）';
+				geju.description = '伤官格：以月干伤官定格局，主才华。注意：月令藏干未透，格局力量较弱，需结合其他因素判断。';
+			} else {
+				geju.type = '杂格';
+				geju.description = '杂格：月令藏干未透干，且月干十神不明显，格局复杂，需要综合分析。建议：查看月令本气、中气、余气，结合日主强弱、五行旺衰、组合关系综合判断。';
+			}
+		}
+
+		// 检查破格因素（简化版，后续可完善）
+		const poGeFactors: string[] = [];
+		
+		// 检查天干五合是否破格
+		const ganHeList = ['甲己', '乙庚', '丙辛', '丁壬', '戊癸'];
+		for (const he of ganHeList) {
+			if (allGan.includes(he[0]) && allGan.includes(he[1])) {
+				// 如果月令透干被合，可能破格
+				if (touGanGan && (he.includes(touGanGan))) {
+					poGeFactors.push(`${he[0]}${he[1]}合，可能影响格局`);
+				}
+			}
+		}
+
+		if (poGeFactors.length > 0) {
+			geju.description += ` 破格因素：${poGeFactors.join('；')}`;
+		}
+
+	} catch (e) {
+		console.error('格局判断失败:', e);
 		geju.type = '杂格';
-		geju.description = '杂格：格局复杂，需要综合分析';
+		geju.description = '杂格：格局判断过程中出现错误，需要综合分析';
 	}
 
 	return geju;
@@ -1027,30 +1136,213 @@ function calculateWuxingWangshuai(bazi: any, solar: Solar): BaziEnhancedData['wu
 }
 
 /**
- * 判断日主强弱（简化版）
+ * 判断日主强弱（完善版）
+ * 根据八字理论，综合考虑：
+ * 1. 得令（月令）：日主是否生于自身五行旺盛的月份
+ * 2. 得地（根气）：地支中是否有日主的根气（本气、中气、余气）
+ * 3. 得势（比劫）：天干地支中与日主同类五行（比肩、劫财）的数量
+ * 4. 得生（印星）：四柱中是否有生助日主的五行（印星）
+ * 5. 得助（通关）：是否有克制日主克星的五行
  */
 function calculateRizhuQiangruo(bazi: any, wuxingWangshuai: BaziEnhancedData['wuxingWangshuai']): BaziEnhancedData['rizhuQiangruo'] {
 	const dayGan = bazi.getDayGan();
 	const dayWuxing = getGanWuxing(dayGan);
-	const wangshuai = wuxingWangshuai[dayWuxing] || '';
-
+	
+	// 获取四柱天干地支
+	const yearGan = bazi.getYearGan() || '';
+	const monthGan = bazi.getMonthGan() || '';
+	const timeGan = bazi.getTimeGan() || '';
+	const yearZhi = bazi.getYearZhi() || '';
+	const monthZhi = bazi.getMonthZhi() || '';
+	const dayZhi = bazi.getDayZhi() || '';
+	const timeZhi = bazi.getTimeZhi() || '';
+	
+	// 获取所有地支的藏干
+	const yearHideGan = bazi.getYearHideGan() || [];
+	const monthHideGan = bazi.getMonthHideGan() || [];
+	const dayHideGan = bazi.getDayHideGan() || [];
+	const timeHideGan = bazi.getTimeHideGan() || [];
+	
+	// 获取日主对应的十神映射表
+	const tianganMap = config.tiangan as { [key: string]: { [key: string]: string } };
+	const getShiShen = (gan: string): string => {
+		if (!dayGan || !gan) return '';
+		return tianganMap[dayGan]?.[gan] || '';
+	};
+	
+	// 1. 得令（月令）：检查月支是否与日主同五行或生助日主
+	let deLing = 0; // 0: 失令, 1: 得令, 2: 得生
+	const monthZhiWuxing = getZhiWuxing(monthZhi);
+	const monthHideGanList = Array.isArray(monthHideGan) ? monthHideGan : [];
+	
+	// 检查月支本气是否与日主同五行
+	if (monthZhiWuxing === dayWuxing) {
+		deLing = 1; // 得令
+	} else {
+		// 检查月支藏干是否有与日主同五行的
+		for (const gan of monthHideGanList) {
+			if (getGanWuxing(gan) === dayWuxing) {
+				deLing = 1; // 得令
+				break;
+			}
+		}
+		// 检查月支是否生助日主（印星）
+		const shengMap: { [key: string]: string } = {
+			'木': '水', '火': '木', '土': '火', '金': '土', '水': '金'
+		};
+		if (shengMap[dayWuxing] === monthZhiWuxing) {
+			deLing = 2; // 得生（印星生助）
+		}
+	}
+	
+	// 2. 得地（根气）：检查地支中是否有日主的根气
+	let deDi = 0; // 根气数量
+	const allZhi = [yearZhi, monthZhi, dayZhi, timeZhi];
+	const allHideGan = [yearHideGan, monthHideGan, dayHideGan, timeHideGan];
+	
+	for (let i = 0; i < allZhi.length; i++) {
+		const zhi = allZhi[i];
+		const hideGan = allHideGan[i];
+		const hideGanList = Array.isArray(hideGan) ? hideGan : [];
+		
+		// 检查地支本气
+		if (getZhiWuxing(zhi) === dayWuxing) {
+			deDi += 1; // 本气根
+		}
+		// 检查藏干
+		for (const gan of hideGanList) {
+			if (getGanWuxing(gan) === dayWuxing) {
+				deDi += 0.5; // 中气或余气根
+			}
+		}
+	}
+	
+	// 3. 得势（比劫）：统计比肩、劫财的数量
+	let deShi = 0; // 比劫数量
+	const allGan = [yearGan, monthGan, dayGan, timeGan];
+	
+	for (const gan of allGan) {
+		const shishen = getShiShen(gan);
+		if (shishen === '比肩' || shishen === '劫财') {
+			deShi += 1;
+		}
+	}
+	
+	// 统计地支藏干中的比劫
+	for (const hideGanList of allHideGan) {
+		const hideGanArray = Array.isArray(hideGanList) ? hideGanList : [];
+		for (const gan of hideGanArray) {
+			const shishen = getShiShen(gan);
+			if (shishen === '比肩' || shishen === '劫财') {
+				deShi += 0.5; // 藏干中的比劫权重较低
+			}
+		}
+	}
+	
+	// 4. 得生（印星）：统计正印、偏印的数量
+	let deSheng = 0; // 印星数量
+	
+	for (const gan of allGan) {
+		const shishen = getShiShen(gan);
+		if (shishen === '正印' || shishen === '偏印') {
+			deSheng += 1;
+		}
+	}
+	
+	// 统计地支藏干中的印星
+	for (const hideGanList of allHideGan) {
+		const hideGanArray = Array.isArray(hideGanList) ? hideGanList : [];
+		for (const gan of hideGanArray) {
+			const shishen = getShiShen(gan);
+			if (shishen === '正印' || shishen === '偏印') {
+				deSheng += 0.5;
+			}
+		}
+	}
+	
+	// 5. 统计克泄耗（官杀、财星、食伤）
+	let keXieHao = 0; // 克泄耗数量
+	
+	for (const gan of allGan) {
+		const shishen = getShiShen(gan);
+		if (shishen === '正官' || shishen === '七杀' || 
+			shishen === '正财' || shishen === '偏财' ||
+			shishen === '食神' || shishen === '伤官') {
+			keXieHao += 1;
+		}
+	}
+	
+	// 统计地支藏干中的克泄耗
+	for (const hideGanList of allHideGan) {
+		const hideGanArray = Array.isArray(hideGanList) ? hideGanList : [];
+		for (const gan of hideGanArray) {
+			const shishen = getShiShen(gan);
+			if (shishen === '正官' || shishen === '七杀' || 
+				shishen === '正财' || shishen === '偏财' ||
+				shishen === '食神' || shishen === '伤官') {
+				keXieHao += 0.5;
+			}
+		}
+	}
+	
+	// 综合评分
+	let score = 0;
+	
+	// 得令权重最高（3分）
+	if (deLing === 1) {
+		score += 3; // 得令
+	} else if (deLing === 2) {
+		score += 1.5; // 得生（印星生助）
+	}
+	
+	// 得地（根气）权重较高（2分）
+	score += Math.min(deDi, 2); // 最多2分
+	
+	// 得势（比劫）权重中等（1.5分）
+	score += Math.min(deShi * 0.5, 1.5); // 最多1.5分
+	
+	// 得生（印星）权重中等（1分）
+	score += Math.min(deSheng * 0.3, 1); // 最多1分
+	
+	// 克泄耗减分（最多减2分）
+	score -= Math.min(keXieHao * 0.2, 2);
+	
+	// 判断强弱
 	let level = '中';
 	let description = '';
-
-	if (wangshuai.includes('旺')) {
+	const evidence: string[] = [];
+	
+	if (score >= 4) {
 		level = '强';
-		description = `日主${dayGan}(${dayWuxing})得令而旺，身强`;
-	} else if (wangshuai.includes('相')) {
+		if (deLing === 1) evidence.push('得令');
+		if (deDi >= 1) evidence.push(`得地（${deDi.toFixed(1)}个根气）`);
+		if (deShi >= 1) evidence.push(`得势（${deShi.toFixed(1)}个比劫）`);
+		if (deSheng >= 1) evidence.push(`得生（${deSheng.toFixed(1)}个印星）`);
+		description = `日主${dayGan}(${dayWuxing})身强。依据：${evidence.join('、')}。`;
+	} else if (score >= 2.5) {
 		level = '中强';
-		description = `日主${dayGan}(${dayWuxing})得相，身中强`;
-	} else if (wangshuai.includes('休') || wangshuai.includes('囚') || wangshuai.includes('死')) {
-		level = '弱';
-		description = `日主${dayGan}(${dayWuxing})失令，身弱`;
-	} else {
+		if (deLing === 1) evidence.push('得令');
+		if (deDi >= 0.5) evidence.push(`得地（${deDi.toFixed(1)}个根气）`);
+		if (deShi >= 0.5) evidence.push(`得势（${deShi.toFixed(1)}个比劫）`);
+		description = `日主${dayGan}(${dayWuxing})身中强。依据：${evidence.join('、') || '综合判断'}。`;
+	} else if (score >= 1) {
 		level = '中';
-		description = `日主${dayGan}(${dayWuxing})中和`;
+		description = `日主${dayGan}(${dayWuxing})身中和。依据：得令/得地/得势/得生/克泄耗综合平衡。`;
+	} else if (score >= -1) {
+		level = '弱';
+		if (deLing === 0) evidence.push('失令');
+		if (deDi < 0.5) evidence.push('失地（根气不足）');
+		if (keXieHao >= 2) evidence.push(`克泄耗多（${keXieHao.toFixed(1)}个）`);
+		description = `日主${dayGan}(${dayWuxing})身弱。依据：${evidence.join('、')}。`;
+	} else {
+		level = '极弱';
+		if (deLing === 0) evidence.push('失令');
+		if (deDi < 0.5) evidence.push('失地（根气不足）');
+		if (keXieHao >= 3) evidence.push(`克泄耗多（${keXieHao.toFixed(1)}个）`);
+		if (deShi < 0.5 && deSheng < 0.5) evidence.push('无助无生');
+		description = `日主${dayGan}(${dayWuxing})身极弱。依据：${evidence.join('、')}。需考虑从格。`;
 	}
-
+	
 	return { level, description };
 }
 

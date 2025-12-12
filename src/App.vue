@@ -4,7 +4,7 @@ import { onPageNotFound } from '@dcloudio/uni-app';
 // 未匹配到页面时统一回到首页
 onPageNotFound(() => {
 	uni.redirectTo({
-		url: '/pages/index/index'
+		url: '/pages/index/index',
 	});
 });
 </script>
@@ -54,9 +54,9 @@ body {
 }
 /* #endif */
 
-@font-face{
+@font-face {
 	font-family: PingFangSC-Medium;
-	src: url('./assets/fonts/pingfang-font.ttf')
+	src: url('/static/fonts/pingfang-font.ttf');
 }
 
 view,

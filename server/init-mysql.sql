@@ -47,11 +47,43 @@ CREATE TABLE IF NOT EXISTS `email_verification_codes` (
   KEY `idx_email_expires` (`email`, `expires_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 大模型配置历史表
+CREATE TABLE IF NOT EXISTS `llm_models` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(100) NOT NULL COMMENT '模型配置名称',
+  `provider` VARCHAR(50) NOT NULL COMMENT '供应商：openai/anthropic/deepseek/qwen/gemini',
+  `base_url` VARCHAR(500) NOT NULL COMMENT 'API Base URL',
+  `api_key` VARCHAR(500) NOT NULL COMMENT 'API Key',
+  `model` VARCHAR(100) NOT NULL COMMENT '模型名称',
+  `extra` TEXT DEFAULT NULL COMMENT '额外参数（JSON）',
+  `is_active` TINYINT(1) DEFAULT 0 COMMENT '是否当前激活',
+  `created_at` DATETIME DEFAULT NULL,
+  `updated_at` DATETIME DEFAULT NULL,
+  KEY `idx_provider` (`provider`),
+  KEY `idx_is_active` (`is_active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 应用配置表（用于存储配置信息）
 CREATE TABLE IF NOT EXISTS `app_config` (
   `key` VARCHAR(100) NOT NULL PRIMARY KEY,
   `value` TEXT NOT NULL,
   `updated_at` DATETIME DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Refresh Token 表（用于存储 refresh token，支持双 Token 认证）
+CREATE TABLE IF NOT EXISTS `refresh_tokens` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `user_id` INT NOT NULL,
+  `token_hash` VARCHAR(255) NOT NULL COMMENT 'refresh token 的 hash 值',
+  `device_id` VARCHAR(255) NOT NULL COMMENT '设备ID',
+  `expires_at` DATETIME NOT NULL COMMENT '过期时间',
+  `revoked_at` DATETIME DEFAULT NULL COMMENT '撤销时间',
+  `created_at` DATETIME DEFAULT NULL,
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_token_hash` (`token_hash`),
+  KEY `idx_device_id` (`device_id`),
+  KEY `idx_expires_at` (`expires_at`),
+  CONSTRAINT `fk_refresh_tokens_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 创建默认管理员账号

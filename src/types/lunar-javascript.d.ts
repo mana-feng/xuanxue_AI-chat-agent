@@ -83,4 +83,3 @@ declare module 'lunar-javascript' {
 		getDaYun(): any[];
 	}
 }
-

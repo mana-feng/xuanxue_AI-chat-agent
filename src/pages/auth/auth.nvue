@@ -2,7 +2,7 @@
 	<tm-app>
 		<view class="page-wrapper">
 			<view class="page-content-scale">
-				<!-- 已登录状态 -->
+				<!-- 已登录状�?-->
 				<view v-if="isLoggedIn" class="login-container">
 					<tm-sheet
 						:round="12"
@@ -218,7 +218,7 @@
 								></tm-input>
 							</view>
 							
-							<!-- 验证码输入区域 -->
+							<!-- 验证码输入区�?-->
 							<view class="input-wrapper">
 								<view class="verification-code-container">
 									<view class="code-input-wrapper">
@@ -286,23 +286,23 @@
 									<tm-text
 										:font-size="22"
 										color="#999999"
-										label="注册即表示同意"
+									label="注册即表示同意"
 									></tm-text>
 									<tm-text
 										:font-size="22"
 										color="#667eea"
-										label="《用户服务协议》"
+									label="《用户服务协议》"
 										@tap="openProtocol('user')"
 									></tm-text>
 									<tm-text
 										:font-size="22"
 										color="#999999"
-										label="和"
+									label="和"
 									></tm-text>
 									<tm-text
 										:font-size="22"
 										color="#667eea"
-										label="《隐私权政策》"
+									label="《隐私权政策》"
 										@tap="openProtocol('privacy')"
 									></tm-text>
 								</view>
@@ -349,15 +349,19 @@
 
 <script lang="ts" setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { useUserStore } from '@/store/user.ts';
-import { API_BASE_URL } from '@/config/config.ts';
-import { sendEmailVerificationCode, verifyEmailCode } from '@/config/emailVerification.ts';
+import { useUserStore } from '@/store/user';
+import { API_BASE_URL } from '@/config/config';
+import { sendEmailVerificationCode, verifyEmailCode } from '@/config/emailVerification';
+import { getDeviceId } from '@/utils/device';
+import { sanitizeInput } from '@/utils/sanitize';
+
+
 
 const user_store = useUserStore();
 
 const isLoggedIn = computed(() => user_store.isLoggedIn);
 
-// 标签页切换
+// 标签页切�?
 const currentTab = ref<'login' | 'register'>('login');
 
 // 登录表单（支持邮箱或用户名）
@@ -365,6 +369,8 @@ const loginIdentifier = ref('');
 const loginPassword = ref('');
 const loginLoading = ref(false);
 const loginError = ref('');
+// 移除记住密码功能
+
 
 // 注册表单
 const registerUsername = ref('');
@@ -375,7 +381,7 @@ const registerPasswordConfirm = ref('');
 const registerLoading = ref(false);
 const registerError = ref('');
 
-// 验证码相关
+// 验证码相�?
 const sendCodeLoading = ref(false);
 const codeCountdown = ref(0);
 let countdownTimer: any = null;
@@ -409,22 +415,37 @@ function submitLogin() {
 	loginLoading.value = true;
 	loginError.value = '';
 
+	// 获取设备ID
+	const deviceId = getDeviceId();
+	const safeIdentifier = sanitizeInput(loginIdentifier.value, 255);
+	const safePassword = sanitizeInput(loginPassword.value, 128);
+
 	uni.request({
-		url: API_BASE_URL + '/api/login',
+		url: API_BASE_URL + '/api/auth/login',
 		method: 'POST',
 		data: {
-			identifier: loginIdentifier.value,
-			password: loginPassword.value
+			identifier: safeIdentifier,
+			password: safePassword,
+			device_id: deviceId
 		},
+		header: {
+			'X-Device-Id': deviceId
+		},
+		// H5 需要 withCredentials 来接收 cookie
+		// #ifdef H5
+		withCredentials: true,
+		// #endif
 		success(res: any) {
-			if (res.statusCode >= 200 && res.statusCode < 300 && res.data?.token) {
+			if (res.statusCode >= 200 && res.statusCode < 300 && res.data?.access_token) {
 				const user = res.data.user;
 				user_store.setAuth({
 					username: user?.username || null,
 					email: user?.email,
-					token: res.data.token,
+					access_token: res.data.access_token,
+					refresh_token: res.data.refresh_token,
 					role: user?.role || 'user'
 				});
+				
 				uni.showToast({
 					title: '登录成功',
 					icon: 'success',
@@ -505,23 +526,29 @@ async function sendVerificationCode() {
 }
 
 async function submitRegister() {
-	if (!registerUsername.value || !registerEmail.value || !registerPassword.value) {
+	const safeUsername = sanitizeInput(registerUsername.value, 50);
+	const safeEmail = sanitizeInput(registerEmail.value, 255);
+	const safePassword = sanitizeInput(registerPassword.value, 128);
+	const safePasswordConfirm = sanitizeInput(registerPasswordConfirm.value, 128);
+	const safeCode = sanitizeInput(registerVerificationCode.value, 10);
+
+	if (!safeUsername || !safeEmail || !safePassword) {
 		registerError.value = '请输入用户名、邮箱和密码';
 		return;
 	}
-	if (!registerVerificationCode.value) {
+	if (!safeCode) {
 		registerError.value = '请输入邮箱验证码';
 		return;
 	}
-	if (registerUsername.value.length < 2) {
+	if (safeUsername.length < 2) {
 		registerError.value = '用户名长度不能少于 2 个字符';
 		return;
 	}
-	if (registerPassword.value.length < 6) {
+	if (safePassword.length < 6) {
 		registerError.value = '密码长度不能少于 6 位';
 		return;
 	}
-	if (registerPasswordConfirm.value !== registerPassword.value) {
+	if (safePasswordConfirm !== safePassword) {
 		registerError.value = '两次输入的密码不一致';
 		return;
 	}
@@ -531,7 +558,7 @@ async function submitRegister() {
 	registerError.value = '';
 	
 	try {
-		const verifyResult = await verifyEmailCode(registerEmail.value, registerVerificationCode.value, 'register');
+		const verifyResult = await verifyEmailCode(safeEmail, safeCode, 'register');
 		if (!verifyResult.success) {
 			registerError.value = verifyResult.message || '验证码验证失败';
 			registerLoading.value = false;
@@ -549,21 +576,33 @@ async function submitRegister() {
 	}
 	
 	// 验证码验证成功，继续注册流程
+	const deviceId = getDeviceId();
 	uni.request({
 		url: API_BASE_URL + '/api/register',
 		method: 'POST',
 		data: {
-			username: registerUsername.value,
-			email: registerEmail.value,
-			password: registerPassword.value
+			username: safeUsername,
+			email: safeEmail,
+			password: safePassword,
+			device_id: deviceId
 		},
+		header: {
+			'X-Device-Id': deviceId
+		},
+		// H5 需要 withCredentials 来接收 cookie
+		// #ifdef H5
+		withCredentials: true,
+		// #endif
 		success(res: any) {
-			if (res.statusCode >= 200 && res.statusCode < 300 && res.data?.token) {
+			if (res.statusCode >= 200 && res.statusCode < 300 && res.data?.access_token) {
 				const user = res.data.user;
+				const deviceId = getDeviceId();
+				
 				user_store.setAuth({
 					username: user?.username || registerUsername.value,
 					email: user?.email || registerEmail.value,
-					token: res.data.token,
+					access_token: res.data.access_token,
+					refresh_token: res.data.refresh_token,
 					role: user?.role || 'user'
 				});
 				uni.showToast({
@@ -600,15 +639,15 @@ function goToAdmin() {
 			url: '/pages/admin/dashboard'
 		});
 	} else {
-		// 跳转到登录页面
+		// 跳转到登录页�?
 		uni.navigateTo({
 			url: '/pages/auth/auth'
 		});
 	}
 }
 
-function logout() {
-	user_store.logout();
+async function logout() {
+	await user_store.logout();
 	uni.showToast({
 		title: '已退出登录',
 		icon: 'none',
@@ -627,43 +666,8 @@ onUnmounted(() => {
 
 <style scoped>
 .page-wrapper {
-	min-height: 100vh;
 	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 	position: relative;
-	overflow: hidden;
-}
-
-.page-wrapper::before {
-	content: '';
-	position: absolute;
-	top: -50%;
-	right: -50%;
-	width: 200%;
-	height: 200%;
-	background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
-	animation: pulse 10s ease-in-out infinite;
-}
-
-.page-wrapper::after {
-	content: '';
-	position: absolute;
-	bottom: -30%;
-	left: -30%;
-	width: 160%;
-	height: 160%;
-	background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-	animation: pulse 12s ease-in-out infinite reverse;
-}
-
-@keyframes pulse {
-	0%, 100% {
-		transform: scale(1) rotate(0deg);
-		opacity: 0.6;
-	}
-	50% {
-		transform: scale(1.15) rotate(5deg);
-		opacity: 0.4;
-	}
 }
 
 .page-content-scale {
@@ -677,7 +681,6 @@ onUnmounted(() => {
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	min-height: calc(100vh - 120rpx);
 }
 
 .header-section {
@@ -692,7 +695,6 @@ onUnmounted(() => {
 	height: 160rpx;
 	border-radius: 50%;
 	background: rgba(255, 255, 255, 0.2);
-	backdrop-filter: blur(10px);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -702,16 +704,12 @@ onUnmounted(() => {
 
 .login-card {
 	width: 100%;
-	max-width: 600rpx;
 	background: rgba(255, 255, 255, 0.98);
-	backdrop-filter: blur(10px);
 }
 
 .user-info-card {
 	width: 100%;
-	max-width: 600rpx;
 	background: rgba(255, 255, 255, 0.98);
-	backdrop-filter: blur(10px);
 }
 
 .user-header {
@@ -750,7 +748,6 @@ onUnmounted(() => {
 	align-items: center;
 	padding: 20rpx 0;
 	border-bottom: 4rpx solid transparent;
-	transition: all 0.3s;
 }
 
 .tab-item.active {
@@ -787,8 +784,15 @@ onUnmounted(() => {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	gap: 20rpx;
 	width: 100%;
+}
+
+.verification-code-container > view {
+	margin-right: 20rpx;
+}
+
+.verification-code-container > view:last-child {
+	margin-right: 0;
 }
 
 .code-input-wrapper {
@@ -796,13 +800,11 @@ onUnmounted(() => {
 }
 
 .code-button {
-	flex-shrink: 0;
-	min-width: 180rpx;
+	width: 180rpx;
 }
 
 .login-input {
 	width: 100% !important;
-	box-sizing: border-box;
 }
 
 .input-wrapper :deep(.tm-input) {
@@ -824,6 +826,18 @@ onUnmounted(() => {
 	border-left: 4rpx solid #F56C6C;
 }
 
+.remember-password-wrapper {
+	margin-top: 20rpx;
+	margin-bottom: 10rpx;
+}
+
+.remember-checkbox {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	cursor: pointer;
+}
+
 .protocol-hint {
 	display: flex;
 	flex-direction: row;
@@ -840,7 +854,15 @@ onUnmounted(() => {
 	flex-direction: row;
 	align-items: center;
 	flex-wrap: wrap;
-	gap: 4rpx;
+}
+
+.protocol-text-wrapper > view {
+	margin-right: 4rpx;
+	margin-bottom: 4rpx;
+}
+
+.protocol-text-wrapper > view:last-child {
+	margin-right: 0;
 }
 
 .footer-hint {

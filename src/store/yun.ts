@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { Solar, Lunar, Yun } from 'lunar-javascript';
+import { Solar, Lunar } from 'lunar-javascript';
 import utils from '@/libs/utils/utils';
 
 // 类型定义
@@ -61,7 +61,13 @@ export const useYunStore = defineStore('yun', {
 			day_index: 0,
 			time_index: 0,
 			// 是否已完成初始自动定位（用于防止用户手动选择后被重置）
-			autoLocated: false
+			autoLocated: false,
+			// 缓存流日数据，避免重复计算
+			_dayListCache: null as { key: string; data: DayItem[] } | null,
+			// 记录上次计算流年时的大运索引
+			_lastDayunIndex: -1 as number,
+			// 记录上次计算流月时的缓存键
+			_lastMonthCacheKey: '' as string,
 		};
 	},
 	actions: {
@@ -78,6 +84,10 @@ export const useYunStore = defineStore('yun', {
 			this.day_list = [];
 			this.time_list = [];
 			this.autoLocated = false; // 重置自动定位标志
+			// 清除所有缓存
+			this._dayListCache = null;
+			this._lastDayunIndex = -1;
+			this._lastMonthCacheKey = '';
 			this.resolveDaYun();
 		},
 		// 大运
@@ -92,7 +102,7 @@ export const useYunStore = defineStore('yun', {
 					start_year: item.getStartYear(),
 					start_age: item.getStartAge(),
 					ganzhi: ganzhi,
-					shishen: ganzhi == '流年' ? '流年' : utils.GetShiShen(ganzhi)
+					shishen: ganzhi == '流年' ? '流年' : utils.GetShiShen(ganzhi),
 				});
 			}
 
@@ -112,8 +122,15 @@ export const useYunStore = defineStore('yun', {
 			const original = this.original;
 			const current_index = this.current_index;
 
+			// 检查缓存：如果大运索引没有变化，且已有流年数据，则不需要重新计算
+			if (this.year_list.length > 0 && this._lastDayunIndex === current_index) {
+				// 清除流日缓存，因为流年变化了
+				this._dayListCache = null;
+				this.resolveLiuMonth();
+				return;
+			}
+
 			const dayun = original[current_index];
-			const xiaoyun = dayun.getXiaoYun();
 			const year = dayun.getLiuNian();
 			const year_list = [];
 
@@ -124,17 +141,20 @@ export const useYunStore = defineStore('yun', {
 					year: item.getYear(),
 					ganzhi: ganzhi,
 					age: item.getAge(),
-					shishen: utils.GetShiShen(ganzhi)
+					shishen: utils.GetShiShen(ganzhi),
 				});
 			}
 
 			this.year_list = year_list;
+			this._lastDayunIndex = current_index;
 			this.month_index = 0;
 			this.day_index = 0;
 			this.time_index = 0;
 			this.month_list = [];
 			this.day_list = [];
 			this.time_list = [];
+			// 清除流日缓存
+			this._dayListCache = null;
 
 			this.resolveLiuMonth();
 		},
@@ -142,6 +162,15 @@ export const useYunStore = defineStore('yun', {
 			const original = this.original;
 			const current_index = this.current_index;
 			const year_index = this.year_index;
+
+			// 检查缓存：如果流年索引没有变化，且已有流月数据，则不需要重新计算
+			const monthCacheKey = `${current_index}_${year_index}`;
+			if (this.month_list.length > 0 && this._lastMonthCacheKey === monthCacheKey) {
+				// 清除流日缓存，因为流月可能变化了
+				this._dayListCache = null;
+				this.resolveLiuDay();
+				return;
+			}
 
 			const dayun = original[current_index];
 			const year = dayun.getLiuNian();
@@ -156,16 +185,29 @@ export const useYunStore = defineStore('yun', {
 			const nextYearSolar = Solar.fromDate(new Date(currentYear + 1, 0, 1));
 			const nextYearLunar = nextYearSolar.getLunar();
 			const nextYearJieqi = nextYearLunar.getJieQiTable();
-			
-			const map = ['立春', '惊蛰', '清明', '立夏', '芒种', '小暑', '立秋', '白露', '寒露', '立冬', '大雪', 'XIAO_HAN'];
+
+			const map = [
+				'立春',
+				'惊蛰',
+				'清明',
+				'立夏',
+				'芒种',
+				'小暑',
+				'立秋',
+				'白露',
+				'寒露',
+				'立冬',
+				'大雪',
+				'XIAO_HAN',
+			];
 
 			for (let i = 0; i < month.length; i++) {
 				const item = month[i];
 				const ganzhi = item.getGanZhi();
-				
+
 				let _jieqi: Solar;
 				let _next_jieqi: Solar;
-				
+
 				if (i === 11) {
 					// 小寒流月：从下一年的节气表获取小寒和立春（优先使用中文键名）
 					_jieqi = nextYearJieqi['小寒'] || nextYearJieqi['XIAO_HAN'];
@@ -179,7 +221,7 @@ export const useYunStore = defineStore('yun', {
 					_jieqi = jieqi[map[i]];
 					_next_jieqi = jieqi[map[i + 1]];
 				}
-				
+
 				month_list.push({
 					original: _jieqi,
 					year: year[year_index].getYear(),
@@ -187,15 +229,18 @@ export const useYunStore = defineStore('yun', {
 					next_jieqi_date: _next_jieqi.getMonth() + '/' + _next_jieqi.getDay(),
 					date: _jieqi.getMonth() + '/' + _jieqi.getDay(),
 					ganzhi: ganzhi,
-					shishen: utils.GetShiShen(ganzhi)
+					shishen: utils.GetShiShen(ganzhi),
 				});
 			}
 
 			this.month_list = month_list;
+			this._lastMonthCacheKey = monthCacheKey;
 			this.day_index = 0;
 			this.time_index = 0;
 			this.day_list = [];
 			this.time_list = [];
+			// 清除流日缓存
+			this._dayListCache = null;
 
 			// 自动定位到当前系统时间（延迟执行，确保数据已更新）
 			// 只在未完成初始自动定位时执行
@@ -203,6 +248,9 @@ export const useYunStore = defineStore('yun', {
 				setTimeout(() => {
 					this.autoLocateToCurrentDate(false);
 				}, 0);
+			} else {
+				// 如果已经完成自动定位，直接解析流日
+				this.resolveLiuDay();
 			}
 		},
 		async resolveLiuDay() {
@@ -214,6 +262,15 @@ export const useYunStore = defineStore('yun', {
 			const currentMonth = month_list[month_index] as any;
 			if (!currentMonth) {
 				this.day_list = [];
+				this.time_index = 0;
+				this.time_list = [];
+				return;
+			}
+
+			// 检查缓存：如果流年和流月索引没有变化，且已有流日数据，则不需要重新计算
+			const cacheKey = `${year_index}_${month_index}`;
+			if (this._dayListCache && this._dayListCache.key === cacheKey && this._dayListCache.data) {
+				this.day_list = this._dayListCache.data;
 				this.time_index = 0;
 				this.time_list = [];
 				return;
@@ -232,7 +289,7 @@ export const useYunStore = defineStore('yun', {
 			} else {
 				// 其他流月：使用当前节气的 Solar 对象作为起始
 				startSolar = currentMonth.original as Solar;
-				
+
 				// 计算结束日期（下一个节气的日期）
 				const [nextMonth, nextDay] = currentMonth.next_jieqi_date.split('/').map(Number);
 				const endYear = month_index < 10 ? year : year + 1;
@@ -246,15 +303,23 @@ export const useYunStore = defineStore('yun', {
 			// 对于小寒流月，包含结束日期（2月3号）
 			// 对于其他流月，不包含结束日期（因为结束日期是下一个流月的起始日期）
 			const includeEndDate = month_index === 11;
-			
-			while (true) {
+
+			// 计算日期范围，避免无限循环
+			const startTime = startSolar.toYmdHms();
+			const endTime = endSolar.toYmdHms();
+			const maxDays = 60; // 最多60天，防止无限循环
+			let dayCount = 0;
+
+			// 遍历日期，直到超过结束日期
+			// eslint-disable-next-line no-constant-condition
+			while (dayCount < maxDays) {
 				const currentYear = currentSolar.getYear();
 				const currentMonthNum = currentSolar.getMonth();
 				const currentDay = currentSolar.getDay();
 				const endYear = endSolar.getYear();
 				const endMonthNum = endSolar.getMonth();
 				const endDay = endSolar.getDay();
-				
+
 				// 判断是否超过结束日期
 				if (currentYear > endYear) break;
 				if (currentYear === endYear && currentMonthNum > endMonthNum) break;
@@ -265,7 +330,7 @@ export const useYunStore = defineStore('yun', {
 						if (currentDay >= endDay) break;
 					}
 				}
-				
+
 				const lunar = currentSolar.getLunar();
 				const ganzhi = lunar.getDayInGanZhi();
 				const params = {
@@ -274,13 +339,20 @@ export const useYunStore = defineStore('yun', {
 					gan: lunar.getDayGan(),
 					zhi: lunar.getDayZhi(),
 					ganzhi: ganzhi,
-					shishen: utils.GetShiShen(ganzhi)
+					shishen: utils.GetShiShen(ganzhi),
 				};
 				day_list.push(params);
-				
+
 				// 移动到下一天
 				currentSolar = currentSolar.next(1);
+				dayCount++;
 			}
+
+			// 缓存结果
+			this._dayListCache = {
+				key: cacheKey,
+				data: day_list
+			};
 
 			this.day_list = day_list;
 			this.time_index = 0;
@@ -294,7 +366,8 @@ export const useYunStore = defineStore('yun', {
 			const { date: _date } = day_list[day_index];
 
 			const date = _date + ' 00:00:00';
-			const start_time = new Date(date.replace(/-/g, '/').replace(/T/g, ' ')).getTime() - 60 * 60 * 1000;
+			const start_time =
+				new Date(date.replace(/-/g, '/').replace(/T/g, ' ')).getTime() - 60 * 60 * 1000;
 
 			const time_list = [];
 			for (let i = 0; i < 12; i++) {
@@ -306,7 +379,7 @@ export const useYunStore = defineStore('yun', {
 					zhi: lunar.getTimeZhi(),
 					ganzhi: ganzhi,
 					time: lunar.getHour() + ':00',
-					shishen: utils.GetShiShen(ganzhi)
+					shishen: utils.GetShiShen(ganzhi),
 				};
 				time_list.push(params);
 			}
@@ -319,12 +392,12 @@ export const useYunStore = defineStore('yun', {
 			if (this.autoLocated && !skipAutoLocate) {
 				return;
 			}
-			
+
 			const now = new Date();
 			const currentYear = now.getFullYear();
 			const currentMonth = now.getMonth() + 1; // 1-12
 			const currentDay = now.getDate();
-			
+
 			// 1. 定位大运：找到 start_year <= 当前年份的最大索引
 			if (!skipAutoLocate && this.dayun_list && this.dayun_list.length > 0) {
 				let dayunIndex = 0;
@@ -344,7 +417,7 @@ export const useYunStore = defineStore('yun', {
 					return;
 				}
 			}
-			
+
 			// 2. 定位流年：找到匹配当前年份的索引
 			if (!skipAutoLocate && this.year_list && this.year_list.length > 0) {
 				const yearIndex = this.year_list.findIndex((item: any) => item.year == currentYear);
@@ -356,24 +429,24 @@ export const useYunStore = defineStore('yun', {
 					return;
 				}
 			}
-			
+
 			// 3. 定位流月：找到包含当前日期的流月
 			if (this.month_list && this.month_list.length > 0) {
 				let monthIndex = -1;
 				const currentYear = now.getFullYear();
 				const currentMonthNum = now.getMonth() + 1;
 				const currentDayNum = now.getDate();
-				
+
 				for (let i = 0; i < this.month_list.length; i++) {
 					const item = this.month_list[i] as any;
 					if (!item.date || !item.next_jieqi_date) continue;
-					
+
 					// 获取当前流年的年份
 					const yearList = this.year_list;
 					const yearIndex = this.year_index;
 					if (!yearList.length || yearIndex < 0 || yearIndex >= yearList.length) break;
 					const year = (yearList[yearIndex] as any).year;
-					
+
 					// 计算流月的日期范围
 					let startYear, startMonth, startDay, endYear, endMonth, endDay;
 					if (i === 11) {
@@ -390,18 +463,18 @@ export const useYunStore = defineStore('yun', {
 						startYear = year;
 						startMonth = month;
 						startDay = day;
-						
+
 						endYear = i < 10 ? year : year + 1;
 						const [nextMonth, nextDay] = item.next_jieqi_date.split('/').map(Number);
 						endMonth = nextMonth;
 						endDay = nextDay;
 					}
-					
+
 					// 判断当前日期是否在这个流月范围内
 					const currentDate = new Date(currentYear, currentMonthNum - 1, currentDayNum);
 					const startDate = new Date(startYear, startMonth - 1, startDay);
 					const endDate = new Date(endYear, endMonth - 1, endDay);
-					
+
 					// 对于非小寒流月，结束日期不包含（因为结束日期是下一个流月的起始日期）
 					if (i === 11) {
 						// 小寒流月：包含结束日期
@@ -417,7 +490,7 @@ export const useYunStore = defineStore('yun', {
 						}
 					}
 				}
-				
+
 				if (monthIndex >= 0 && this.month_index !== monthIndex) {
 					this.month_index = monthIndex;
 					await this.resolveLiuDay();
@@ -427,22 +500,24 @@ export const useYunStore = defineStore('yun', {
 					}
 				}
 			}
-			
+
 			// 4. 定位流日：找到匹配当前日期的索引
 			if (this.day_list && this.day_list.length > 0) {
 				// 格式化当前日期为 YYYY/M/D 或 YYYY/MM/DD 格式
 				const currentDateStr1 = `${currentYear}/${currentMonth}/${currentDay}`;
 				const currentDateStr2 = `${currentYear}/${currentMonth.toString().padStart(2, '0')}/${currentDay.toString().padStart(2, '0')}`;
-				
+
 				const dayIndex = this.day_list.findIndex((item: any) => {
 					if (item.date) {
 						// 格式化日期字符串进行比较（统一格式）
 						const itemDate = item.date.replace(/-/g, '/');
 						// 尝试多种格式匹配
-						return itemDate === currentDateStr1 || 
-						       itemDate === currentDateStr2 ||
-						       itemDate.startsWith(currentDateStr1) ||
-						       itemDate.startsWith(currentDateStr2);
+						return (
+							itemDate === currentDateStr1 ||
+							itemDate === currentDateStr2 ||
+							itemDate.startsWith(currentDateStr1) ||
+							itemDate.startsWith(currentDateStr2)
+						);
 					}
 					return false;
 				});
@@ -450,7 +525,7 @@ export const useYunStore = defineStore('yun', {
 					this.day_index = dayIndex;
 				}
 			}
-			
+
 			// 标记已完成自动定位
 			if (!skipAutoLocate) {
 				this.autoLocated = true;
@@ -459,6 +534,6 @@ export const useYunStore = defineStore('yun', {
 		// 标记用户已手动选择时间，禁用自动定位
 		markManualSelection() {
 			this.autoLocated = true;
-		}
-	}
+		},
+	},
 });

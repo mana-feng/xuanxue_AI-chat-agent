@@ -73,7 +73,7 @@ uni-page-body {
 	color: inherit;
 }
 
-.app-header__logo img {
+.app-header__logo .logo-icon {
 	width: clamp(24px, 4vw, 32px);
 	height: clamp(24px, 4vw, 32px);
 	object-fit: contain;

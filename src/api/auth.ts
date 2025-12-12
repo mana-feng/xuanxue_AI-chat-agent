@@ -1,32 +1,13 @@
 /**
  * 认证相关API
+ *
+ * 注意：项目中直接使用 uni.request 进行认证请求，
+ * 因此此文件暂时为空，保留以备将来可能需要统一 API 调用方式。
  */
 
-import { request } from '@/api/index';
-
-export interface LoginParams {
-	identifier: string; // 邮箱或用户名
-	password: string;
-}
-
-export interface RegisterParams {
-	email: string;
-	password: string;
-	code: string; // 邮箱验证码
-	username?: string;
-}
-
-export interface AuthResponse {
-	token: string;
-	user: {
-		id: number;
-		username?: string;
-		email: string;
-		role?: 'user' | 'admin';
-	};
-}
-
-// 以下函数未在项目中使用（项目中直接使用 uni.request），已删除：
+// 以下接口和函数未在项目中使用（项目中直接使用 uni.request），已删除：
+// - LoginParams - 登录参数类型
+// - RegisterParams - 注册参数类型
+// - AuthResponse - 认证响应类型
 // - login() - 登录函数
 // - register() - 注册函数
-

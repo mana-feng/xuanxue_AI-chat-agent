@@ -1,0 +1,230 @@
+<template>
+	<tm-app>
+		<view class="app-shell">
+			<yx-nav-header></yx-nav-header>
+			<view class="app-main">
+				<view class="page-shell">
+					<view class="hero-card">
+						<view class="hero-title">
+							<view class="title-main">关于作者</view>
+							<view class="title-sub">Wild Chicken University · 玄学 PhD</view>
+						</view>
+						<view class="hero-media">
+							<image class="diploma-img" src="/static/icons/diploma.png" mode="aspectFit"></image>
+						</view>
+						<view class="hero-desc">
+							<tm-text :font-size="28" color="#4a5568" label="作者在 Wild Chicken University 完成了玄学 PhD，带着敬畏与好奇，想把学到的术数知识用来帮助有需要的人。"></tm-text>
+							<tm-text :font-size="28" color="#4a5568" :margin="[0, 12, 0, 0]" label="在这里，每一次排盘都是一次温柔的对话：先理解，再建议，而不是神神叨叨的吓人结论。"></tm-text>
+						</view>
+					</view>
+
+					<view class="story-card">
+						<view class="section-header">
+							<tm-icon name="tmicon-md-book" :font-size="30" color="#667eea"></tm-icon>
+							<tm-text :font-size="32" color="#2d3748" bold label="故事缘起"></tm-text>
+						</view>
+						<view class="section-body">
+							<tm-text
+								:font-size="28"
+								color="#4a5568"
+								:label="`在校园里，作者把昼夜都用在排盘和推演上，试图用现代视角去理解传统玄学。朋友们常带着困惑来求解，作者发现，真正的价值不是玄而又玄的神秘，而是陪伴、解释和给出可行的选择。`"
+							></tm-text>
+							<tm-text
+								:font-size="28"
+								color="#4a5568"
+								:margin="[0, 20, 0, 0]"
+								:label="`于是有了这个站点：把八字、六爻、奇门等工具做成可用的服务，让需要的人可以更轻松地获得指引。`"
+							></tm-text>
+							<tm-text
+								:font-size="28"
+								color="#4a5568"
+								:label="`图书馆的长桌、夜半的自习室、和室友的咖啡都见证了无数次推演：有人为择业纠结，有人为感情迷茫，也有人只想知道“我还行不行”。这些经历让作者更确定，科学的方法与温柔的建议，可以让传统玄学更有温度。`"
+							></tm-text>
+							<tm-text
+								:font-size="28"
+								color="#4a5568"
+								:margin="[0, 12, 0, 0]"
+								:label="`后来作者把毕业论文主题改成“玄学与 AI：基于占断规则的决策建模”，把卦象拆成特征、把古籍注解成训练集，用小模型做推断，用可解释方法还原“卦象→建议”的链路。指导老师打趣说：“你这是把卦象当作决策树了”，作者也因此更坚定要把工具做成人人可用的产品。`"
+							></tm-text>
+							<tm-text
+								:font-size="28"
+								color="#4a5568"
+								:margin="[0, 12, 0, 0]"
+								:label="`毕业时，作者拿着刚发下的 diploma、模型训练日志和一摞写满推演的草稿本，决定继续迭代这个站点：用算法守住玄学的温度，让每个需要“聊聊未来”的人，都能在这里得到清晰、温和、可执行的建议。`"
+							></tm-text>
+						</view>
+					</view>
+
+					<view class="story-card">
+						<view class="section-header">
+							<tm-icon name="tmicon-md-heart" :font-size="30" color="#48bb78"></tm-icon>
+							<tm-text :font-size="32" color="#2d3748" bold label="想做的事"></tm-text>
+						</view>
+						<view class="section-body">
+							<view class="bullet">
+								<view class="dot"></view>
+								<tm-text :font-size="28" color="#4a5568" label="用易懂的方式呈现排盘结果，让决策更有底气。"></tm-text>
+							</view>
+							<view class="bullet">
+								<view class="dot"></view>
+								<tm-text :font-size="28" color="#4a5568" label="尊重隐私，只记录必要信息，帮助用户更安心。"></tm-text>
+							</view>
+							<view class="bullet">
+								<view class="dot"></view>
+								<tm-text :font-size="28" color="#4a5568" label="把玄学当作工具，而非束缚，让人们找到自己的路。"></tm-text>
+							</view>
+						</view>
+					</view>
+
+					<view class="story-card">
+						<view class="section-header">
+							<tm-icon name="tmicon-md-rocket" :font-size="30" color="#ed8936"></tm-icon>
+							<tm-text :font-size="32" color="#2d3748" bold label="接下来"></tm-text>
+						</view>
+						<view class="section-body">
+							<tm-text
+								:font-size="28"
+								color="#4a5568"
+								:label="`作者正在把六爻、奇门排盘也搬上来，等完善后会第一时间开放。也欢迎把你的想法和需求告诉我们。`"
+							></tm-text>
+							<tm-text
+								:font-size="28"
+								color="#4a5568"
+								:margin="[0, 16, 0, 0]"
+								:label="`如果你愿意分享你的校园故事、人生选择，或者单纯想聊聊运势，欢迎给我们留言。或许一张盘、一段建议，能成为你下一个决定的底气。`"
+							></tm-text>
+						</view>
+					</view>
+
+				</view>
+			</view>
+		</view>
+	</tm-app>
+</template>
+
+<script setup lang="ts">
+// 纯展示页，无额外逻辑
+</script>
+
+<style scoped>
+.app-shell {
+	display: flex;
+	flex-direction: column;
+	min-height: 100vh;
+	background: linear-gradient(180deg, #f6f9ff 0%, #ffffff 100%);
+}
+
+.app-main {
+	flex: 1;
+	padding: 24rpx;
+}
+
+.page-shell {
+	display: flex;
+	flex-direction: column;
+}
+
+.hero-card {
+	background: linear-gradient(135deg, #eef2ff 0%, #ffffff 100%);
+	border: 1rpx solid #e2e8f0;
+	border-radius: 16rpx;
+	padding: 28rpx;
+	margin-bottom: 20rpx;
+}
+
+.hero-title {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	margin-bottom: 12rpx;
+	text-align: center;
+}
+
+.title-main {
+	font-size: 36rpx;
+	color: #1a202c;
+	font-weight: 700;
+}
+
+.title-sub {
+	font-size: 26rpx;
+	color: #718096;
+	margin-top: 6rpx;
+}
+
+.hero-desc {
+	margin-top: 8rpx;
+	align-items: center;
+	text-align: center;
+	display: flex;
+	flex-direction: column;
+}
+
+.hero-media {
+	margin: 12rpx 0;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	width: 100%;
+}
+
+.diploma-img {
+	width: 840rpx;
+	height: 560rpx;
+	max-width: 100%;
+	max-height: 100%;
+	align-self: center;
+	display: block;
+	border-radius: 12rpx;
+	border: 1rpx solid #e2e8f0;
+	background: #ffffff;
+}
+
+.story-card {
+	background: #ffffff;
+	border: 1rpx solid #e2e8f0;
+	border-radius: 16rpx;
+	padding: 24rpx;
+	margin-bottom: 20rpx;
+}
+
+.section-header {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+.section-header tm-text {
+	margin-left: 10rpx;
+}
+
+.section-body {
+	margin-top: 16rpx;
+	display: flex;
+	flex-direction: column;
+}
+
+.section-body tm-text + tm-text {
+	margin-top: 12rpx;
+}
+
+.bullet {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	margin-bottom: 12rpx;
+}
+
+.bullet:last-child {
+	margin-bottom: 0;
+}
+
+.dot {
+	width: 12rpx;
+	height: 12rpx;
+	border-radius: 50%;
+	background: #667eea;
+	margin-right: 12rpx;
+}
+</style>
+

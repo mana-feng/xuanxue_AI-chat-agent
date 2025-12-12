@@ -64,7 +64,7 @@ export interface EmailConfig {
 export function getAdminStats() {
 	return request<AdminStats>('/api/admin/stats', {
 		method: 'GET',
-		needAuth: true
+		needAuth: true,
 	});
 }
 
@@ -76,10 +76,10 @@ export function getUserList(params: { page?: number; pageSize?: number; search?:
 	if (params.page) query.append('page', params.page.toString());
 	if (params.pageSize) query.append('pageSize', params.pageSize.toString());
 	if (params.search) query.append('search', params.search);
-	
+
 	return request<UserListResponse>(`/api/admin/users?${query.toString()}`, {
 		method: 'GET',
-		needAuth: true
+		needAuth: true,
 	});
 }
 
@@ -92,7 +92,7 @@ export function updateUserRole(id: number, role: 'user' | 'admin') {
 	return request('/api/admin/users/' + id + '/role', {
 		method: 'PUT',
 		data: { role },
-		needAuth: true
+		needAuth: true,
 	});
 }
 
@@ -102,28 +102,28 @@ export function updateUserRole(id: number, role: 'user' | 'admin') {
 export function deleteUser(id: number) {
 	return request('/api/admin/users/' + id, {
 		method: 'DELETE',
-		needAuth: true
+		needAuth: true,
 	});
 }
 
 /**
  * 获取八字记录列表
  */
-export function getRecordList(params: { 
-	page?: number; 
-	pageSize?: number; 
-	userId?: number; 
-	search?: string 
+export function getRecordList(params: {
+	page?: number;
+	pageSize?: number;
+	userId?: number;
+	search?: string;
 }) {
 	const query = new URLSearchParams();
 	if (params.page) query.append('page', params.page.toString());
 	if (params.pageSize) query.append('pageSize', params.pageSize.toString());
 	if (params.userId) query.append('userId', params.userId.toString());
 	if (params.search) query.append('search', params.search);
-	
+
 	return request<RecordListResponse>(`/api/admin/records?${query.toString()}`, {
 		method: 'GET',
-		needAuth: true
+		needAuth: true,
 	});
 }
 
@@ -133,7 +133,7 @@ export function getRecordList(params: {
 export function getRecordDetail(id: number) {
 	return request<BaziRecordInfo & { rawPayload?: any }>(`/api/admin/records/${id}`, {
 		method: 'GET',
-		needAuth: true
+		needAuth: true,
 	});
 }
 
@@ -151,25 +151,28 @@ export function createRecord(params: {
 	return request('/api/admin/records', {
 		method: 'POST',
 		data: params,
-		needAuth: true
+		needAuth: true,
 	});
 }
 
 /**
  * 更新八字记录
  */
-export function updateRecord(id: number, params: {
-	userId?: number;
-	name?: string | null;
-	gender?: string;
-	birthDatetime?: string;
-	calendarType?: string | null;
-	rawPayload?: any | null;
-}) {
+export function updateRecord(
+	id: number,
+	params: {
+		userId?: number;
+		name?: string | null;
+		gender?: string;
+		birthDatetime?: string;
+		calendarType?: string | null;
+		rawPayload?: any | null;
+	}
+) {
 	return request(`/api/admin/records/${id}`, {
 		method: 'PUT',
 		data: params,
-		needAuth: true
+		needAuth: true,
 	});
 }
 
@@ -179,7 +182,7 @@ export function updateRecord(id: number, params: {
 export function deleteRecord(id: number) {
 	return request('/api/admin/records/' + id, {
 		method: 'DELETE',
-		needAuth: true
+		needAuth: true,
 	});
 }
 
@@ -195,23 +198,26 @@ export function createUser(params: {
 	return request('/api/admin/users', {
 		method: 'POST',
 		data: params,
-		needAuth: true
+		needAuth: true,
 	});
 }
 
 /**
  * 更新用户信息
  */
-export function updateUser(id: number, params: {
-	email?: string;
-	username?: string | null;
-	password?: string;
-	role?: 'user' | 'admin';
-}) {
+export function updateUser(
+	id: number,
+	params: {
+		email?: string;
+		username?: string | null;
+		password?: string;
+		role?: 'user' | 'admin';
+	}
+) {
 	return request(`/api/admin/users/${id}`, {
 		method: 'PUT',
 		data: params,
-		needAuth: true
+		needAuth: true,
 	});
 }
 
@@ -221,7 +227,7 @@ export function updateUser(id: number, params: {
 export function getAdminEmailConfig() {
 	return request<EmailConfig>('/api/admin/email-config', {
 		method: 'GET',
-		needAuth: true
+		needAuth: true,
 	});
 }
 
@@ -239,7 +245,6 @@ export function updateAdminEmailConfig(payload: {
 	return request('/api/admin/email-config', {
 		method: 'PUT',
 		data: payload,
-		needAuth: true
+		needAuth: true,
 	});
 }
-

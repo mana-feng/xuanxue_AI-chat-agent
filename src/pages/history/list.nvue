@@ -204,10 +204,10 @@
 
 <script lang="ts" setup>
 import { ref, computed, onMounted, watch } from 'vue';
-import { useUserStore } from '@/store/user.ts';
-import { useBaziStore } from '@/store/bazi.ts';
-import { API_BASE_URL } from '@/config/config.ts';
-import utils from '@/libs/utils/utils.ts';
+import { useUserStore } from '@/store/user';
+import { useBaziStore } from '@/store/bazi';
+import { request } from '@/api/index';
+import utils from '@/libs/utils/utils';
 
 interface ChartItem {
 	id: number;
@@ -271,95 +271,86 @@ function clearFilters() {
 	fetchCharts();
 }
 
-function fetchCharts() {
-	if (!user_store.isLoggedIn || !user_store.token) {
+async function fetchCharts() {
+	if (!user_store.isLoggedIn) {
 		return;
 	}
 	loading.value = true;
 	error.value = '';
 
-	const params: Record<string, string> = {};
-	if (searchKeyword.value) {
-		params.keyword = searchKeyword.value;
-	}
-	if (genderFilter.value) {
-		params.gender = genderFilter.value;
-	}
-	if (sortBy.value) {
-		params.sortBy = sortBy.value as string;
-	}
-	if (sortOrder.value) {
-		params.sortOrder = sortOrder.value;
-	}
-
-	const queryString = Object.keys(params)
-		.map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
-		.join('&');
-
-	uni.request({
-		url: API_BASE_URL + '/api/charts' + (queryString ? '?' + queryString : ''),
-		method: 'GET',
-		header: {
-			Authorization: 'Bearer ' + user_store.token
-		},
-		success(res: any) {
-			try {
-				if (res.statusCode >= 200 && res.statusCode < 300) {
-					let data = res.data;
-					if (Array.isArray(data)) {
-						charts.value = data.map((it: any) => {
-							try {
-								return {
-									...it,
-									createdAtLabel: formatDateTime(it.createdAt || '')
-								};
-							} catch (e) {
-								return {
-									...it,
-									createdAtLabel: ''
-								};
-							}
-						});
-						totalCount.value = charts.value.length;
-					} else if (data && data.list) {
-						charts.value = data.list.map((it: any) => {
-							try {
-								return {
-									...it,
-									createdAtLabel: formatDateTime(it.createdAt || '')
-								};
-							} catch (e) {
-								return {
-									...it,
-									createdAtLabel: ''
-								};
-							}
-						});
-						totalCount.value = data.total || charts.value.length;
-					} else {
-						charts.value = [];
-						totalCount.value = 0;
-					}
-				} else if (res.statusCode === 401) {
-					uni.showToast({
-						title: '登录已失效，请重新登录',
-						icon: 'none',
-						duration: 2000
-					});
-				} else {
-					error.value = (res.data && res.data.error) || '获取失败，请稍后重试';
-				}
-			} catch (e) {
-				error.value = '数据处理失败，请稍后重试';
-			}
-		},
-		fail() {
-			error.value = '网络错误，请检查后端是否已启动';
-		},
-		complete() {
-			loading.value = false;
+	try {
+		const params: Record<string, string> = {};
+		if (searchKeyword.value) {
+			params.keyword = searchKeyword.value;
 		}
-	});
+		if (genderFilter.value) {
+			params.gender = genderFilter.value;
+		}
+		if (sortBy.value) {
+			params.sortBy = sortBy.value as string;
+		}
+		if (sortOrder.value) {
+			params.sortOrder = sortOrder.value;
+		}
+
+		const queryString = Object.keys(params)
+			.map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+			.join('&');
+
+		const res = await request('/api/charts' + (queryString ? '?' + queryString : ''), {
+			method: 'GET',
+			needAuth: true
+		});
+
+		if (res.success !== false) {
+			let data = res.data || res;
+			if (Array.isArray(data)) {
+				charts.value = data.map((it: any) => {
+					try {
+						return {
+							...it,
+							createdAtLabel: formatDateTime(it.createdAt || '')
+						};
+					} catch (e) {
+						return {
+							...it,
+							createdAtLabel: ''
+						};
+					}
+				});
+				totalCount.value = charts.value.length;
+			} else if (data && data.list) {
+				charts.value = data.list.map((it: any) => {
+					try {
+						return {
+							...it,
+							createdAtLabel: formatDateTime(it.createdAt || '')
+						};
+					} catch (e) {
+						return {
+							...it,
+							createdAtLabel: ''
+						};
+					}
+				});
+				totalCount.value = data.total || charts.value.length;
+			} else {
+				charts.value = [];
+				totalCount.value = 0;
+			}
+		} else {
+			error.value = res.error || '获取失败，请稍后重试';
+			charts.value = [];
+			totalCount.value = 0;
+		}
+	} catch (e: any) {
+		console.error('获取历史记录失败:', e);
+		error.value = e?.error || '网络错误，请检查后端是否已启动';
+		charts.value = [];
+		totalCount.value = 0;
+	} finally {
+		loading.value = false;
+	}
 }
 
 function formatDateTime(iso: string) {
@@ -572,32 +563,30 @@ function removeChart(item: ChartItem) {
 	});
 }
 
-function doRemove(item: ChartItem) {
-	if (!user_store.token) return;
+async function doRemove(item: ChartItem) {
+	if (!user_store.isLoggedIn) return;
 
-	uni.request({
-		url: API_BASE_URL + '/api/charts/' + item.id,
-		method: 'DELETE',
-		header: {
-			Authorization: 'Bearer ' + user_store.token
-		},
-		success(res: any) {
-			if (res.statusCode >= 200 && res.statusCode < 300) {
-				charts.value = charts.value.filter(c => c.id !== item.id);
-				totalCount.value = charts.value.length;
-				uni.showToast({
-					title: '已删除',
-					icon: 'none',
-					duration: 1500
-				});
-			} else {
-				error.value = (res.data && res.data.error) || '删除失败，请稍后重试';
-			}
-		},
-		fail() {
-			error.value = '网络错误，请检查后端是否已启动';
+	try {
+		const res = await request(`/api/charts/${item.id}`, {
+			method: 'DELETE',
+			needAuth: true
+		});
+
+		if (res.success !== false) {
+			charts.value = charts.value.filter(c => c.id !== item.id);
+			totalCount.value = charts.value.length;
+			uni.showToast({
+				title: '已删除',
+				icon: 'none',
+				duration: 1500
+			});
+		} else {
+			error.value = res.error || '删除失败，请稍后重试';
 		}
-	});
+	} catch (e: any) {
+		console.error('删除失败:', e);
+		error.value = e?.error || '网络错误，请检查后端是否已启动';
+	}
 }
 
 function goToHome() {
@@ -623,7 +612,14 @@ function goLogin() {
 .history-card {
 	display: flex;
 	flex-direction: column;
-	gap: clamp(16px, 2vw, 20px);
+}
+
+.history-card > view {
+	margin-bottom: 18px;
+}
+
+.history-card > view:last-child {
+	margin-bottom: 0;
 }
 
 .history-header {
@@ -634,9 +630,17 @@ function goLogin() {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	gap: 8px;
 	flex-wrap: wrap;
 	justify-content: flex-end;
+}
+
+.header-actions > view {
+	margin-right: 8px;
+	margin-bottom: 8px;
+}
+
+.header-actions > view:last-child {
+	margin-right: 0;
 }
 
 .filters-card {
@@ -646,57 +650,92 @@ function goLogin() {
 }
 
 .filters-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-	gap: 12px;
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+}
+
+.filters-grid > view {
+	width: calc(50% - 6px);
+	margin-right: 12px;
+	margin-bottom: 12px;
+}
+
+.filters-grid > view:nth-child(2n) {
+	margin-right: 0;
+}
+
+.search-block {
+	width: 100%;
+	margin-right: 0;
 }
 
 .filter-block {
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
 }
 
-.search-block {
-	grid-column: 1 / -1;
+.filter-block > view {
+	margin-bottom: 8px;
+}
+
+.filter-block > view:last-child {
+	margin-bottom: 0;
 }
 
 .filter-actions {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 8px;
 	align-items: center;
 }
 
+.filter-actions > view {
+	margin-right: 8px;
+	margin-bottom: 8px;
+}
+
+.filter-actions > view:last-child {
+	margin-right: 0;
+}
+
 .filters-count {
-	margin-left: auto;
+	flex: 1;
+	text-align: right;
 }
 
 .records-list {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+}
+
+.records-list > view {
+	margin-bottom: 12px;
+}
+
+.records-list > view:last-child {
+	margin-bottom: 0;
 }
 
 .record-card {
 	background: #ffffff;
-	transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.record-card:active {
-	transform: translateY(1px);
 }
 
 .record-card__header {
 	display: flex;
 	flex-direction: row;
 	justify-content: space-between;
-	gap: 16px;
+}
+
+.record-card__header > view {
+	margin-right: 16px;
+}
+
+.record-card__header > view:last-child {
+	margin-right: 0;
 }
 
 .record-meta {
 	flex: 1;
-	min-width: 0;
 }
 
 .record-meta__row {
@@ -705,15 +744,30 @@ function goLogin() {
 	align-items: center;
 	margin-top: 8rpx;
 	flex-wrap: wrap;
-	gap: 8rpx;
+}
+
+.record-meta__row > view {
+	margin-right: 8rpx;
+	margin-bottom: 8rpx;
+}
+
+.record-meta__row > view:last-child {
+	margin-right: 0;
 }
 
 .record-actions {
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
 	align-items: flex-end;
 	justify-content: center;
+}
+
+.record-actions > view {
+	margin-bottom: 8px;
+}
+
+.record-actions > view:last-child {
+	margin-bottom: 0;
 }
 
 .empty-state {
@@ -733,7 +787,14 @@ function goLogin() {
 	.history-header {
 		flex-direction: column;
 		align-items: flex-start;
-		gap: 12px;
+	}
+
+	.history-header > view {
+		margin-bottom: 12px;
+	}
+
+	.history-header > view:last-child {
+		margin-bottom: 0;
 	}
 
 	.header-actions {

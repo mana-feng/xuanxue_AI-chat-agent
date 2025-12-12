@@ -1,12 +1,23 @@
 <template>
-	<tm-table :width="tableWidth" :cellHeight="cellHeight" :header="header" :table-data="tableData"></tm-table>
+	<tm-table
+		:width="tableWidth"
+		:cellHeight="cellHeight"
+		:header="header"
+		:table-data="tableData"
+	></tm-table>
 </template>
 
 <script lang="ts" setup>
 import { computed } from 'vue';
 import { useBaziStore } from '@/store/bazi';
 import { useYunStore } from '@/store/yun';
-import { getHideGanForGanZhi, getFuXingForGanZhi, getDiShiForGanZhi, calculateShenShaForGanZhi, calculateKongWangForGanZhi } from '@/libs/utils/bazi-enhanced';
+import {
+	getHideGanForGanZhi,
+	getFuXingForGanZhi,
+	getDiShiForGanZhi,
+	calculateShenShaForGanZhi,
+	calculateKongWangForGanZhi,
+} from '@/libs/utils/bazi-enhanced';
 import config from '@/config/config';
 import utils from '@/libs/utils/utils';
 
@@ -79,18 +90,18 @@ const selectedDay = computed(() => {
 
 const header = computed<headerOpts[]>(() => {
 	// 检查是否有神煞行，如果有则使用更大的列宽以适应神煞名称
-	const hasShenshaRow = baziStore.table?.some(row => row.data?.name === '神煞');
+	const hasShenshaRow = baziStore.table?.some((row) => row.data?.name === '神煞');
 	// 四柱列宽：有神煞时使用更大的宽度，否则使用基础宽度
 	const columnWidth = hasShenshaRow ? 220 : sizhuWidth;
-	
+
 	const headers: headerOpts[] = [
 		{ title: '\\', key: 'name', width: width },
 		{ title: '年柱', key: 'year', width: columnWidth },
 		{ title: '月柱', key: 'month', width: columnWidth },
 		{ title: '日柱', key: 'day', width: columnWidth },
-		{ title: '时柱', key: 'time', width: columnWidth }
+		{ title: '时柱', key: 'time', width: columnWidth },
 	];
-	
+
 	// 如果有选中的大运、流年、流月、流日，添加列
 	if (selectedDayun.value || selectedYear.value || selectedMonth.value || selectedDay.value) {
 		if (selectedDayun.value) {
@@ -106,7 +117,7 @@ const header = computed<headerOpts[]>(() => {
 			headers.push({ title: '流日', key: 'day_yun', width: columnWidth });
 		}
 	}
-	
+
 	return headers;
 });
 
@@ -117,42 +128,47 @@ const tableWidth = computed(() => {
 	// 计算所有列的总宽度，并添加一些额外空间确保所有列完全显示
 	const totalWidth = header.value.reduce((sum, col) => sum + col.width, 0);
 	// 添加额外的边距空间（每列约10rpx的边距）
-	return totalWidth + (header.value.length * 10);
+	return totalWidth + header.value.length * 10;
 });
 
 // 格式化单元格数据，应用 zydx.top 样式
 // 参考 zydx.top：偶数行 #EEE（浅灰），奇数行 #CCC（深灰）
-function formatCellData(value: CellValue, isEvenRow: boolean, isDayun: boolean = false, isShensha: boolean = false): FormattedCell {
+function formatCellData(
+	value: CellValue,
+	isEvenRow: boolean,
+	isDayun: boolean = false,
+	isShensha: boolean = false
+): FormattedCell {
 	// 如果是神煞行且值为数组，返回垂直文本格式
 	if (isShensha) {
 		// 确保值是数组格式
-		const items = Array.isArray(value) ? value : (value ? [String(value)] : []);
+		const items = Array.isArray(value) ? value : value ? [String(value)] : [];
 		const safeItems = items.length > 0 ? items : ['—'];
 		return {
 			type: 'vertical-text',
 			items: safeItems,
 			color: isEvenRow ? 'grey-4' : 'grey-3',
-			light: true
+			light: true,
 		};
 	}
-	
+
 	if (value && typeof value === 'object' && !Array.isArray(value)) {
 		// 如果已经是对象格式，直接返回并添加样式
 		const obj = value as Record<string, any>;
 		return {
 			...obj,
 			color: obj.color || (isEvenRow ? 'grey-4' : 'grey-3'),
-			light: obj.light !== undefined ? obj.light : true
+			light: obj.light !== undefined ? obj.light : true,
 		};
 	}
-	
+
 	// 字符串格式，转换为对象并添加样式
 	// 使用 grey-4（浅灰）和 grey-3（深灰）实现交替行背景色
 	return {
-		text: Array.isArray(value) ? value.join(' ') : (value || ''),
+		text: Array.isArray(value) ? value.join(' ') : value || '',
 		type: 'text',
 		color: isEvenRow ? 'grey-4' : 'grey-3',
-		light: true
+		light: true,
 	};
 }
 
@@ -179,24 +195,136 @@ function toArray(value: any): string[] {
 // 计算神煞行在当前场景下的最大条目数，用于按需抬高该行
 function getShenshaMaxItems(baseRowData: any, includeExtended: boolean): number {
 	const items: any[] = [];
-	['year', 'month', 'day', 'time'].forEach(key => items.push(baseRowData?.[key]));
+	// 获取基础四柱的神煞数据
+	['year', 'month', 'day', 'time'].forEach((key) => {
+		const value = baseRowData?.[key];
+		if (value) {
+			// 如果已经是数组，直接使用；如果是字符串，转换为数组
+			const arr = Array.isArray(value) ? value : toArray(value);
+			items.push(...arr);
+		}
+	});
 
 	if (includeExtended) {
 		if (selectedDayun.value) {
-		items.push(calculateShenShaForGanZhi(dayGan.value, selectedDayun.value, originalZhiList.value, yearZhi.value, monthZhi.value, baseDayZhi.value, baseTimeZhi.value));
-	}
-	if (selectedYear.value) {
-		items.push(calculateShenShaForGanZhi(dayGan.value, selectedYear.value, originalZhiList.value, yearZhi.value, monthZhi.value, baseDayZhi.value, baseTimeZhi.value));
-	}
-	if (selectedMonth.value) {
-		items.push(calculateShenShaForGanZhi(dayGan.value, selectedMonth.value, originalZhiList.value, yearZhi.value, monthZhi.value, baseDayZhi.value, baseTimeZhi.value));
-	}
-	if (selectedDay.value) {
-		items.push(calculateShenShaForGanZhi(dayGan.value, selectedDay.value, originalZhiList.value, yearZhi.value, monthZhi.value, baseDayZhi.value, baseTimeZhi.value));
-	}
+			const shensha = calculateShenShaForGanZhi(
+				dayGan.value,
+				selectedDayun.value,
+				originalZhiList.value,
+				yearZhi.value,
+				monthZhi.value,
+				baseDayZhi.value,
+				baseTimeZhi.value
+			);
+			const arr = Array.isArray(shensha) ? shensha : toArray(shensha);
+			items.push(...arr);
+		}
+		if (selectedYear.value) {
+			const shensha = calculateShenShaForGanZhi(
+				dayGan.value,
+				selectedYear.value,
+				originalZhiList.value,
+				yearZhi.value,
+				monthZhi.value,
+				baseDayZhi.value,
+				baseTimeZhi.value
+			);
+			const arr = Array.isArray(shensha) ? shensha : toArray(shensha);
+			items.push(...arr);
+		}
+		if (selectedMonth.value) {
+			const shensha = calculateShenShaForGanZhi(
+				dayGan.value,
+				selectedMonth.value,
+				originalZhiList.value,
+				yearZhi.value,
+				monthZhi.value,
+				baseDayZhi.value,
+				baseTimeZhi.value
+			);
+			const arr = Array.isArray(shensha) ? shensha : toArray(shensha);
+			items.push(...arr);
+		}
+		if (selectedDay.value) {
+			const shensha = calculateShenShaForGanZhi(
+				dayGan.value,
+				selectedDay.value,
+				originalZhiList.value,
+				yearZhi.value,
+				monthZhi.value,
+				baseDayZhi.value,
+				baseTimeZhi.value
+			);
+			const arr = Array.isArray(shensha) ? shensha : toArray(shensha);
+			items.push(...arr);
+		}
 	}
 
-	return items.reduce((max, cur) => Math.max(max, toArray(cur).length), 0);
+	// 计算每个单元格的最大条目数
+	const cellMaxItems: number[] = [];
+	['year', 'month', 'day', 'time'].forEach((key) => {
+		const value = baseRowData?.[key];
+		const arr = Array.isArray(value) ? value : toArray(value);
+		cellMaxItems.push(arr.length);
+	});
+
+	if (includeExtended) {
+		if (selectedDayun.value) {
+			const shensha = calculateShenShaForGanZhi(
+				dayGan.value,
+				selectedDayun.value,
+				originalZhiList.value,
+				yearZhi.value,
+				monthZhi.value,
+				baseDayZhi.value,
+				baseTimeZhi.value
+			);
+			const arr = Array.isArray(shensha) ? shensha : toArray(shensha);
+			cellMaxItems.push(arr.length);
+		}
+		if (selectedYear.value) {
+			const shensha = calculateShenShaForGanZhi(
+				dayGan.value,
+				selectedYear.value,
+				originalZhiList.value,
+				yearZhi.value,
+				monthZhi.value,
+				baseDayZhi.value,
+				baseTimeZhi.value
+			);
+			const arr = Array.isArray(shensha) ? shensha : toArray(shensha);
+			cellMaxItems.push(arr.length);
+		}
+		if (selectedMonth.value) {
+			const shensha = calculateShenShaForGanZhi(
+				dayGan.value,
+				selectedMonth.value,
+				originalZhiList.value,
+				yearZhi.value,
+				monthZhi.value,
+				baseDayZhi.value,
+				baseTimeZhi.value
+			);
+			const arr = Array.isArray(shensha) ? shensha : toArray(shensha);
+			cellMaxItems.push(arr.length);
+		}
+		if (selectedDay.value) {
+			const shensha = calculateShenShaForGanZhi(
+				dayGan.value,
+				selectedDay.value,
+				originalZhiList.value,
+				yearZhi.value,
+				monthZhi.value,
+				baseDayZhi.value,
+				baseTimeZhi.value
+			);
+			const arr = Array.isArray(shensha) ? shensha : toArray(shensha);
+			cellMaxItems.push(arr.length);
+		}
+	}
+
+	// 返回所有单元格中的最大条目数
+	return Math.max(...cellMaxItems, 0);
 }
 
 // 基础行高（未单独指定的行）
@@ -204,19 +332,19 @@ const cellHeight = computed(() => baseRowHeight);
 
 const tableData = computed(() => {
 	const baseTable = baziStore.table || [];
-	
+
 	// 如果没有选中的大运、流年、流月、流日，直接返回原表格并应用样式
 	if (!selectedDayun.value && !selectedYear.value && !selectedMonth.value && !selectedDay.value) {
 		return baseTable.map((row, index) => {
 			const isEvenRow = index % 2 === 0;
 			const newRow: any = { ...row };
 			const newData: any = {};
-			
+
 			// 格式化每个单元格数据
 			const isShenshaRow = row.data.name === '神煞';
 			// 确保包含所有必需的字段：name, year, month, day, time
 			const requiredKeys = ['name', 'year', 'month', 'day', 'time'];
-			requiredKeys.forEach(key => {
+			requiredKeys.forEach((key) => {
 				if (key === 'name') {
 					// 行名称列保持原样
 					newData[key] = row.data[key];
@@ -226,7 +354,7 @@ const tableData = computed(() => {
 					newData[key] = formatCellData(value, isEvenRow, false, isShenshaRow);
 				}
 			});
-			
+
 			newRow.data = newData;
 			if (compactRows.has(row.data.name)) {
 				newRow.rowHeight = compactRowHeight;
@@ -234,23 +362,28 @@ const tableData = computed(() => {
 				newRow.rowHeight = midRowHeight;
 			} else if (row.data.name === '神煞') {
 				const maxItems = getShenshaMaxItems(row.data, false);
-				newRow.rowHeight = Math.max(baseRowHeight, maxItems * 32 + 24);
+				// 根据神煞数量动态调整高度：每个神煞约36rpx高度，加上上下内边距24rpx
+				// 至少保持基础行高，如果神煞多则增加高度
+				const minHeight = baseRowHeight;
+				const itemHeight = 36; // 每个神煞项的高度
+				const padding = 24; // 上下内边距
+				newRow.rowHeight = Math.max(minHeight, maxItems * itemHeight + padding);
 			}
 			return newRow;
 		});
 	}
-	
-		// 为每一行添加选中的大运、流年、流月、流日数据
+
+	// 为每一行添加选中的大运、流年、流月、流日数据
 	return baseTable.map((row, index) => {
 		const isEvenRow = index % 2 === 0;
 		const newRow: any = { ...row };
 		const newData: any = {};
-		
+
 		// 先处理原有数据
 		const isShenshaRow = row.data.name === '神煞';
 		// 确保包含所有必需的字段：name, year, month, day, time
 		const requiredKeys = ['name', 'year', 'month', 'day', 'time'];
-		requiredKeys.forEach(key => {
+		requiredKeys.forEach((key) => {
 			if (key === 'name') {
 				newData[key] = row.data[key];
 			} else {
@@ -258,7 +391,7 @@ const tableData = computed(() => {
 				newData[key] = formatCellData(value, isEvenRow, false, isShenshaRow);
 			}
 		});
-		
+
 		// 添加大运、流年、流月、流日列
 		if (selectedDayun.value) {
 			let dayunValue: string | string[] = '';
@@ -282,11 +415,19 @@ const tableData = computed(() => {
 			} else if (row.data.name === '空亡') {
 				dayunValue = calculateKongWangForGanZhi(selectedDayun.value).join('、');
 			} else if (row.data.name === '神煞') {
-				dayunValue = calculateShenShaForGanZhi(dayGan.value, selectedDayun.value, originalZhiList.value, yearZhi.value, monthZhi.value, baseDayZhi.value, baseTimeZhi.value);
+				dayunValue = calculateShenShaForGanZhi(
+					dayGan.value,
+					selectedDayun.value,
+					originalZhiList.value,
+					yearZhi.value,
+					monthZhi.value,
+					baseDayZhi.value,
+					baseTimeZhi.value
+				);
 			}
 			newData.dayun = formatCellData(dayunValue, isEvenRow, true, row.data.name === '神煞');
 		}
-		
+
 		if (selectedYear.value) {
 			let yearValue: string | string[] = '';
 			if (row.data.name === '天干') {
@@ -309,11 +450,19 @@ const tableData = computed(() => {
 			} else if (row.data.name === '空亡') {
 				yearValue = calculateKongWangForGanZhi(selectedYear.value).join('、');
 			} else if (row.data.name === '神煞') {
-				yearValue = calculateShenShaForGanZhi(dayGan.value, selectedYear.value, originalZhiList.value, yearZhi.value, monthZhi.value, baseDayZhi.value, baseTimeZhi.value);
+				yearValue = calculateShenShaForGanZhi(
+					dayGan.value,
+					selectedYear.value,
+					originalZhiList.value,
+					yearZhi.value,
+					monthZhi.value,
+					baseDayZhi.value,
+					baseTimeZhi.value
+				);
 			}
 			newData.year_yun = formatCellData(yearValue, isEvenRow, false, row.data.name === '神煞');
 		}
-		
+
 		if (selectedMonth.value) {
 			let monthValue: string | string[] = '';
 			if (row.data.name === '天干') {
@@ -336,11 +485,19 @@ const tableData = computed(() => {
 			} else if (row.data.name === '空亡') {
 				monthValue = calculateKongWangForGanZhi(selectedMonth.value).join('、');
 			} else if (row.data.name === '神煞') {
-				monthValue = calculateShenShaForGanZhi(dayGan.value, selectedMonth.value, originalZhiList.value, yearZhi.value, monthZhi.value, baseDayZhi.value, baseTimeZhi.value);
+				monthValue = calculateShenShaForGanZhi(
+					dayGan.value,
+					selectedMonth.value,
+					originalZhiList.value,
+					yearZhi.value,
+					monthZhi.value,
+					baseDayZhi.value,
+					baseTimeZhi.value
+				);
 			}
 			newData.month_yun = formatCellData(monthValue, isEvenRow, false, row.data.name === '神煞');
 		}
-		
+
 		if (selectedDay.value) {
 			let dayValue: string | string[] = '';
 			if (row.data.name === '天干') {
@@ -363,11 +520,19 @@ const tableData = computed(() => {
 			} else if (row.data.name === '空亡') {
 				dayValue = calculateKongWangForGanZhi(selectedDay.value).join('、');
 			} else if (row.data.name === '神煞') {
-				dayValue = calculateShenShaForGanZhi(dayGan.value, selectedDay.value, originalZhiList.value, yearZhi.value, monthZhi.value, baseDayZhi.value, baseTimeZhi.value);
+				dayValue = calculateShenShaForGanZhi(
+					dayGan.value,
+					selectedDay.value,
+					originalZhiList.value,
+					yearZhi.value,
+					monthZhi.value,
+					baseDayZhi.value,
+					baseTimeZhi.value
+				);
 			}
 			newData.day_yun = formatCellData(dayValue, isEvenRow, false, row.data.name === '神煞');
 		}
-		
+
 		newRow.data = newData;
 		if (compactRows.has(row.data.name)) {
 			newRow.rowHeight = compactRowHeight;
@@ -375,7 +540,12 @@ const tableData = computed(() => {
 			newRow.rowHeight = midRowHeight;
 		} else if (row.data.name === '神煞') {
 			const maxItems = getShenshaMaxItems(row.data, true);
-			newRow.rowHeight = Math.max(baseRowHeight, maxItems * 32 + 24);
+			// 根据神煞数量动态调整高度：每个神煞约36rpx高度，加上上下内边距24rpx
+			// 至少保持基础行高，如果神煞多则增加高度
+			const minHeight = baseRowHeight;
+			const itemHeight = 36; // 每个神煞项的高度
+			const padding = 24; // 上下内边距
+			newRow.rowHeight = Math.max(minHeight, maxItems * itemHeight + padding);
 		}
 		return newRow;
 	});

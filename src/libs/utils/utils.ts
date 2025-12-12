@@ -1,6 +1,6 @@
-import { useBaziStore } from '@/store/bazi.ts';
+import { useBaziStore } from '@/store/bazi';
 import { Solar } from 'lunar-javascript';
-import config from "@/config/config.ts"
+import config from "@/config/config"
 
 export default {
 	// 获取十神
