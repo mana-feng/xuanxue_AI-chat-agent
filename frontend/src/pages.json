@@ -12,7 +12,7 @@
     {
       "path": "pages/index/index",
       "style": {
-        "navigationBarTitleText": "八字排盘",
+        "navigationBarTitleText": "mana玄学AI",
         "enablePullDownRefresh": false,
         "navigationStyle": "custom"
       }
@@ -20,7 +20,7 @@
     {
       "path": "pages/index/detail",
       "style": {
-        "navigationBarTitleText": "八字排盘",
+        "navigationBarTitleText": "mana玄学AI",
         "enablePullDownRefresh": false,
         "navigationStyle": "custom"
       }
@@ -28,7 +28,7 @@
     {
       "path": "pages/history/list",
       "style": {
-        "navigationBarTitleText": "历史排盘",
+        "navigationBarTitleText": "mana玄学AI",
         "enablePullDownRefresh": false,
         "navigationStyle": "custom"
       }
@@ -36,7 +36,7 @@
     {
       "path": "pages/auth/auth",
       "style": {
-        "navigationBarTitleText": "账号登录 / 注册",
+        "navigationBarTitleText": "mana玄学AI",
         "enablePullDownRefresh": false,
         "navigationStyle": "custom"
       }
@@ -44,7 +44,7 @@
     {
       "path": "pages/admin/dashboard",
       "style": {
-        "navigationBarTitleText": "管理员后台",
+        "navigationBarTitleText": "mana玄学AI",
         "enablePullDownRefresh": false,
         "navigationStyle": "custom"
       }
@@ -52,7 +52,7 @@
     {
       "path": "pages/admin/users",
       "style": {
-        "navigationBarTitleText": "用户管理",
+        "navigationBarTitleText": "mana玄学AI",
         "enablePullDownRefresh": false,
         "navigationStyle": "custom"
       }
@@ -60,7 +60,7 @@
     {
       "path": "pages/admin/records",
       "style": {
-        "navigationBarTitleText": "记录管理",
+        "navigationBarTitleText": "mana玄学AI",
         "enablePullDownRefresh": false,
         "navigationStyle": "custom"
       }
@@ -68,7 +68,7 @@
     {
       "path": "pages/admin/email-config",
       "style": {
-        "navigationBarTitleText": "邮箱配置",
+        "navigationBarTitleText": "mana玄学AI",
         "enablePullDownRefresh": false,
         "navigationStyle": "custom"
       }
@@ -76,7 +76,7 @@
     {
       "path": "pages/admin/llm-config",
       "style": {
-        "navigationBarTitleText": "大模型管理",
+        "navigationBarTitleText": "mana玄学AI",
         "enablePullDownRefresh": false,
         "navigationStyle": "custom"
       }
@@ -84,7 +84,7 @@
     {
       "path": "pages/admin/llm-quota",
       "style": {
-        "navigationBarTitleText": "AI额度管理",
+        "navigationBarTitleText": "mana玄学AI",
         "enablePullDownRefresh": false,
         "navigationStyle": "custom"
       }
@@ -92,7 +92,7 @@
     {
       "path": "pages/about/index",
       "style": {
-        "navigationBarTitleText": "关于",
+        "navigationBarTitleText": "mana玄学AI",
         "enablePullDownRefresh": false,
         "navigationStyle": "custom"
       }
@@ -100,7 +100,7 @@
     {
       "path": "pages/chat/index",
       "style": {
-        "navigationBarTitleText": "AI 聊天",
+        "navigationBarTitleText": "mana玄学AI",
         "enablePullDownRefresh": false,
         "navigationStyle": "custom"
       }
@@ -108,7 +108,7 @@
   ],
   "globalStyle": {
     "navigationBarTextStyle": "black",
-    "navigationBarTitleText": "八字排盘",
+    "navigationBarTitleText": "mana玄学AI",
     "navigationBarBackgroundColor": "#FFFFFF",
     "backgroundColor": "#FFFFFF"
   },

@@ -1,5 +1,5 @@
 {
-    "name" : "八字排盘",
+    "name" : "mana玄学AI",
     "appid" : "__UNI__G9DE1127",
     "description" : "",
     "versionName" : "1.0.0",
@@ -124,7 +124,7 @@
             "mode" : "hash",
             "base" : "./"
         },
-        "title" : "manafeng的玄学AI",
+        "title" : "mana玄学AI",
         "devServer" : {
             "https" : false
         },
