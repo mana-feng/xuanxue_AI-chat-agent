@@ -1,0 +1,125 @@
+{
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^tm-(.*)": "@/libs/tmui/components/tm-$1/tm-$1.vue",
+      "^yx-(.*)": "@/components/yx-$1/yx-$1.vue",
+      "^yxn-(.*)": "@/components/yxn-$1/yxn-$1.nvue"
+    }
+  },
+  "_comment_pages": "pages数组中第一项表示应用启动页，参考：https://uniapp.dcloud.io/collocation/pages",
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "八字排盘",
+        "enablePullDownRefresh": false,
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/index/detail",
+      "style": {
+        "navigationBarTitleText": "八字排盘",
+        "enablePullDownRefresh": false,
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/history/list",
+      "style": {
+        "navigationBarTitleText": "历史排盘",
+        "enablePullDownRefresh": false,
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/auth/auth",
+      "style": {
+        "navigationBarTitleText": "账号登录 / 注册",
+        "enablePullDownRefresh": false,
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/admin/dashboard",
+      "style": {
+        "navigationBarTitleText": "管理员后台",
+        "enablePullDownRefresh": false,
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/admin/users",
+      "style": {
+        "navigationBarTitleText": "用户管理",
+        "enablePullDownRefresh": false,
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/admin/records",
+      "style": {
+        "navigationBarTitleText": "记录管理",
+        "enablePullDownRefresh": false,
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/admin/email-config",
+      "style": {
+        "navigationBarTitleText": "邮箱配置",
+        "enablePullDownRefresh": false,
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/admin/llm-config",
+      "style": {
+        "navigationBarTitleText": "大模型管理",
+        "enablePullDownRefresh": false,
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/admin/llm-quota",
+      "style": {
+        "navigationBarTitleText": "AI额度管理",
+        "enablePullDownRefresh": false,
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/about/index",
+      "style": {
+        "navigationBarTitleText": "关于",
+        "enablePullDownRefresh": false,
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/chat/index",
+      "style": {
+        "navigationBarTitleText": "AI 聊天",
+        "enablePullDownRefresh": false,
+        "navigationStyle": "custom"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "八字排盘",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "backgroundColor": "#FFFFFF"
+  },
+  "condition": {
+    "current": 0,
+    "list": [
+      {
+        "name": "",
+        "path": "",
+        "query": ""
+      }
+    ]
+  }
+}

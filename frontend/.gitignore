@@ -1,0 +1,33 @@
+# dependencies and builds
+node_modules/
+dist/
+unpackage/
+
+# 注意：dist/ 和 unpackage/ 现在在 frontend/ 目录下
+
+# environment
+.env
+.env.*
+# 但允许示例文件
+!env.example
+!env.frontend.example
+
+# logs and coverage
+logs/
+*.log
+coverage/
+
+# editor
+.DS_Store
+.vscode/
+.idea/
+
+# temp
+*.local
+*.tmp
+*.swp
+*.swo
+*.bak
+*.orig
+*.rej
+

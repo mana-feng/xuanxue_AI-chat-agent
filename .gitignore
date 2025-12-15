@@ -1,11 +1,21 @@
 # dependencies and builds
 node_modules/
-dist/
-unpackage/
+# 根目录不应该有 node_modules，前后端各自管理
+
+# frontend builds (moved to frontend/)
+frontend/dist/
+frontend/unpackage/
+
+# backend builds
+backend/dist/
 
 # environment
 .env
 .env.*
+# 但允许示例文件
+!env.example
+!*.example
+!*.example.*
 
 # logs and coverage
 logs/

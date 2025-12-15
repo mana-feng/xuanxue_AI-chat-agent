@@ -7,31 +7,43 @@ echo   Starting Development Environment
 echo ========================================
 echo.
 
-if not exist ".env" (
-    echo [INFO] .env file not found.
-    if exist "env.example" (
-        echo [INFO] Creating .env from env.example...
-        copy /Y env.example .env >nul 2>&1
+REM 检查后端环境变量
+if not exist "backend\.env" (
+    echo [INFO] Backend .env file not found.
+    if exist "backend\env.example" (
+        echo [INFO] Creating backend\.env from env.example...
+        echo [WARN] Please edit backend\.env file and configure your database and JWT secret!
+        copy /Y backend\env.example backend\.env >nul 2>&1
         if errorlevel 1 (
-            echo [WARN] Failed to create .env file.
+            echo [WARN] Failed to create backend\.env file.
         ) else (
-            echo [OK] .env file created.
+            echo [OK] Backend .env file created from env.example.
         )
     )
     echo.
 )
 
-if exist ".env" (
-    echo [INFO] Using MySQL database.
+REM 检查前端环境变量
+if not exist "frontend\.env.development" (
+    echo [INFO] Frontend .env.development file not found.
+    if exist "frontend\env.example" (
+        echo [INFO] Creating frontend\.env.development from env.example...
+        copy /Y frontend\env.example frontend\.env.development >nul 2>&1
+        if errorlevel 1 (
+            echo [WARN] Failed to create frontend\.env.development file.
+        ) else (
+            echo [OK] Frontend .env.development file created from env.example.
+        )
+    )
     echo.
 )
 
-echo [INFO] Starting frontend...
-start "Frontend" cmd /k "cd /d %~dp0 && npm run dev"
+echo [INFO] Starting backend...
+start "Backend" cmd /k "cd /d %~dp0backend && npm start"
 timeout /t 2 /nobreak >nul 2>&1
 
-echo [INFO] Starting backend...
-start "Backend" cmd /k "cd /d %~dp0 && npm run dev:server"
+echo [INFO] Starting frontend...
+start "Frontend" cmd /k "cd /d %~dp0frontend && npm run dev:h5"
 timeout /t 2 /nobreak >nul 2>&1
 
 echo [INFO] Waiting for services to start...
