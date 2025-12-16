@@ -6,18 +6,51 @@
 import { theme, tiangan, dizhi } from './constants';
 
 /**
- * 后端 API 基础地址
- * uni-app 环境变量处理：
- * - 开发环境：使用 vite 注入的 import.meta.env
- * - 生产环境：使用构建时注入的环境变量
- * - 默认值：本地开发地址
+ * 统一读取环境变量（兼容 Vite import.meta.env 与 Webpack/Vue-CLI 的 process.env）
  */
-// 仅根据 .env 中的 VITE_API_BASE_URL 读取，未设置则使用默认值
-const resolveApiBase = (): string =>
-	(import.meta as any)?.env?.VITE_API_BASE_URL || 'https://xuanapi.manafeng.com';
+const getEnv = (key: string): string | undefined => {
+	// Vite / uni-app (import.meta.env)
+	const viteEnv = (import.meta as any)?.env?.[key];
+	if (viteEnv !== undefined && viteEnv !== null && viteEnv !== '') {
+		return String(viteEnv);
+	}
 
-export const API_BASE_URL = resolveApiBase();
-export const API_SIGNATURE_SECRET = (import.meta as any)?.env?.VITE_API_SIGNATURE_SECRET || '';
+	// Webpack / Vue-CLI (process.env)
+	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+	// @ts-ignore - process 在浏览器构建中可能不存在，仅作兼容读取
+	if (typeof process !== 'undefined' && process?.env) {
+		// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+		// @ts-ignore
+		const v = process.env[key];
+		if (v !== undefined && v !== null && v !== '') {
+			return String(v);
+		}
+	}
+
+	return undefined;
+};
+
+/**
+ * 后端 API 基础地址：
+ * - 优先 Vite 风格：VITE_API_BASE_URL
+ * - 兼容 Vue-CLI 风格：VUE_APP_API_BASE_URL
+ * - 最终兜底：线上默认地址
+ */
+export const API_BASE_URL =
+	getEnv('VITE_API_BASE_URL') ??
+	getEnv('VUE_APP_API_BASE_URL') ??
+	'https://xuanapi.manafeng.com';
+
+/**
+ * API 签名密钥（仅供测试用，不建议在线上前端暴露）：
+ * - 优先 Vite：VITE_API_SIGNATURE_SECRET
+ * - 兼容 Vue-CLI：VUE_APP_API_SIGNATURE_SECRET
+ * - 默认空字符串（表示未启用前端签名密钥）
+ */
+export const API_SIGNATURE_SECRET =
+	getEnv('VITE_API_SIGNATURE_SECRET') ??
+	getEnv('VUE_APP_API_SIGNATURE_SECRET') ??
+	'';
 
 export { theme };
 
