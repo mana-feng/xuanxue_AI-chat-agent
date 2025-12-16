@@ -4,6 +4,7 @@
  */
 
 import { getDeviceId } from './device';
+import { API_SIGNATURE_SECRET } from '@/config/config';
 
 /**
  * 生成随机字符串（用于 nonce）
@@ -19,31 +20,52 @@ function generateNonce(): string {
  * @param nonce - 随机字符串
  * @returns 签名字符串
  */
-function generateSignature(params: any, timestamp: number, nonce: string): string {
-	// 注意：前端不能直接使用密钥生成签名，因为密钥不能暴露在前端
-	// 这里使用一个简化的签名方案：使用时间戳和 nonce 的组合
-	// 实际生产环境应该使用更安全的方案，比如：
-	// 1. 使用 JWT token 中包含的签名密钥
-	// 2. 使用设备指纹 + 时间戳 + 参数哈希
-	// 3. 或者依赖 HTTPS + JWT 来保证安全性
-	
-	// 简化方案：对参数进行排序并生成哈希
-	// 只对关键参数进行签名，避免签名字符串过长
-	const keyParams: Record<string, any> = {};
-	if (params.name) keyParams.name = params.name;
-	if (params.gender !== undefined) keyParams.gender = params.gender;
-	if (params.birthDatetime) keyParams.birthDatetime = params.birthDatetime;
-	
-	const sortedKeys = Object.keys(keyParams).sort();
-	const signString = sortedKeys
-		.map(key => `${key}=${JSON.stringify(keyParams[key])}`)
-		.join('&') + `&timestamp=${timestamp}&nonce=${nonce}`;
-	
-	// 使用简单的哈希（实际应该在后端验证时使用密钥）
-	// 这里只是生成一个标识，真正的验证在后端
-	// 使用设备ID增加安全性
+async function generateSignature(params: any, timestamp: number, nonce: string): Promise<string> {
+	const sortedKeys = Object.keys(params || {}).sort();
+	const signString =
+		sortedKeys.map((key) => `${key}=${JSON.stringify(params[key])}`).join('&') +
+		`&timestamp=${timestamp}&nonce=${nonce}`;
+
+	// 优先使用与后端一致的 HMAC-SHA256（需要在 .env 配置 VITE_API_SIGNATURE_SECRET，仅用于测试）
+	if (API_SIGNATURE_SECRET) {
+		try {
+			return await hmacSha256Hex(signString, API_SIGNATURE_SECRET);
+		} catch (e) {
+			console.warn('HMAC 计算失败，回退到简化签名', e);
+		}
+	}
+
+	// 弱签名：仅用于后端关闭校验或本地调试
 	const deviceId = getDeviceId();
-	return btoa(signString + deviceId).substring(0, 32);
+	const raw = signString + deviceId;
+	const hash = cryptoDigest(raw);
+	return toBase64Url(hash).substring(0, 32);
+}
+
+/**
+ * 简单哈希（使用浏览器可用的 SubtleCrypto SHA-256，同步 fallback）
+ */
+function cryptoDigest(input: string): string {
+	if (typeof window !== 'undefined' && window.crypto?.subtle) {
+		// 浏览器异步接口；此处同步封装为简化，使用 TextEncoder + digest
+		const encoder = new TextEncoder();
+		const data = encoder.encode(input);
+		// 注意：真正调用仍是异步，需要在调用处 await；为兼容当前同步流程，退回纯文本
+		// 这里退回原文本，由后续 base64url 处理（已是 UTF-8），不会再触发 Latin1 限制
+		return Array.from(data)
+			.map((b) => String.fromCharCode(b))
+			.join('');
+	}
+	// Node 或不支持 subtle 时，直接返回 UTF-8 文本
+	return input;
+}
+
+function toBase64Url(input: string): string {
+	// 将 UTF-8 字符串安全编码为 base64url
+	const utf8Bytes = new TextEncoder().encode(input);
+	let binary = '';
+	utf8Bytes.forEach((b) => (binary += String.fromCharCode(b)));
+	return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 /**
@@ -52,10 +74,13 @@ function generateSignature(params: any, timestamp: number, nonce: string): strin
  * @param headers - 请求头（会被修改）
  * @returns 包含签名信息的请求数据
  */
-export function signRequest(data: any = {}, headers: Record<string, string> = {}): {
+export async function signRequest(
+	data: any = {},
+	headers: Record<string, string> = {}
+): Promise<{
 	data: any;
 	headers: Record<string, string>;
-} {
+}> {
 	const timestamp = Date.now();
 	const nonce = generateNonce();
 	
@@ -64,10 +89,43 @@ export function signRequest(data: any = {}, headers: Record<string, string> = {}
 	headers['X-Nonce'] = nonce;
 	
 	// 生成签名（简化版，实际验证在后端）
-	const signature = generateSignature(data, timestamp, nonce);
+	const signature = await generateSignature(data, timestamp, nonce);
 	headers['X-Signature'] = signature;
 	
 	return { data, headers };
+}
+
+/**
+ * HMAC-SHA256 -> hex，优先使用 WebCrypto，回退 Node crypto
+ */
+async function hmacSha256Hex(message: string, secret: string): Promise<string> {
+	if (typeof globalThis !== 'undefined' && (globalThis.crypto as any)?.subtle) {
+		const encoder = new TextEncoder();
+		const key = await (crypto as any).subtle.importKey(
+			'raw',
+			encoder.encode(secret),
+			{ name: 'HMAC', hash: 'SHA-256' },
+			false,
+			['sign']
+		);
+		const signature = await (crypto as any).subtle.sign('HMAC', key, encoder.encode(message));
+		return bufferToHex(signature);
+	}
+
+	try {
+		// eslint-disable-next-line @typescript-eslint/no-var-requires
+		const nodeCrypto = require('crypto');
+		return nodeCrypto.createHmac('sha256', secret).update(message).digest('hex');
+	} catch (err) {
+		throw new Error('当前环境不支持 HMAC-SHA256');
+	}
+}
+
+function bufferToHex(buffer: ArrayBuffer): string {
+	const bytes = new Uint8Array(buffer);
+	return Array.from(bytes)
+		.map((b) => b.toString(16).padStart(2, '0'))
+		.join('');
 }
 
 /**

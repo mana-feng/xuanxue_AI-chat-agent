@@ -1,13 +1,23 @@
 <template>
 	<tm-app>
-		<view class="page-wrapper">
+		<view class="page-wrapper theme-page-bg">
 			<yx-nav-header></yx-nav-header>
 
-			<view class="page-content" :style="pageContentStyle">
+			<view class="page-content theme-container" :style="pageContentStyle">
+				<view class="theme-card theme-card-glass">
 				<view class="header">
 					<tm-text :font-size="42" :bold="true" color="#2d3748" label="邮箱服务配置"></tm-text>
 					<view class="header-actions">
-						<tm-button size="small" type="primary" :round="12" :padding="[20, 24]" label="返回后台" @tap="goBack"></tm-button>
+						<tm-button
+							class="btn-gradient"
+							size="small"
+							color="teal"
+							linear="right"
+							:round="12"
+							:padding="[20, 24]"
+							label="返回后台"
+							@tap="goBack"
+						></tm-button>
 					</view>
 				</view>
 
@@ -83,18 +93,18 @@
 					</view>
 
 					<tm-button
-						type="primary"
+						class="btn-gradient"
+						color="teal"
+						linear="right"
 						block
 						:loading="saving"
-						:margin="[40, 0, 0, 0]"
+						:margin="[32, 0, 0, 0]"
 						:round="12"
-						:height="96"
-						:font-size="32"
-						:bold="true"
 						label="保存配置"
 						@tap="handleSave"
 					></tm-button>
 				</tm-sheet>
+				</view>
 			</view>
 		</view>
 	</tm-app>
@@ -204,13 +214,15 @@ function goBack() {
 
 <style scoped>
 .page-wrapper {
-	min-height: 100vh;
-	/* background-color: #f5f5f5; */ /* 移除硬编码背景色，使用 tm-app 的背景 */
+	padding-bottom: 40rpx;
 }
 
 .page-content {
-	padding: 20rpx;
-	/* padding-top 通过 :style 动态设置，与 navbar 高度联动 */
+	/* theme-container + pageContentStyle 控制内边距 */
+}
+
+.theme-card {
+	padding: 24px 20px 28px;
 }
 
 .header {

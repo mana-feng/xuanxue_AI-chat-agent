@@ -10,12 +10,19 @@
 
 const { verifySignature, extractSignatureInfo } = require('../utils/api-signature');
 
+// 可通过环境变量关闭签名校验（用于本地调试或全局故障兜底）
+const SIGNATURE_DISABLED = process.env.API_SIGNATURE_DISABLED === 'true';
+
 /**
  * API 签名验证中间件（强制模式）
  * 所有使用此中间件的请求都必须提供有效的签名，否则请求将被拒绝
  */
 function apiSignatureMiddleware() {
 	return (req, res, next) => {
+		if (SIGNATURE_DISABLED) {
+			return next();
+		}
+
 		// 只对 POST/PUT/DELETE 请求进行签名验证
 		if (req.method === 'GET' || req.method === 'OPTIONS') {
 			return next();

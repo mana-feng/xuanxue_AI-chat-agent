@@ -103,6 +103,18 @@ async function initTables() {
 
 	// 初始化配置表
 	await ConfigService.initTable(db);
+
+	// 公告表
+	await db.run(
+		`CREATE TABLE IF NOT EXISTS announcements (
+			id INT AUTO_INCREMENT PRIMARY KEY,
+			title VARCHAR(255) NOT NULL,
+			content TEXT NOT NULL,
+			expires_at DATETIME DEFAULT NULL,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+	);
 }
 
 module.exports = {

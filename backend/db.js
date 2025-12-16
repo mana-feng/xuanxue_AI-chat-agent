@@ -8,21 +8,25 @@ const path = require('path');
 const fs = require('fs');
 
 // 确保加载环境变量（如果 db.js 在 app.js 之前加载）
-if (!process.env.DB_PASS && fs.existsSync(path.join(__dirname, '.env'))) {
-	try {
-		require('dotenv').config({ path: path.join(__dirname, '.env') });
-	} catch (e) {
-		// dotenv 可能未安装或加载失败，忽略
+// 仅加载 backend/.env
+if (!process.env.DB_PASS) {
+	const defaultPath = path.join(__dirname, '.env');
+	if (fs.existsSync(defaultPath)) {
+		try {
+			require('dotenv').config({ path: defaultPath });
+		} catch (e) {
+			// dotenv 可能未安装或加载失败，忽略
+		}
 	}
 }
 
 // 数据库配置
 const DB_CONFIG = {
-	host: process.env.DB_HOST || 'localhost',
-	port: Number(process.env.DB_PORT) || 3306,
-	user: process.env.DB_USER || 'root',
-	password: process.env.DB_PASS || '',
-	database: process.env.DB_NAME || 'bazi_app',
+	host: process.env.DB_HOST,
+	port: Number(process.env.DB_PORT),
+	user: process.env.DB_USER,
+	password: process.env.DB_PASS,
+	database: process.env.DB_NAME,
 	charset: 'utf8mb4',
 	waitForConnections: true,
 	connectionLimit: 10,
@@ -44,51 +48,23 @@ function validateDatabaseConfig() {
 	const issues = [];
 	const warnings = [];
 
-	// 检查密码
-	if (!process.env.DB_PASS || process.env.DB_PASS.trim() === '') {
-		issues.push('DB_PASS 未设置或为空');
-	} else {
-		// 显示配置信息（隐藏密码）
-		console.log('📋 MySQL 配置:');
-		console.log(`   Host: ${DB_CONFIG.host}`);
-		console.log(`   Port: ${DB_CONFIG.port}`);
-		console.log(`   User: ${DB_CONFIG.user}`);
-		console.log(`   Password: ${DB_CONFIG.password ? '***' : '(empty)'}`);
-		console.log(`   Database: ${DB_CONFIG.database}`);
+	// 检查必填项，不在日志中输出实际配置或默认值
+	if (!process.env.DB_HOST || process.env.DB_HOST.trim() === '') {
+		issues.push('DB_HOST 未设置');
 	}
-
-	// 检查用户
 	if (!process.env.DB_USER || process.env.DB_USER.trim() === '') {
-		issues.push('DB_USER 未设置或为空');
+		issues.push('DB_USER 未设置');
 	}
-
-	// 警告：如果使用默认值
-	if (!process.env.DB_HOST) {
-		warnings.push('DB_HOST 使用默认值: localhost');
+	if (!process.env.DB_PASS || process.env.DB_PASS.trim() === '') {
+		issues.push('DB_PASS 未设置');
 	}
-	if (!process.env.DB_NAME) {
-		warnings.push('DB_NAME 使用默认值: bazi_app');
-	}
-
-	if (warnings.length > 0) {
-		console.warn('\n⚠️  配置警告:');
-		warnings.forEach((warning) => console.warn(`   - ${warning}`));
+	if (!process.env.DB_NAME || process.env.DB_NAME.trim() === '') {
+		issues.push('DB_NAME 未设置');
 	}
 
 	if (issues.length > 0) {
 		console.error('\n❌ MySQL 配置错误:');
 		issues.forEach((issue) => console.error(`   - ${issue}`));
-		console.error('\n请检查 .env 文件中的以下配置:');
-		console.error('   DB_HOST=localhost');
-		console.error('   DB_PORT=3306');
-		console.error('   DB_USER=root');
-		console.error('   DB_PASS=your_mysql_password  ← 必须设置');
-		console.error('   DB_NAME=bazi_app\n');
-		console.error('提示:');
-		console.error('   1. 确保 .env 文件在项目根目录');
-		console.error('   2. 确保 DB_PASS 不为空');
-		console.error('   3. 确保密码与 MySQL root 密码匹配');
-		console.error('   4. 可以使用命令测试: mysql -u root -p\n');
 		throw new Error('MySQL 配置不完整，请检查 .env 文件');
 	}
 }

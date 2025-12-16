@@ -1,9 +1,10 @@
 <template>
 	<tm-app>
-		<view class="page-wrapper">
+		<view class="page-wrapper theme-page-bg">
 			<yx-nav-header></yx-nav-header>
 			
-			<view class="page-content" :style="pageContentStyle">
+			<view class="page-content theme-container" :style="pageContentStyle">
+				<view class="theme-card theme-card-glass">
 				<!-- 顶部操作栏 -->
 				<view class="top-bar">
 					<view class="search-bar">
@@ -16,19 +17,19 @@
 						></tm-input>
 					</view>
 					<view class="top-bar-buttons">
-						<tm-button
-							type="success"
+						<yx-teal-button
+							size="small"
 							label="返回主页"
 							icon="tmicon-md-home"
 							@tap="goToHome"
 							:margin="[0, 12, 0, 0]"
-						></tm-button>
-						<tm-button
-							type="success"
+						></yx-teal-button>
+						<yx-teal-button
+							size="small"
 							label="创建用户"
 							@tap="handleCreateUser"
 							:margin="[0, 0, 0, 0]"
-						></tm-button>
+						></yx-teal-button>
 					</view>
 				</view>
 				
@@ -57,35 +58,31 @@
 								></tm-tag>
 							</view>
 							<view class="user-actions">
-								<tm-button
-									size="small"
-									type="primary"
+								<yx-teal-button
+									size="mini"
 									label="编辑"
 									:margin="[0, 10, 0, 0]"
 									@tap="() => handleEditUser(user)"
-								></tm-button>
-								<tm-button
+								></yx-teal-button>
+								<yx-teal-button
 									v-if="user.role !== 'admin'"
-									size="small"
-									type="primary"
+									size="mini"
 									label="设为管理员"
 									:margin="[0, 10, 0, 0]"
 									@tap="() => handleChangeRole(user.id, 'admin')"
-								></tm-button>
-								<tm-button
+								></yx-teal-button>
+								<yx-teal-button
 									v-if="user.role === 'admin'"
-									size="small"
-									type="warning"
+									size="mini"
 									label="取消管理员"
 									:margin="[0, 10, 0, 0]"
 									@tap="() => handleChangeRole(user.id, 'user')"
-								></tm-button>
-								<tm-button
-									size="small"
-									type="danger"
+								></yx-teal-button>
+								<yx-teal-button
+									size="mini"
 									label="删除"
 									@tap="() => handleDeleteUser(user.id)"
-								></tm-button>
+								></yx-teal-button>
 							</view>
 						</view>
 						
@@ -121,20 +118,23 @@
 				
 				<!-- 分页 -->
 				<view class="pagination" v-if="totalPages > 1">
-					<tm-button
+					<yx-teal-button
+						size="small"
 						:disabled="currentPage === 1"
 						label="上一页"
 						@tap="handlePrevPage"
-					></tm-button>
+					></yx-teal-button>
 					<tm-text
 						:margin="[0, 20]"
 						:label="`${currentPage} / ${totalPages}`"
 					></tm-text>
-					<tm-button
+					<yx-teal-button
+						size="small"
 						:disabled="currentPage === totalPages"
 						label="下一页"
 						@tap="handleNextPage"
-					></tm-button>
+					></yx-teal-button>
+				</view>
 				</view>
 			</view>
 			
@@ -189,21 +189,21 @@
 					</view>
 					
 					<view class="form-actions">
-						<tm-button
+						<yx-teal-button
 							block
-							type="primary"
+							size="small"
 							:loading="userFormLoading"
 							:label="editingUser ? '保存' : '创建'"
 							@tap="handleSubmitUser"
 							:margin="[20, 0, 0, 0]"
-						></tm-button>
-						<tm-button
+						></yx-teal-button>
+						<yx-teal-button
 							block
-							type="default"
+							size="small"
 							label="取消"
 							@tap="handleCancelUser"
 							:margin="[20, 0, 0, 0]"
-						></tm-button>
+						></yx-teal-button>
 					</view>
 				</view>
 			</tm-drawer>
@@ -474,13 +474,15 @@ async function handleSubmitUser() {
 
 <style scoped>
 .page-wrapper {
-	min-height: 100vh;
-	background-color: #f5f5f5;
+	padding-bottom: 40rpx;
 }
 
 .page-content {
-	padding: 20rpx;
-	/* padding-top 通过 :style 动态设置，与 navbar 高度联动 */
+	/* theme-container + pageContentStyle 控制内边距 */
+}
+
+.theme-card {
+	padding: 24px 20px 28px;
 }
 
 .top-bar {

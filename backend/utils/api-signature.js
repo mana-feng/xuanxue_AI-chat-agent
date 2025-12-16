@@ -9,8 +9,8 @@ const config = require('../config');
 // API 签名密钥（应该从环境变量读取）
 const API_SIGNATURE_SECRET = process.env.API_SIGNATURE_SECRET || config.API_SIGNATURE_SECRET || config.JWT_SECRET;
 
-// 请求时间戳有效期（5分钟）
-const TIMESTAMP_VALID_WINDOW = 5 * 60 * 1000;
+// 请求时间戳有效期（从环境变量读取，默认5分钟）
+const TIMESTAMP_VALID_WINDOW = config.API_SIGNATURE_TIMESTAMP_WINDOW || 5 * 60 * 1000;
 
 // 存储已使用的 nonce（防重放）
 // 生产环境应该使用 Redis 等持久化存储

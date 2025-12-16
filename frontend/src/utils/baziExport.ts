@@ -321,6 +321,7 @@ export function buildBaziExportPayload(
 	if (yunStore.dayun_list && yunStore.dayun_list.length > 0) {
 		// 获取日干和四柱地支，用于计算神煞
 		const dayGan = baziStore.tiangan.day || '';
+		const yearGan = baziStore.tiangan.year || '';
 		const yearZhi = baziStore.dizhi.year || '';
 		const monthZhi = baziStore.dizhi.month || '';
 		const dayZhi = baziStore.dizhi.day || '';
@@ -337,7 +338,8 @@ export function buildBaziExportPayload(
 				yearZhi,
 				monthZhi,
 				dayZhi,
-				timeZhi
+				timeZhi,
+				yearGan
 			) : [];
 			
 			return {
@@ -376,6 +378,7 @@ export function buildBaziExportPayload(
 		
 		// 获取日干和四柱地支，用于计算神煞
 		const dayGan = baziStore.tiangan.day || '';
+		const yearGan = baziStore.tiangan.year || '';
 		const yearZhi = baziStore.dizhi.year || '';
 		const monthZhi = baziStore.dizhi.month || '';
 		const dayZhi = baziStore.dizhi.day || '';
@@ -405,7 +408,8 @@ export function buildBaziExportPayload(
 								yearZhi,
 								monthZhi,
 								dayZhi,
-								timeZhi
+								timeZhi,
+								yearGan
 							) : [];
 							
 							allLiunian.push({

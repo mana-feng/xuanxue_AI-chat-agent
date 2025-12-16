@@ -26,9 +26,12 @@ const strictLimiter = rateLimit({
 	keyGenerator: rateKey,
 });
 
+const isProd = process.env.NODE_ENV === 'production';
+
 const refreshLimiter = rateLimit({
 	windowMs: 60 * 1000,
-	max: 20,
+	// 适当放宽刷新频率，避免连续请求时触发 429 导致登录态恢复失败
+	max: 200,
 	standardHeaders: true,
 	legacyHeaders: false,
 	keyGenerator: rateKey,

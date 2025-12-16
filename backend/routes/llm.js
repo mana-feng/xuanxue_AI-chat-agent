@@ -45,8 +45,7 @@ router.get('/quota', authMiddleware, async (req, res) => {
 			: 0;
 		
 		const result = {
-			remainingCount: remainingCount,
-			remainingToken: remainingToken,
+			remainingCount: remainingCount
 		};
 		
 		res.json(result);
@@ -158,8 +157,8 @@ router.post('/chat', authMiddleware, apiSignatureMiddleware(), async (req, res) 
 		}
 
 		// 统一返回格式：只返回 text 内容
-		const estimatedTokens = Math.ceil(text.length / 4); // 简单估算：4个字符约等于1个token
-		await recordLLMUsage(userId, estimatedTokens);
+		// 仅按次数计数，不再按 Token 扣减
+		await recordLLMUsage(userId, 0);
 		
 		res.json({ 
 			reply: text || ''

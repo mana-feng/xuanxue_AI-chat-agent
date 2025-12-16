@@ -1,15 +1,16 @@
 <template>
   <tm-app>
-    <view class="page-wrapper">
+    <view class="page-wrapper theme-page-bg">
       <yx-nav-header></yx-nav-header>
 
-      <view class="page-content">
+      <view class="page-content theme-container">
+        <view class="theme-card theme-card-glass">
         <view class="header">
           <tm-text :font-size="36" :bold="true" color="#2d3748" label="大模型管理"></tm-text>
           <tm-text :font-size="24" color="#6b7280" label="配置聊天界面对接的大模型 API"></tm-text>
         </view>
 
-        <tm-sheet :round="12" :shadow="4" :padding="[24, 20]" class="form-card">
+        <tm-sheet :round="12" :shadow="2" :padding="[24, 20]" class="form-card">
           <view class="form-group">
             <tm-text :font-size="26" color="#4b5563" label="当前模型"></tm-text>
             <tm-text :font-size="24" color="#111827" :label="currentModelDisplay"></tm-text>
@@ -105,10 +106,12 @@
           </view>
 
           <view class="actions">
-            <tm-button
-              type="primary"
+              <tm-button
+              class="btn-gradient"
+              color="teal"
+              linear="right"
               :round="12"
-              :padding="[20, 22]"
+              :padding="[18, 22]"
               :loading="saving"
               :disabled="saving"
               label="保存配置"
@@ -116,6 +119,7 @@
             ></tm-button>
           </view>
         </tm-sheet>
+        </view>
       </view>
     </view>
   </tm-app>
@@ -279,16 +283,15 @@ function onProviderChange(e: any) {
 
 <style scoped>
 .page-wrapper {
-  min-height: 100vh;
-  background: #f8fafc;
+  padding-bottom: 40rpx;
 }
 
 .page-content {
-  padding: 20px 16px 32px;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  /* 由 theme-container 控制宽度与内边距 */
+}
+
+.theme-card {
+  padding: 24px 20px 28px;
 }
 
 .header {

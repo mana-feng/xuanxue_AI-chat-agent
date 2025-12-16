@@ -256,7 +256,6 @@ export interface UserQuota {
 	email: string;
 	username?: string;
 	remainingCount: number;
-	remainingToken: number;
 	updatedAt: string | null;
 }
 
@@ -300,7 +299,6 @@ export function setUserQuota(
 	userId: number,
 	payload: {
 		remainingCount?: number;
-		remainingToken?: number;
 	}
 ) {
 	return request(`/api/admin/users/${userId}/quota`, {

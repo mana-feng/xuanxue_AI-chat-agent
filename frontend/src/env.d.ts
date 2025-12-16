@@ -12,6 +12,7 @@ declare namespace UniApp {
 // Vite 环境变量类型扩展
 interface ImportMetaEnv {
 	readonly VITE_API_BASE_URL?: string;
+	readonly VITE_API_SIGNATURE_SECRET?: string;
 	readonly NODE_ENV: 'development' | 'production';
 }
 

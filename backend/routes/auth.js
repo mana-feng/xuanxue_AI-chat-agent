@@ -12,11 +12,13 @@ const config = require('../config');
 const SecurityUtils = require('../security');
 const { authLimiter, refreshLimiter } = require('../config/rateLimit');
 const { apiSignatureMiddleware } = require('../middleware/api-signature');
+const { authMiddleware } = require('../middleware/auth');
 
 const db = getDatabase();
 const JWT_SECRET = config.JWT_SECRET;
 const ACCESS_TOKEN_EXPIRES_IN = config.ACCESS_TOKEN_EXPIRES_IN;
 const REFRESH_TOKEN_EXPIRES_DAYS = config.REFRESH_TOKEN_EXPIRES_DAYS;
+const cookieSecure = process.env.COOKIE_SECURE === 'true'; // 本地调试可设为 false
 
 /**
  * 注册接口
@@ -97,7 +99,7 @@ router.post('/register', authLimiter, apiSignatureMiddleware(), async (req, res)
 		if (isH5) {
 			res.cookie('refresh_token', refresh_token, {
 				httpOnly: true,
-				secure: process.env.NODE_ENV === 'production',
+				secure: cookieSecure,
 				sameSite: 'lax',
 				maxAge: REFRESH_TOKEN_EXPIRES_DAYS * 24 * 60 * 60 * 1000,
 			});
@@ -184,7 +186,7 @@ router.post('/login', authLimiter, async (req, res) => {
 		if (isH5) {
 			res.cookie('refresh_token', refresh_token, {
 				httpOnly: true,
-				secure: process.env.NODE_ENV === 'production',
+				secure: cookieSecure,
 				sameSite: 'lax',
 				maxAge: REFRESH_TOKEN_EXPIRES_DAYS * 24 * 60 * 60 * 1000,
 			});
@@ -207,6 +209,28 @@ router.post('/login', authLimiter, async (req, res) => {
 });
 
 /**
+ * 获取当前用户信息（基于 access token，从数据库校验）
+ */
+router.get('/me', authMiddleware, async (req, res) => {
+	const userId = req.user.id;
+	try {
+		const row = await db.get('SELECT id, email, username, role FROM users WHERE id = ?', [userId]);
+		if (!row) {
+			return res.status(401).json({ error: '用户不存在或已被删除' });
+		}
+		return res.json({
+			id: row.id,
+			email: row.email,
+			username: row.username || null,
+			role: row.role || 'user',
+		});
+	} catch (err) {
+		console.error('查询当前用户失败:', err);
+		return res.status(500).json({ error: '服务器错误' });
+	}
+});
+
+/**
  * 兼容旧接口（重定向到新接口）
  */
 router.post('/login-old', async (req, res) => {
@@ -219,30 +243,42 @@ router.post('/login-old', async (req, res) => {
  */
 /**
  * 刷新Token接口
- * 注意：敏感操作，强制签名验证
+ * 说明：为避免因 access token 过期导致签名无法生成，这里不再强制签名验证
  */
-router.post('/refresh', refreshLimiter, apiSignatureMiddleware(), async (req, res) => {
-	// H5 场景：从 cookie 读取 refresh_token；App/小程序：从 body 读取
-	const refresh_token = req.cookies?.refresh_token || req.body?.refresh_token;
-	const device_id = req.headers['x-device-id'] || req.body?.device_id;
+router.post('/refresh', refreshLimiter, async (req, res) => {
+	// H5：Cookie；App/小程序：body/header；也兼容 Authorization: Bearer <refresh_token>
+	const authHeader = req.headers.authorization || '';
+	const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+	const refresh_token =
+		req.cookies?.refresh_token ||
+		req.body?.refresh_token ||
+		req.headers['x-refresh-token'] ||
+		bearerToken;
+	const device_id = req.headers['x-device-id'] || req.body?.device_id || req.cookies?.device_id;
 
 	if (!refresh_token) {
 		return res.status(400).json({ error: '缺少 refresh_token' });
 	}
 
-	if (!device_id) {
-		return res.status(400).json({ error: '缺少设备ID' });
-	}
+	// device_id 可选，缺失时不做设备绑定校验（便于 H5 跨域 Cookie 刷新）
+	const sanitizedDeviceId = device_id ? SecurityUtils.sanitizeString(String(device_id), { maxLength: 255 }) : null;
 
 	const refresh_token_hash = hashRefreshToken(refresh_token);
-	const sanitizedDeviceId = SecurityUtils.sanitizeString(String(device_id), { maxLength: 255 });
 
 	try {
 		// 查找 refresh token
-		const tokenRow = await db.get(
-			'SELECT id, user_id, expires_at, revoked_at FROM refresh_tokens WHERE token_hash = ? AND device_id = ?',
-			[refresh_token_hash, sanitizedDeviceId]
-		);
+		let tokenRow;
+		if (sanitizedDeviceId) {
+			tokenRow = await db.get(
+				'SELECT id, user_id, expires_at, revoked_at FROM refresh_tokens WHERE token_hash = ? AND device_id = ?',
+				[refresh_token_hash, sanitizedDeviceId]
+			);
+		} else {
+			tokenRow = await db.get(
+				'SELECT id, user_id, expires_at, revoked_at FROM refresh_tokens WHERE token_hash = ? ORDER BY created_at DESC',
+				[refresh_token_hash]
+			);
+		}
 
 		if (!tokenRow) {
 			return res.status(401).json({ error: '无效的 refresh token' });
@@ -289,7 +325,7 @@ router.post('/refresh', refreshLimiter, apiSignatureMiddleware(), async (req, re
 		if (isH5) {
 			res.cookie('refresh_token', new_refresh_token, {
 				httpOnly: true,
-				secure: process.env.NODE_ENV === 'production',
+				secure: cookieSecure,
 				sameSite: 'lax',
 				maxAge: REFRESH_TOKEN_EXPIRES_DAYS * 24 * 60 * 60 * 1000,
 			});
@@ -318,7 +354,7 @@ router.post('/logout', async (req, res) => {
 		// H5 场景：清除 cookie
 		res.clearCookie('refresh_token', {
 			httpOnly: true,
-			secure: process.env.NODE_ENV === 'production',
+			secure: cookieSecure,
 			sameSite: 'lax',
 		});
 		return res.json({ success: true });

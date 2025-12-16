@@ -17,14 +17,13 @@ async function recordLLMUsage(userId, tokensUsed = 0) {
 			[userId, tokensUsed]
 		);
 
-		// 更新用户额度（减少剩余次数和token）
+		// 更新用户额度（仅减少剩余次数；Token 不再扣减）
 		await db.run(
 			`UPDATE user_llm_quotas 
 			SET remaining_count = GREATEST(0, remaining_count - 1),
-				remaining_token = GREATEST(0, remaining_token - ?),
 				updated_at = NOW()
 			WHERE user_id = ?`,
-			[tokensUsed, userId]
+			[userId]
 		);
 	} catch (err) {
 		console.error('记录LLM使用情况失败:', err);
@@ -65,7 +64,7 @@ async function checkLLMQuota(userId) {
 			quota.remaining_token = 0;
 		}
 
-		// 检查剩余次数（如果没有剩余次数，不允许使用）
+		// 仅按次数校验，次数用完即拒绝
 		if (quota.remaining_count <= 0) {
 			return {
 				allowed: false,
@@ -77,7 +76,7 @@ async function checkLLMQuota(userId) {
 			};
 		}
 
-		// 额度充足，允许使用
+		// 额度充足（剩余次数 > 0），允许使用
 		return {
 			allowed: true,
 			usage: {

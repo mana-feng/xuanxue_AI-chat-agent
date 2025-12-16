@@ -1,9 +1,10 @@
 <template>
 	<tm-app>
-		<view class="page-wrapper">
+		<view class="page-wrapper theme-page-bg">
 			<yx-nav-header></yx-nav-header>
 			
-			<view class="page-content" :style="pageContentStyle">
+			<view class="page-content theme-container" :style="pageContentStyle">
+				<view class="theme-card theme-card-glass">
 				<!-- 顶部操作栏 -->
 				<view class="top-bar">
 					<view class="search-bar">
@@ -16,19 +17,19 @@
 						></tm-input>
 					</view>
 					<view class="top-bar-buttons">
-						<tm-button
-							type="success"
+						<yx-teal-button
+							size="small"
 							label="返回主页"
 							icon="tmicon-md-home"
 							@tap="goToHome"
 							:margin="[0, 12, 0, 0]"
-						></tm-button>
-						<tm-button
-							type="success"
+						></yx-teal-button>
+						<yx-teal-button
+							size="small"
 							label="创建记录"
 							@tap="handleCreateRecord"
 							:margin="[0, 0, 0, 0]"
-						></tm-button>
+						></yx-teal-button>
 					</view>
 				</view>
 				
@@ -57,26 +58,23 @@
 								></tm-text>
 							</view>
 							<view class="record-actions">
-								<tm-button
-									size="small"
-									type="primary"
+								<yx-teal-button
+									size="mini"
 									label="详情"
 									:margin="[0, 10, 0, 0]"
 									@tap="() => handleViewDetail(record.id)"
-								></tm-button>
-								<tm-button
-									size="small"
-									type="primary"
+								></yx-teal-button>
+								<yx-teal-button
+									size="mini"
 									label="编辑"
 									:margin="[0, 10, 0, 0]"
 									@tap="() => handleEditRecord(record)"
-								></tm-button>
-								<tm-button
-									size="small"
-									type="danger"
+								></yx-teal-button>
+								<yx-teal-button
+									size="mini"
 									label="删除"
 									@tap="() => handleDeleteRecord(record.id)"
-								></tm-button>
+								></yx-teal-button>
 							</view>
 						</view>
 						
@@ -118,20 +116,23 @@
 				
 				<!-- 分页 -->
 				<view class="pagination" v-if="totalPages > 1">
-					<tm-button
+					<yx-teal-button
+						size="small"
 						:disabled="currentPage === 1"
 						label="上一页"
 						@tap="handlePrevPage"
-					></tm-button>
+					></yx-teal-button>
 					<tm-text
 						:margin="[0, 20]"
 						:label="`${currentPage} / ${totalPages}`"
 					></tm-text>
-					<tm-button
+					<yx-teal-button
+						size="small"
 						:disabled="currentPage === totalPages"
 						label="下一页"
 						@tap="handleNextPage"
-					></tm-button>
+					></yx-teal-button>
+				</view>
 				</view>
 			</view>
 			

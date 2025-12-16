@@ -43,6 +43,7 @@ const midRowHeight = 130;
 const baseRowHeight = 120;
 const baseDayZhi = computed(() => baziStore.dizhi?.day || '');
 const baseTimeZhi = computed(() => baziStore.dizhi?.time || '');
+const yearGan = computed(() => baziStore.tiangan?.year || '');
 
 // 获取选中的大运、流年、流月、流日
 function normalizeGanZhi(value: any): string {
@@ -214,7 +215,8 @@ function getShenshaMaxItems(baseRowData: any, includeExtended: boolean): number 
 				yearZhi.value,
 				monthZhi.value,
 				baseDayZhi.value,
-				baseTimeZhi.value
+				baseTimeZhi.value,
+				yearGan.value
 			);
 			const arr = Array.isArray(shensha) ? shensha : toArray(shensha);
 			items.push(...arr);
@@ -227,7 +229,8 @@ function getShenshaMaxItems(baseRowData: any, includeExtended: boolean): number 
 				yearZhi.value,
 				monthZhi.value,
 				baseDayZhi.value,
-				baseTimeZhi.value
+				baseTimeZhi.value,
+				yearGan.value
 			);
 			const arr = Array.isArray(shensha) ? shensha : toArray(shensha);
 			items.push(...arr);
@@ -240,7 +243,8 @@ function getShenshaMaxItems(baseRowData: any, includeExtended: boolean): number 
 				yearZhi.value,
 				monthZhi.value,
 				baseDayZhi.value,
-				baseTimeZhi.value
+				baseTimeZhi.value,
+				yearGan.value
 			);
 			const arr = Array.isArray(shensha) ? shensha : toArray(shensha);
 			items.push(...arr);
@@ -253,7 +257,8 @@ function getShenshaMaxItems(baseRowData: any, includeExtended: boolean): number 
 				yearZhi.value,
 				monthZhi.value,
 				baseDayZhi.value,
-				baseTimeZhi.value
+				baseTimeZhi.value,
+				yearGan.value
 			);
 			const arr = Array.isArray(shensha) ? shensha : toArray(shensha);
 			items.push(...arr);
@@ -277,7 +282,8 @@ function getShenshaMaxItems(baseRowData: any, includeExtended: boolean): number 
 				yearZhi.value,
 				monthZhi.value,
 				baseDayZhi.value,
-				baseTimeZhi.value
+				baseTimeZhi.value,
+				yearGan.value
 			);
 			const arr = Array.isArray(shensha) ? shensha : toArray(shensha);
 			cellMaxItems.push(arr.length);
@@ -290,7 +296,8 @@ function getShenshaMaxItems(baseRowData: any, includeExtended: boolean): number 
 				yearZhi.value,
 				monthZhi.value,
 				baseDayZhi.value,
-				baseTimeZhi.value
+				baseTimeZhi.value,
+				yearGan.value
 			);
 			const arr = Array.isArray(shensha) ? shensha : toArray(shensha);
 			cellMaxItems.push(arr.length);
@@ -303,7 +310,8 @@ function getShenshaMaxItems(baseRowData: any, includeExtended: boolean): number 
 				yearZhi.value,
 				monthZhi.value,
 				baseDayZhi.value,
-				baseTimeZhi.value
+				baseTimeZhi.value,
+				yearGan.value
 			);
 			const arr = Array.isArray(shensha) ? shensha : toArray(shensha);
 			cellMaxItems.push(arr.length);
@@ -316,7 +324,8 @@ function getShenshaMaxItems(baseRowData: any, includeExtended: boolean): number 
 				yearZhi.value,
 				monthZhi.value,
 				baseDayZhi.value,
-				baseTimeZhi.value
+				baseTimeZhi.value,
+				yearGan.value
 			);
 			const arr = Array.isArray(shensha) ? shensha : toArray(shensha);
 			cellMaxItems.push(arr.length);
@@ -422,7 +431,8 @@ const tableData = computed(() => {
 					yearZhi.value,
 					monthZhi.value,
 					baseDayZhi.value,
-					baseTimeZhi.value
+					baseTimeZhi.value,
+					yearGan.value
 				);
 			}
 			newData.dayun = formatCellData(dayunValue, isEvenRow, true, row.data.name === '神煞');
@@ -457,7 +467,8 @@ const tableData = computed(() => {
 					yearZhi.value,
 					monthZhi.value,
 					baseDayZhi.value,
-					baseTimeZhi.value
+					baseTimeZhi.value,
+					yearGan.value
 				);
 			}
 			newData.year_yun = formatCellData(yearValue, isEvenRow, false, row.data.name === '神煞');
@@ -492,7 +503,8 @@ const tableData = computed(() => {
 					yearZhi.value,
 					monthZhi.value,
 					baseDayZhi.value,
-					baseTimeZhi.value
+					baseTimeZhi.value,
+					yearGan.value
 				);
 			}
 			newData.month_yun = formatCellData(monthValue, isEvenRow, false, row.data.name === '神煞');
@@ -527,7 +539,8 @@ const tableData = computed(() => {
 					yearZhi.value,
 					monthZhi.value,
 					baseDayZhi.value,
-					baseTimeZhi.value
+					baseTimeZhi.value,
+					yearGan.value
 				);
 			}
 			newData.day_yun = formatCellData(dayValue, isEvenRow, false, row.data.name === '神煞');

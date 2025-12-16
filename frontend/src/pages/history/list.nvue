@@ -3,8 +3,8 @@
 		<view class="app-shell">
 			<yx-nav-header></yx-nav-header>
 			<view class="app-main">
-				<view class="page-shell">
-					<view class="page-card history-card">
+					<view class="page-shell">
+					<view class="page-card history-card theme-card-glass">
 						<view class="page-title-wrapper history-header">
 							<view class="form-header-icon">
 								<tm-icon name="tmicon-md-time" :font-size="40" color="#667eea"></tm-icon>
@@ -14,24 +14,22 @@
 								<p class="page-subtitle">查看、筛选并管理已保存的排盘</p>
 							</view>
 							<view class="header-actions">
-								<tm-button
+								<yx-teal-button
 									size="small"
-									type="grey"
 									:round="12"
 									:padding="[18, 18]"
 									icon="tmicon-md-refresh"
 									label="刷新"
 									@tap="fetchCharts"
-								></tm-button>
-								<tm-button
+								></yx-teal-button>
+								<yx-teal-button
 									v-if="isLoggedIn && user_store.isAdmin"
 									size="small"
-									type="warning"
 									:round="12"
 									:padding="[18, 18]"
 									label="管理员后台"
 									@tap="goToAdmin"
-								></tm-button>
+								></yx-teal-button>
 							</view>
 						</view>
 
@@ -43,14 +41,14 @@
 								label="登录后可查看和管理您保存的八字排盘记录"
 								:margin="[0, 0, 30, 0]"
 							></tm-text>
-							<tm-button
-								type="primary"
+							<yx-teal-button
+								size="small"
 								:round="12"
 								:padding="[28, 24]"
 								:bold="true"
 								label="去登录"
 								@tap="goLogin"
-							></tm-button>
+							></yx-teal-button>
 						</view>
 
 						<view v-else>
@@ -92,23 +90,21 @@
 										></tm-segtab>
 									</view>
 									<view class="filter-actions">
-										<tm-button
-											:type="sortOrder === 'DESC' ? 'primary' : 'grey'"
+										<yx-teal-button
 											size="small"
 											:padding="[16, 14]"
 											:round="12"
 											:label="sortOrder === 'DESC' ? '↓ 降序' : '↑ 升序'"
 											@tap="toggleSortOrder"
-										></tm-button>
-										<tm-button
+										></yx-teal-button>
+										<yx-teal-button
 											v-if="searchKeyword || genderFilter"
-											type="danger"
 											size="small"
 											:padding="[16, 14]"
 											:round="12"
 											label="清除筛选"
 											@tap="clearFilters"
-										></tm-button>
+										></yx-teal-button>
 										<tm-text
 											v-if="totalCount > 0"
 											class="filters-count"
@@ -171,22 +167,20 @@
 											</view>
 										</view>
 										<view class="record-actions">
-											<tm-button
-												size="small"
-												type="primary"
-												:padding="[18, 20]"
+											<yx-teal-button
+												size="mini"
+												:padding="[12, 16]"
 												:round="12"
 												label="查看"
 												@tap="openChart(item)"
-											></tm-button>
-											<tm-button
-												size="small"
-												type="danger"
-												:padding="[18, 20]"
+											></yx-teal-button>
+											<yx-teal-button
+												size="mini"
+												:padding="[12, 16]"
 												:round="12"
 												label="删除"
 												@tap="removeChart(item)"
-											></tm-button>
+											></yx-teal-button>
 										</view>
 									</view>
 								</tm-sheet>
@@ -196,6 +190,57 @@
 							</view>
 						</view>
 					</view>
+					<!-- 公告弹窗 -->
+					<tm-overlay v-model:show="showAnnouncementModal" :opacity="0.4" :duration="200">
+						<tm-sheet
+							:round="18"
+							:padding="[24, 24]"
+							:margin="[40, 32]"
+							:shadow="2"
+							:width="600"
+							class="announcement-modal"
+						>
+							<view class="modal-header">
+								<tm-text :font-size="30" label="公告" bold></tm-text>
+								<yx-teal-button
+									size="small"
+									:round="12"
+									@tap="closeAnnouncements"
+								>
+									关闭
+								</yx-teal-button>
+							</view>
+							<view v-if="annLoading" class="py-10">
+								<tm-text label="加载中..." color="#999"></tm-text>
+							</view>
+							<view v-else-if="announcementList.length === 0" class="py-10">
+								<tm-text label="暂无公告" color="#999"></tm-text>
+							</view>
+							<view v-else class="announcement-list">
+								<tm-sheet
+									v-for="item in announcementList"
+									:key="item.id"
+									:round="12"
+									:padding="[18, 16]"
+									:margin="[0, 0, 16, 0]"
+									:shadow="1"
+								>
+									<tm-text :font-size="28" bold :label="item.title"></tm-text>
+									<tm-text
+										v-if="item.expiresAt"
+										:font-size="22"
+										color="#999"
+										:label="`有效期至：${item.expiresAt}`"
+										class="mt-4"
+									></tm-text>
+									<tm-text :font-size="24" color="#444" class="mt-6" :label="item.content"></tm-text>
+								</tm-sheet>
+							</view>
+							<view v-if="annError" class="mt-6">
+								<tm-text :label="annError" color="red"></tm-text>
+							</view>
+						</tm-sheet>
+					</tm-overlay>
 				</view>
 			</view>
 		</view>
@@ -204,11 +249,13 @@
 
 <script lang="ts" setup>
 import { ref, computed, onMounted, watch } from 'vue';
+import { onLoad } from '@dcloudio/uni-app';
 import { useUserStore } from '@/store/user';
 import { useBaziStore } from '@/store/bazi';
 import { request } from '@/api/index';
 import { getAccessToken } from '@/utils/tokenStore';
 import utils from '@/libs/utils/utils';
+import { fetchAnnouncementMeta, fetchAnnouncements, Announcement, AnnouncementMeta } from '@/api/announcement';
 
 interface ChartItem {
 	id: number;
@@ -227,6 +274,13 @@ const charts = ref<ChartItem[]>([]);
 const loading = ref(false);
 const error = ref('');
 const totalCount = ref(0);
+
+// 公告
+const ANN_CACHE_KEY = 'announcements_cache_v1';
+const showAnnouncementModal = ref(false);
+const announcementList = ref<Announcement[]>([]);
+const annLoading = ref(false);
+const annError = ref('');
 
 const searchKeyword = ref('');
 const genderFilter = ref('');
@@ -268,6 +322,13 @@ onMounted(() => {
 			fetchCharts();
 		}
 	}, 100);
+});
+
+onLoad((options: any) => {
+	// 从导航参数中判断是否需要自动打开公告
+	if (options && options.showAnnouncements === '1') {
+		openAnnouncements();
+	}
 });
 
 function onSearchInput() {
@@ -392,6 +453,71 @@ async function fetchCharts() {
 	} finally {
 		loading.value = false;
 	}
+}
+
+/**
+ * 公告缓存与拉取
+ */
+function loadAnnouncementCache() {
+	try {
+		const cacheStr = uni.getStorageSync(ANN_CACHE_KEY);
+		if (!cacheStr) return null;
+		return JSON.parse(cacheStr);
+	} catch (e) {
+		return null;
+	}
+}
+
+function saveAnnouncementCache(payload: { signature: string; list: Announcement[] }) {
+	try {
+		uni.setStorageSync(ANN_CACHE_KEY, JSON.stringify(payload));
+	} catch (e) {
+		// ignore
+	}
+}
+
+function buildSignature(meta: AnnouncementMeta[]) {
+	return meta.map((m) => `${m.id}-${m.updatedAt || ''}`).join('|');
+}
+
+async function refreshAnnouncements() {
+	annError.value = '';
+	annLoading.value = true;
+	try {
+		const metaRes = await fetchAnnouncementMeta();
+		const metaList = ((metaRes as any)?.meta || []) as AnnouncementMeta[];
+		const newSig = buildSignature(metaList);
+		const cache = loadAnnouncementCache();
+		if (cache && cache.signature === newSig) {
+			announcementList.value = cache.list || [];
+			return;
+		}
+		const fullRes = await fetchAnnouncements();
+		const list = ((fullRes as any)?.list || []) as Announcement[];
+		announcementList.value = list;
+		saveAnnouncementCache({ signature: newSig, list });
+	} catch (e: any) {
+		annError.value = e?.error || e?.message || '获取公告失败';
+		const cache = loadAnnouncementCache();
+		if (cache?.list) {
+			announcementList.value = cache.list;
+		}
+	} finally {
+		annLoading.value = false;
+	}
+}
+
+async function openAnnouncements() {
+	const cache = loadAnnouncementCache();
+	if (cache?.list) {
+		announcementList.value = cache.list;
+	}
+	showAnnouncementModal.value = true;
+	await refreshAnnouncements();
+}
+
+function closeAnnouncements() {
+	showAnnouncementModal.value = false;
 }
 
 function formatDateTime(iso: string) {
@@ -826,6 +952,22 @@ function goLogin() {
 
 .text-center {
 	text-align: center;
+}
+
+.announcement-list {
+	max-height: 60vh;
+	overflow-y: auto;
+}
+
+.announcement-modal .tm-text {
+	word-break: break-word;
+}
+
+.modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12px;
 }
 
 @media screen and (max-width: 640px) {

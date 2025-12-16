@@ -179,6 +179,52 @@
 					:showSuffix="time_suffix.lunar"
 					@confirm="LunarConfirm"
 				></tm-time-picker>
+
+				<!-- 公告弹窗 -->
+				<tm-overlay v-model:show="showAnnouncementModal" :opacity="0.4" :duration="200">
+					<tm-sheet
+						:round="18"
+						:padding="[24, 24]"
+						:margin="[40, 32]"
+						:shadow="2"
+						:width="600"
+						class="announcement-modal"
+					>
+						<view class="modal-header">
+							<tm-text :font-size="30" label="公告" bold></tm-text>
+							<tm-button size="small" type="grey" :round="12" @tap="closeAnnouncements">关闭</tm-button>
+						</view>
+						<view v-if="annLoading" class="py-10">
+							<tm-text label="加载中..." color="#999"></tm-text>
+						</view>
+						<view v-else-if="announcementList.length === 0" class="py-10">
+							<tm-text label="暂无公告" color="#999"></tm-text>
+						</view>
+						<view v-else class="announcement-list">
+							<tm-sheet
+								v-for="item in announcementList"
+								:key="item.id"
+								:round="12"
+								:padding="[18, 16]"
+								:margin="[0, 0, 16, 0]"
+								:shadow="1"
+							>
+								<tm-text :font-size="28" bold :label="item.title"></tm-text>
+								<tm-text
+									v-if="item.expiresAt"
+									:font-size="22"
+									color="#999"
+									:label="`有效期至：${item.expiresAt}`"
+									class="mt-4"
+								></tm-text>
+								<tm-text :font-size="24" color="#444" class="mt-6" :label="item.content"></tm-text>
+							</tm-sheet>
+						</view>
+						<view v-if="annError" class="mt-6">
+							<tm-text :label="annError" color="red"></tm-text>
+						</view>
+					</tm-sheet>
+				</tm-overlay>
 			</view>
 		</view>
 	</tm-app>
@@ -191,6 +237,7 @@ import { Solar } from 'lunar-javascript';
 import {useUserStore} from '@/store/user'
 import {useBaziStore} from '@/store/bazi'
 import utils from '@/libs/utils/utils';
+import { fetchAnnouncementMeta, fetchAnnouncements, type Announcement, type AnnouncementMeta } from '@/api/announcement';
 
 let realname = ref('');
 let gender = ref(0);
@@ -266,6 +313,13 @@ const time_suffix = {
 	}
 };
 
+// 公告相关状态
+const ANN_CACHE_KEY = 'announcements_cache_v1';
+const showAnnouncementModal = ref(false);
+const announcementList = ref<Announcement[]>([]);
+const annLoading = ref(false);
+const annError = ref('');
+
 watch(model, () => PullDatatimeLabel());
 watch(timestamp, () => PullDatatimeLabel());
 
@@ -284,7 +338,7 @@ function initCurrentTime() {
 // 标记是否已处理编辑数据，避免 onShow 重复处理
 let editDataProcessed = false;
 
-onLoad(() =>{
+onLoad((options: any) =>{
 	// 恢复登录状态
 	user_store.restoreAuth();
 
@@ -336,6 +390,13 @@ onLoad(() =>{
 	
 	// 始终初始化为当前时间
 	initCurrentTime();
+
+	// 如果需要显示公告，延迟一点点打开弹窗，确保页面已渲染
+	if (options && options.showAnnouncements === '1') {
+		setTimeout(() => {
+			openAnnouncements();
+		}, 200);
+	}
 })
 
 // 每次页面显示时，检查是否有编辑数据（如果 onLoad 未处理）
@@ -511,11 +572,187 @@ function Sumbit ()  {
 		});
 	}
 };
+
+/**
+ * 公告缓存与拉取
+ */
+function loadAnnouncementCache() {
+	try {
+		const cacheStr = uni.getStorageSync(ANN_CACHE_KEY);
+		if (!cacheStr) return null;
+		return JSON.parse(cacheStr);
+	} catch (e) {
+		return null;
+	}
+}
+
+function saveAnnouncementCache(payload: { signature: string; list: Announcement[] }) {
+	try {
+		uni.setStorageSync(ANN_CACHE_KEY, JSON.stringify(payload));
+	} catch (e) {
+		// ignore
+	}
+}
+
+function buildSignature(meta: AnnouncementMeta[]) {
+	return meta.map((m) => `${m.id}-${m.updatedAt || ''}`).join('|');
+}
+
+async function refreshAnnouncements() {
+	annError.value = '';
+	annLoading.value = true;
+	try {
+		const metaRes = await fetchAnnouncementMeta();
+		const metaList = ((metaRes as any)?.meta || []) as AnnouncementMeta[];
+		const newSig = buildSignature(metaList);
+		const cache = loadAnnouncementCache();
+		if (cache && cache.signature === newSig) {
+			announcementList.value = cache.list || [];
+			return;
+		}
+		const fullRes = await fetchAnnouncements();
+		const list = ((fullRes as any)?.list || []) as Announcement[];
+		announcementList.value = list;
+		saveAnnouncementCache({ signature: newSig, list });
+	} catch (e: any) {
+		annError.value = e?.error || e?.message || '获取公告失败';
+		const cache = loadAnnouncementCache();
+		if (cache?.list) {
+			announcementList.value = cache.list;
+		}
+	} finally {
+		annLoading.value = false;
+	}
+}
+
+async function openAnnouncements() {
+	const cache = loadAnnouncementCache();
+	if (cache?.list) {
+		announcementList.value = cache.list;
+	}
+	showAnnouncementModal.value = true;
+	await refreshAnnouncements();
+}
+
+function closeAnnouncements() {
+	showAnnouncementModal.value = false;
+}
 </script>
 
 <style scoped>
 /* 页面样式已在 app-shell.css 中定义 */
 /* 这里只添加页面特定的样式 */
+
+.app-main {
+	background: radial-gradient(circle at 20% 20%, rgba(102, 126, 234, 0.08), transparent 40%),
+		radial-gradient(circle at 80% 10%, rgba(118, 75, 162, 0.08), transparent 38%),
+		#f6f8fc;
+}
+
+.page-shell {
+	width: 100%;
+	display: flex;
+	justify-content: center;
+	padding: 28px 16px 56px;
+	box-sizing: border-box;
+}
+
+.page-card {
+	width: 100%;
+	max-width: 1180px;
+	background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+	border: 1px solid #e5e9f2;
+	border-radius: 20px;
+	box-shadow: 0 18px 60px rgba(31, 41, 55, 0.12);
+	padding: 28px 26px;
+	position: relative;
+	overflow: hidden;
+}
+
+.page-card::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(circle at 12% 12%, rgba(102, 126, 234, 0.08), transparent 35%),
+		radial-gradient(circle at 88% 6%, rgba(118, 75, 162, 0.07), transparent 32%);
+	pointer-events: none;
+}
+
+.page-title-wrapper {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	margin-bottom: 16px;
+	position: relative;
+	z-index: 1;
+}
+
+.page-title {
+	margin: 0;
+	font-size: 28px;
+	color: #1f2a44;
+	letter-spacing: 0.2px;
+}
+
+.page-subtitle {
+	margin: 4px 0 0;
+	font-size: 16px;
+	color: #6b7280;
+}
+
+.section {
+	background: #ffffff;
+	border-radius: 14px;
+	border: 1px solid #e2e8f0;
+	padding: 20px 18px 18px;
+	margin-bottom: 18px;
+	box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+	position: relative;
+	z-index: 1;
+}
+
+.section__header {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 12px;
+	border-bottom: 1px dashed #e5e7eb;
+	padding-bottom: 12px;
+}
+
+.section__title {
+	font-size: 22px;
+	color: #2d3748;
+}
+
+.section__body {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.page-card__footer {
+	margin-top: 14px;
+	padding-top: 10px;
+	border-top: 1px solid #eef2f7;
+	display: flex;
+	justify-content: flex-end;
+	position: relative;
+	z-index: 1;
+}
+
+@media (max-width: 768px) {
+	.page-card {
+		padding: 20px 18px;
+		border-radius: 16px;
+	}
+	.section {
+		padding: 16px 14px;
+	}
+	.page-card__footer {
+		justify-content: center;
+	}
+}
 
 
 /* 未登录状态样式 */
@@ -805,5 +1042,21 @@ function Sumbit ()  {
 	border-radius: 12rpx;
 	border-left: 4rpx solid #f56565;
 	width: 100%;
+}
+
+.announcement-list {
+	max-height: 60vh;
+	overflow-y: auto;
+}
+
+.announcement-modal .tm-text {
+	word-break: break-word;
+}
+
+.modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12px;
 }
 </style>

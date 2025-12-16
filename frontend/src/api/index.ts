@@ -126,6 +126,8 @@ export function request<T = any>(
 	const { method = 'GET', data, header = {}, needAuth = false } = options;
 
 	return new Promise((resolve, reject) => {
+		let retryCount = 0;
+
 		// 内部请求函数
 		const doRequest = async (): Promise<void> => {
 			const deviceId = getDeviceId();
@@ -146,7 +148,7 @@ export function request<T = any>(
 			
 			// 为需要认证的请求添加签名（POST/PUT/DELETE）
 			if (needAuth && (method === 'POST' || method === 'PUT' || method === 'DELETE')) {
-				const signed = signRequest(sanitizedData, requestHeaders);
+				const signed = await signRequest(sanitizedData, requestHeaders);
 				Object.assign(requestHeaders, signed.headers);
 			}
 
@@ -176,9 +178,25 @@ export function request<T = any>(
 							});
 						}
 					} else if (res.statusCode === 401 && needAuth) {
-						// 401 未授权：尝试刷新 token 后重试
+						// 401 未授权：尝试刷新 token 后重试（最多 1 次）
+						if (retryCount >= 1) {
+							clearAllTokens();
+							return reject({
+								success: false,
+								error: '登录已失效，请重新登录',
+							});
+						}
+						retryCount += 1;
 						try {
 							await refreshAccessToken();
+							const newToken = getAccessToken();
+							if (!newToken) {
+								clearAllTokens();
+								return reject({
+									success: false,
+									error: '登录已失效，请重新登录',
+								});
+							}
 							// 刷新成功，重试请求
 							return doRequest();
 						} catch (refreshError) {

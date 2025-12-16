@@ -5,6 +5,8 @@
 
 export const theme = {
 	primary: '#0052d9',
+	// 自定义淡蓝按钮主题色（用于统一操作按钮）
+	'soft-blue': '#93c5fd',
 };
 
 /**

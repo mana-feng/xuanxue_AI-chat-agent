@@ -7,7 +7,6 @@
 			</view>
 			<view v-if="quotaInfo" class="header-right">
 				<text class="quota-item">次数: {{ quotaInfo.remainingCount }}</text>
-				<text class="quota-item">Token: {{ formatToken(quotaInfo.remainingToken) }}</text>
 			</view>
 			<view v-else class="header-right">
 				<text class="quota-item">加载中...</text>
@@ -78,7 +77,6 @@ type Message = {
 
 type QuotaInfo = {
 	remainingCount: number;
-	remainingToken: number;
 };
 
 const emit = defineEmits<{
@@ -108,15 +106,6 @@ function formatNow() {
 	const hh = String(d.getHours()).padStart(2, '0');
 	const mm = String(d.getMinutes()).padStart(2, '0');
 	return `${hh}:${mm}`;
-}
-
-function formatToken(token: number): string {
-	if (token >= 1000000) {
-		return (token / 1000000).toFixed(1) + 'M';
-	} else if (token >= 1000) {
-		return (token / 1000).toFixed(1) + 'K';
-	}
-	return String(token);
 }
 
 function pushMessage(role: Role, text: string, status?: string) {

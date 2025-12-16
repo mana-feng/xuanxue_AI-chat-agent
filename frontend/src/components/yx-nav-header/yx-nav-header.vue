@@ -44,6 +44,10 @@
 			</template>
 			<!-- 已登录时显示用户菜单 -->
 			<template v-else>
+				<view class="dropdown-item" @tap="goToAnnouncements">
+					<tm-icon name="tmicon-md-bulb" :font-size="28" :margin="[0, 12, 0, 0]"></tm-icon>
+					<tm-text :font-size="28" label="公告"></tm-text>
+				</view>
 				<view class="dropdown-item" @tap="goToHistory">
 					<tm-icon name="tmicon-md-time" :font-size="28" :margin="[0, 12, 0, 0]"></tm-icon>
 					<tm-text :font-size="28" label="历史查询"></tm-text>
@@ -185,6 +189,13 @@ const goToHistory = () => {
 	closeUserMenu();
 	uni.navigateTo({
 		url: '/pages/history/list',
+	});
+};
+
+const goToAnnouncements = () => {
+	closeUserMenu();
+	uni.navigateTo({
+		url: '/pages/index/index?showAnnouncements=1',
 	});
 };
 

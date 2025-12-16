@@ -43,9 +43,9 @@ async function loadEmailConfig() {
 			},
 			// 连接超时设置
 			connectionTimeout: 10000,
-			// 调试选项（生产环境可关闭）
-			debug: process.env.NODE_ENV === 'development',
-			logger: process.env.NODE_ENV === 'development',
+		// 调试选项（生产环境保持关闭）
+		debug: false,
+		logger: false,
 		});
 
 		// 验证连接（异步，不阻塞启动）

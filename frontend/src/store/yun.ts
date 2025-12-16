@@ -178,14 +178,14 @@ export const useYunStore = defineStore('yun', {
 			const month = year[year_index].getLiuYue();
 
 			const month_list = [];
-			// 获取当前流年的节气表
-			const jieqi = year[year_index].getLunar().getJieQiTable();
-			// 获取下一年的节气表（用于小寒流月和大雪流月的下一个节气）
+			// 严格按照 bz.js 的逻辑：使用 Lunar.fromYmd(year, 6, 1).getJieQiTable() 获取节气表
+			// 在项目中，使用 Solar.fromDate 创建日期，然后获取农历对象
 			const currentYear = year[year_index].getYear();
-			const nextYearSolar = Solar.fromDate(new Date(currentYear + 1, 0, 1));
-			const nextYearLunar = nextYearSolar.getLunar();
-			const nextYearJieqi = nextYearLunar.getJieQiTable();
+			const jieqi = Lunar.fromDate(new Date(currentYear, 5, 1)).getJieQiTable(); // 月份从0开始，6月对应索引5
+			// 获取下一年的节气表（用于小寒流月和大雪流月的下一个节气）
+			const nextYearJieqi = Lunar.fromDate(new Date(currentYear + 1, 5, 1)).getJieQiTable();
 
+			// 严格按照 bz.js 的 $jie 数组：包含13个元素（最后一个为 'LI_CHUN'）
 			const map = [
 				'立春',
 				'惊蛰',
@@ -199,6 +199,7 @@ export const useYunStore = defineStore('yun', {
 				'立冬',
 				'大雪',
 				'XIAO_HAN',
+				'LI_CHUN',
 			];
 
 			for (let i = 0; i < month.length; i++) {
@@ -217,7 +218,7 @@ export const useYunStore = defineStore('yun', {
 					_jieqi = jieqi[map[i]];
 					_next_jieqi = nextYearJieqi['小寒'] || nextYearJieqi['XIAO_HAN'];
 				} else {
-					// 其他流月：从当前流年的节气表获取
+					// 其他流月：从当前流年的节气表获取，使用 map[i] 和 map[i + 1]
 					_jieqi = jieqi[map[i]];
 					_next_jieqi = jieqi[map[i + 1]];
 				}
@@ -279,34 +280,23 @@ export const useYunStore = defineStore('yun', {
 			const year = year_list[year_index].year;
 			let startSolar: Solar;
 			let endSolar: Solar;
-
-			// 使用库提供的 Solar 对象直接计算，避免手动拼接日期字符串
-			if (month_index === 11) {
-				// 小寒流月：特殊处理，起始日期为下一年的1月6号，结束日期为下一年的2月3号
-				const nextYear = year + 1;
-				startSolar = Solar.fromDate(new Date(nextYear, 0, 6)); // 1月6号（月份从0开始）
-				endSolar = Solar.fromDate(new Date(nextYear, 1, 3)); // 2月3号
-			} else {
-				// 其他流月：使用当前节气的 Solar 对象作为起始
-				startSolar = currentMonth.original as Solar;
-
-				// 计算结束日期（下一个节气的日期）
-				const [nextMonth, nextDay] = currentMonth.next_jieqi_date.split('/').map(Number);
-				const endYear = month_index < 10 ? year : year + 1;
-				endSolar = Solar.fromDate(new Date(endYear, nextMonth - 1, nextDay)); // 月份从0开始
-			}
+		
+			// 严格按照旧版 bz.js 中的逻辑：
+			// 起始日期使用当前节气对应的 Solar（currentMonth.original）
+			// 结束日期使用 next_jieqi_date 对应的节气日（不包含在当前流月内）
+			startSolar = currentMonth.original as Solar;
+		
+			const [nextMonth, nextDay] = currentMonth.next_jieqi_date.split('/').map(Number);
+			const endYear = month_index < 10 ? year : year + 1;
+			endSolar = Solar.fromDate(new Date(endYear, nextMonth - 1, nextDay)); // 月份从0开始
 
 			const day_list = [];
 			let currentSolar = startSolar;
 
-			// 遍历从起始日期到结束日期的每一天
-			// 对于小寒流月，包含结束日期（2月3号）
-			// 对于其他流月，不包含结束日期（因为结束日期是下一个流月的起始日期）
-			const includeEndDate = month_index === 11;
+			// 遍历从起始日期到结束日期前一天的每一天
+			// （结束日期本身属于下一个流月）
+			const includeEndDate = false;
 
-			// 计算日期范围，避免无限循环
-			const startTime = startSolar.toYmdHms();
-			const endTime = endSolar.toYmdHms();
 			const maxDays = 60; // 最多60天，防止无限循环
 			let dayCount = 0;
 

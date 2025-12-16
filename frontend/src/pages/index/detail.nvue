@@ -176,7 +176,6 @@ const yun_store = useYunStore();
 const user_store = useUserStore();
 const tableWrapperRef = ref<any>(null);
 const flowWrapperRef = ref<any>(null);
-const dragCleanups: Array<() => void> = [];
 
 const combinedGanZhiRelations = computed(() => {
 	const list: string[] = [];
@@ -345,73 +344,6 @@ if (user_store.timestamp === null) {
 		url: '/pages/index/index'
 	});
 }
-
-function enableDragScroll(el: HTMLElement | null) {
-	// #ifndef H5
-	return; // 非 H5 平台不支持拖拽
-	// #endif
-	// #ifdef H5
-	if (!el || typeof (el as any).addEventListener !== 'function') return;
-	let isDown = false;
-	let startX = 0;
-	let scrollLeft = 0;
-
-	const onMouseDown = (e: MouseEvent) => {
-		isDown = true;
-		(el as any).classList?.add('dragging');
-		const rect = (el as any).getBoundingClientRect ? (el as any).getBoundingClientRect() : { left: (el as any).offsetLeft || 0 };
-		startX = e.pageX - rect.left;
-		scrollLeft = el.scrollLeft;
-	};
-
-	const onMouseLeave = () => {
-		isDown = false;
-		(el as any).classList?.remove('dragging');
-	};
-
-	const onMouseUp = () => {
-		isDown = false;
-		(el as any).classList?.remove('dragging');
-	};
-
-	const onMouseMove = (e: MouseEvent) => {
-		if (!isDown) return;
-		e.preventDefault();
-		const x = e.pageX - el.offsetLeft;
-		const walk = x - startX;
-		el.scrollLeft = scrollLeft - walk;
-	};
-
-	el.addEventListener('mousedown', onMouseDown);
-	el.addEventListener('mouseleave', onMouseLeave);
-	el.addEventListener('mouseup', onMouseUp);
-	el.addEventListener('mousemove', onMouseMove);
-
-	dragCleanups.push(() => {
-		el.removeEventListener('mousedown', onMouseDown);
-		el.removeEventListener('mouseleave', onMouseLeave);
-		el.removeEventListener('mouseup', onMouseUp);
-		el.removeEventListener('mousemove', onMouseMove);
-		(el as any).classList?.remove('dragging');
-	});
-	// #endif
-}
-
-onMounted(() => {
-	// 仅在 H5/有 DOM 的环境启用拖拽
-	// #ifdef H5
-	if (typeof window === 'undefined' || typeof document === 'undefined') return;
-	nextTick(() => {
-		enableDragScroll(tableWrapperRef.value as any);
-		const flowTarget = (flowWrapperRef.value as any)?.querySelector?.('.scroll-view') || (flowWrapperRef.value as any);
-		enableDragScroll(flowTarget as any);
-	});
-	// #endif
-});
-
-onUnmounted(() => {
-	dragCleanups.forEach(fn => fn());
-});
 
 function getGenderLabel() {
 	// 统一标准：0=男，1=女

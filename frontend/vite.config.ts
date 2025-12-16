@@ -37,8 +37,4 @@ export default defineConfig({
 			},
 		},
 	},
-	// 优化依赖预构建
-	optimizeDeps: {
-		include: ['vue', 'pinia', 'lunar-javascript'],
-	},
 });

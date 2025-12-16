@@ -2,6 +2,7 @@
 // 提供 HTTP 安全头、输入验证、请求过滤等功能
 
 const SecurityUtils = require('./security');
+const config = require('./config');
 
 /**
  * 设置安全 HTTP 头
@@ -19,7 +20,7 @@ function securityHeaders(req, res, next) {
 			"script-src 'self' 'unsafe-eval' 'unsafe-inline' blob:; " +
 			"style-src 'self' 'unsafe-inline'; " +
 			"img-src 'self' data: blob:; " +
-			"connect-src 'self' http://localhost:3001 ws: wss:; " +
+			`connect-src 'self' ${config.CSP_CONNECT_SRC} ws: wss:; ` +
 			"font-src 'self' data:; " +
 			"object-src 'none'; " +
 			"base-uri 'self'; " +

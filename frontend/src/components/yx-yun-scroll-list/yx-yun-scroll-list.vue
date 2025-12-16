@@ -1,177 +1,327 @@
 <template>
 	<view>
-		<view v-for="(mitem, mindex) in map_list" :key="mitem.index">
-			<tm-sheet
-				v-if="(yun_store as any)[mitem.list].length"
-				class="my-20 yun-sheet"
-				:round="3"
-				:shadow="2"
-				:margin="[0, 12]"
-			>
-				<tm-text _class="font-weight-b" :label="mitem.title"></tm-text>
-				<view class="list-divider"></view>
-				<view class="scroll-container" :class="{ 'scroll-container-liuri': mindex == 3 }">
-					<scroll-view
-						class="scroll-view"
-						:class="{ 'scroll-view-liuri': mindex == 3 }"
-						scroll-x="true"
-						:show-scrollbar="true"
-						:enable-flex="true"
+		<!-- 大运 -->
+		<tm-sheet
+			v-if="(yun_store as any)[map_list[0].list].length"
+			class="my-20 yun-sheet"
+			:round="3"
+			:shadow="2"
+			:margin="[0, 12]"
+		>
+			<tm-text _class="font-weight-b" :label="map_list[0].title"></tm-text>
+			<view class="list-divider"></view>
+			<view class="scroll-container">
+				<scroll-view
+					ref="scrollView_0"
+					class="scroll-view"
+					scroll-x="true"
+					:show-scrollbar="true"
+					:enable-flex="true"
+				>
+					<view
+						class="scroll-view-item"
+						v-for="(ditem, dindex) in (yun_store as any)[map_list[0].list]"
+						:key="dindex"
 					>
 						<view
-							class="scroll-view-item"
-							v-for="(ditem, dindex) in mindex == 3
-								? limitedDayList
-								: (yun_store as any)[mitem.list]"
-							:key="mindex == 3 ? dindex : dindex"
+							class="scroll-view-item-default"
+							:class="{
+								'scroll-view-item-active':
+									(yun_store as any)[map_list[0].index] == dindex
+							}"
+							@click="ScrollItemClick(0, dindex)"
 						>
-							<view
-								class="scroll-view-item-default"
-								:class="{
-									'scroll-view-item-active':
-										(mindex == 3
-											? (yun_store as any)[mitem.index] == getOriginalDayIndex(dindex)
-											: (yun_store as any)[mitem.index] == dindex) && mindex < 4,
-								}"
-								@click="ScrollItemClick(mindex, mindex == 3 ? getOriginalDayIndex(dindex) : dindex)"
-							>
-								<view v-if="mindex == 0">
-									<view><tm-text :label="ditem.start_year"></tm-text></view>
-									<view><tm-text :label="ditem.ganzhi"></tm-text></view>
-									<view><tm-text :label="ditem.start_age + '岁'"></tm-text></view>
-									<view><tm-text :label="ditem.shishen"></tm-text></view>
-								</view>
-								<view v-if="mindex == 1">
-									<view><tm-text :label="ditem.year"></tm-text></view>
-									<view><tm-text :label="ditem.ganzhi"></tm-text></view>
-									<view><tm-text :label="ditem.age + '岁'"></tm-text></view>
-									<view><tm-text :label="ditem.shishen"></tm-text></view>
-								</view>
-								<view v-if="mindex == 2">
-									<view><tm-text :label="ditem.jieqi"></tm-text></view>
-									<view><tm-text :label="ditem.date"></tm-text></view>
-									<view><tm-text :label="ditem.ganzhi"></tm-text></view>
-									<view><tm-text :label="ditem.shishen"></tm-text></view>
-								</view>
-								<view v-if="mindex == 3">
-									<view><tm-text :label="formatSolarDate(ditem.date)"></tm-text></view>
-									<view><tm-text :label="ditem.nongli"></tm-text></view>
-									<view><tm-text :label="ditem.ganzhi"></tm-text></view>
-									<view><tm-text :label="ditem.shishen"></tm-text></view>
-								</view>
+							<view><tm-text :label="ditem.start_year"></tm-text></view>
+							<view><tm-text :label="ditem.ganzhi"></tm-text></view>
+							<view><tm-text :label="ditem.start_age + '岁'"></tm-text></view>
+							<view><tm-text :label="ditem.shishen"></tm-text></view>
+						</view>
+					</view>
+				</scroll-view>
+
+				<view v-if="(yun_store as any)[map_list[0].index] >= 0" class="selected-info">
+					<view v-if="getCachedShenSha(0).length > 0" class="px-20 py-10">
+						<tm-text
+							label="神煞："
+							:font-size="32"
+							color="primary"
+							_class="font-weight-b"
+						></tm-text>
+						<tm-text
+							:label="getCachedShenSha(0).join('、')"
+							:font-size="30"
+							color="grey-darken-1"
+							class="ml-10"
+						></tm-text>
+					</view>
+					<view v-if="getCachedHasRelations(0)" class="px-20 py-10">
+						<tm-text
+							label="关系："
+							:font-size="32"
+							color="primary"
+							_class="font-weight-b"
+						></tm-text>
+						<view class="mt-6">
+							<view v-if="getCachedRelationValue(0, 'ganHe')" class="mb-6">
+								<tm-text :label="getCachedRelationValue(0, 'ganHe')" :font-size="30" color="orange"></tm-text>
 							</view>
-						</view>
-					</scroll-view>
-
-					<!-- 在选中项下方显示神煞和关系（仅对大运、流年、流月、流日） -->
-					<view v-if="mindex < 4 && (yun_store as any)[mitem.index] >= 0" class="selected-info">
-						<!-- 显示选中项的神煞 -->
-						<view v-if="getCachedShenSha(mindex).length > 0" class="px-20 py-10">
-							<tm-text
-								label="神煞："
-								:font-size="32"
-								color="primary"
-								_class="font-weight-b"
-							></tm-text>
-							<tm-text
-								:label="getCachedShenSha(mindex).join('、')"
-								:font-size="30"
-								color="grey-darken-1"
-								class="ml-10"
-							></tm-text>
-						</view>
-
-						<!-- 显示选中项与原局的关系 -->
-						<view v-if="getCachedHasRelations(mindex)" class="px-20 py-10">
-							<tm-text
-								label="关系："
-								:font-size="32"
-								color="primary"
-								_class="font-weight-b"
-							></tm-text>
-							<view class="mt-6">
-								<!-- 天干合化 -->
-								<view v-if="getCachedRelationValue(mindex, 'ganHe')" class="mb-6">
-									<tm-text
-										:label="getCachedRelationValue(mindex, 'ganHe')"
-										:font-size="30"
-										color="orange"
-									></tm-text>
-								</view>
-								<!-- 地支六合 -->
-								<view v-if="getCachedRelationValue(mindex, 'zhiLiuHe')" class="mb-6">
-									<tm-text
-										:label="getCachedRelationValue(mindex, 'zhiLiuHe')"
-										:font-size="30"
-										color="green"
-									></tm-text>
-								</view>
-								<!-- 地支三合 -->
-								<view v-if="getCachedRelationValue(mindex, 'zhiSanHe')" class="mb-6">
-									<tm-text
-										:label="getCachedRelationValue(mindex, 'zhiSanHe')"
-										:font-size="30"
-										color="blue"
-									></tm-text>
-								</view>
-								<!-- 地支三会 -->
-								<view v-if="getCachedRelationValue(mindex, 'zhiSanHui')" class="mb-6">
-									<tm-text
-										:label="getCachedRelationValue(mindex, 'zhiSanHui')"
-										:font-size="30"
-										color="purple"
-									></tm-text>
-								</view>
-								<!-- 地支六冲 -->
-								<view
-									v-if="getCachedRelationArray(mindex, 'zhiLiuChong').length > 0"
-									class="mb-6"
-								>
-									<tm-text
-										:label="'冲：' + getCachedRelationArray(mindex, 'zhiLiuChong').join('、')"
-										:font-size="30"
-										color="red"
-									></tm-text>
-								</view>
-								<!-- 地支相刑 -->
-								<view
-									v-if="getCachedRelationArray(mindex, 'zhiXing').length > 0"
-									class="mb-6"
-								>
-									<tm-text
-										:label="'刑：' + getCachedRelationArray(mindex, 'zhiXing').join('、')"
-										:font-size="30"
-										color="red-darken-1"
-									></tm-text>
-								</view>
-								<!-- 地支相害 -->
-								<view
-									v-if="getCachedRelationArray(mindex, 'zhiHai').length > 0"
-									class="mb-6"
-								>
-									<tm-text
-										:label="'害：' + getCachedRelationArray(mindex, 'zhiHai').join('、')"
-										:font-size="30"
-										color="orange-darken-1"
-									></tm-text>
-								</view>
+							<view v-if="getCachedRelationValue(0, 'zhiLiuHe')" class="mb-6">
+								<tm-text :label="getCachedRelationValue(0, 'zhiLiuHe')" :font-size="30" color="green"></tm-text>
+							</view>
+							<view v-if="getCachedRelationValue(0, 'zhiSanHe')" class="mb-6">
+								<tm-text :label="getCachedRelationValue(0, 'zhiSanHe')" :font-size="30" color="blue"></tm-text>
+							</view>
+							<view v-if="getCachedRelationValue(0, 'zhiSanHui')" class="mb-6">
+								<tm-text :label="getCachedRelationValue(0, 'zhiSanHui')" :font-size="30" color="purple"></tm-text>
+							</view>
+							<view v-if="getCachedRelationArray(0, 'zhiLiuChong').length > 0" class="mb-6">
+								<tm-text :label="'冲：' + getCachedRelationArray(0, 'zhiLiuChong').join('、')" :font-size="30" color="red"></tm-text>
+							</view>
+							<view v-if="getCachedRelationArray(0, 'zhiXing').length > 0" class="mb-6">
+								<tm-text :label="'刑：' + getCachedRelationArray(0, 'zhiXing').join('、')" :font-size="30" color="red-darken-1"></tm-text>
+							</view>
+							<view v-if="getCachedRelationArray(0, 'zhiHai').length > 0" class="mb-6">
+								<tm-text :label="'害：' + getCachedRelationArray(0, 'zhiHai').join('、')" :font-size="30" color="orange-darken-1"></tm-text>
 							</view>
 						</view>
 					</view>
 				</view>
-			</tm-sheet>
-		</view>
+			</view>
+		</tm-sheet>
+
+		<!-- 流年 -->
+		<tm-sheet
+			v-if="(yun_store as any)[map_list[1].list].length"
+			class="my-20 yun-sheet"
+			:round="3"
+			:shadow="2"
+			:margin="[0, 12]"
+		>
+			<tm-text _class="font-weight-b" :label="map_list[1].title"></tm-text>
+			<view class="list-divider"></view>
+			<view class="scroll-container">
+				<scroll-view
+					ref="scrollView_1"
+					class="scroll-view"
+					scroll-x="true"
+					:show-scrollbar="true"
+					:enable-flex="true"
+				>
+					<view
+						class="scroll-view-item"
+						v-for="(ditem, dindex) in (yun_store as any)[map_list[1].list]"
+						:key="dindex"
+					>
+						<view
+							class="scroll-view-item-default"
+							:class="{
+								'scroll-view-item-active':
+									(yun_store as any)[map_list[1].index] == dindex
+							}"
+							@click="ScrollItemClick(1, dindex)"
+						>
+							<view><tm-text :label="ditem.year"></tm-text></view>
+							<view><tm-text :label="ditem.ganzhi"></tm-text></view>
+							<view><tm-text :label="ditem.age + '岁'"></tm-text></view>
+							<view><tm-text :label="ditem.shishen"></tm-text></view>
+						</view>
+					</view>
+				</scroll-view>
+
+				<view v-if="(yun_store as any)[map_list[1].index] >= 0" class="selected-info">
+					<view v-if="getCachedShenSha(1).length > 0" class="px-20 py-10">
+						<tm-text label="神煞：" :font-size="32" color="primary" _class="font-weight-b"></tm-text>
+						<tm-text :label="getCachedShenSha(1).join('、')" :font-size="30" color="grey-darken-1" class="ml-10"></tm-text>
+					</view>
+					<view v-if="getCachedHasRelations(1)" class="px-20 py-10">
+						<tm-text label="关系：" :font-size="32" color="primary" _class="font-weight-b"></tm-text>
+						<view class="mt-6">
+							<view v-if="getCachedRelationValue(1, 'ganHe')" class="mb-6">
+								<tm-text :label="getCachedRelationValue(1, 'ganHe')" :font-size="30" color="orange"></tm-text>
+							</view>
+							<view v-if="getCachedRelationValue(1, 'zhiLiuHe')" class="mb-6">
+								<tm-text :label="getCachedRelationValue(1, 'zhiLiuHe')" :font-size="30" color="green"></tm-text>
+							</view>
+							<view v-if="getCachedRelationValue(1, 'zhiSanHe')" class="mb-6">
+								<tm-text :label="getCachedRelationValue(1, 'zhiSanHe')" :font-size="30" color="blue"></tm-text>
+							</view>
+							<view v-if="getCachedRelationValue(1, 'zhiSanHui')" class="mb-6">
+								<tm-text :label="getCachedRelationValue(1, 'zhiSanHui')" :font-size="30" color="purple"></tm-text>
+							</view>
+							<view v-if="getCachedRelationArray(1, 'zhiLiuChong').length > 0" class="mb-6">
+								<tm-text :label="'冲：' + getCachedRelationArray(1, 'zhiLiuChong').join('、')" :font-size="30" color="red"></tm-text>
+							</view>
+							<view v-if="getCachedRelationArray(1, 'zhiXing').length > 0" class="mb-6">
+								<tm-text :label="'刑：' + getCachedRelationArray(1, 'zhiXing').join('、')" :font-size="30" color="red-darken-1"></tm-text>
+							</view>
+							<view v-if="getCachedRelationArray(1, 'zhiHai').length > 0" class="mb-6">
+								<tm-text :label="'害：' + getCachedRelationArray(1, 'zhiHai').join('、')" :font-size="30" color="orange-darken-1"></tm-text>
+							</view>
+						</view>
+					</view>
+				</view>
+			</view>
+		</tm-sheet>
+
+		<!-- 流月 -->
+		<tm-sheet
+			v-if="(yun_store as any)[map_list[2].list].length"
+			class="my-20 yun-sheet"
+			:round="3"
+			:shadow="2"
+			:margin="[0, 12]"
+		>
+			<tm-text _class="font-weight-b" :label="map_list[2].title"></tm-text>
+			<view class="list-divider"></view>
+			<view class="scroll-container">
+				<scroll-view
+					ref="scrollView_2"
+					class="scroll-view"
+					scroll-x="true"
+					:show-scrollbar="true"
+					:enable-flex="true"
+				>
+					<view
+						class="scroll-view-item"
+						v-for="(ditem, dindex) in (yun_store as any)[map_list[2].list]"
+						:key="dindex"
+					>
+						<view
+							class="scroll-view-item-default"
+							:class="{
+								'scroll-view-item-active':
+									(yun_store as any)[map_list[2].index] == dindex
+							}"
+							@click="ScrollItemClick(2, dindex)"
+						>
+							<view><tm-text :label="ditem.jieqi"></tm-text></view>
+							<view><tm-text :label="ditem.date"></tm-text></view>
+							<view><tm-text :label="ditem.ganzhi"></tm-text></view>
+							<view><tm-text :label="ditem.shishen"></tm-text></view>
+						</view>
+					</view>
+				</scroll-view>
+
+				<view v-if="(yun_store as any)[map_list[2].index] >= 0" class="selected-info">
+					<view v-if="getCachedShenSha(2).length > 0" class="px-20 py-10">
+						<tm-text label="神煞：" :font-size="32" color="primary" _class="font-weight-b"></tm-text>
+						<tm-text :label="getCachedShenSha(2).join('、')" :font-size="30" color="grey-darken-1" class="ml-10"></tm-text>
+					</view>
+					<view v-if="getCachedHasRelations(2)" class="px-20 py-10">
+						<tm-text label="关系：" :font-size="32" color="primary" _class="font-weight-b"></tm-text>
+						<view class="mt-6">
+							<view v-if="getCachedRelationValue(2, 'ganHe')" class="mb-6">
+								<tm-text :label="getCachedRelationValue(2, 'ganHe')" :font-size="30" color="orange"></tm-text>
+							</view>
+							<view v-if="getCachedRelationValue(2, 'zhiLiuHe')" class="mb-6">
+								<tm-text :label="getCachedRelationValue(2, 'zhiLiuHe')" :font-size="30" color="green"></tm-text>
+							</view>
+							<view v-if="getCachedRelationValue(2, 'zhiSanHe')" class="mb-6">
+								<tm-text :label="getCachedRelationValue(2, 'zhiSanHe')" :font-size="30" color="blue"></tm-text>
+							</view>
+							<view v-if="getCachedRelationValue(2, 'zhiSanHui')" class="mb-6">
+								<tm-text :label="getCachedRelationValue(2, 'zhiSanHui')" :font-size="30" color="purple"></tm-text>
+							</view>
+							<view v-if="getCachedRelationArray(2, 'zhiLiuChong').length > 0" class="mb-6">
+								<tm-text :label="'冲：' + getCachedRelationArray(2, 'zhiLiuChong').join('、')" :font-size="30" color="red"></tm-text>
+							</view>
+							<view v-if="getCachedRelationArray(2, 'zhiXing').length > 0" class="mb-6">
+								<tm-text :label="'刑：' + getCachedRelationArray(2, 'zhiXing').join('、')" :font-size="30" color="red-darken-1"></tm-text>
+							</view>
+							<view v-if="getCachedRelationArray(2, 'zhiHai').length > 0" class="mb-6">
+								<tm-text :label="'害：' + getCachedRelationArray(2, 'zhiHai').join('、')" :font-size="30" color="orange-darken-1"></tm-text>
+							</view>
+						</view>
+					</view>
+				</view>
+			</view>
+		</tm-sheet>
+
+		<!-- 流日 -->
+		<tm-sheet
+			v-if="(yun_store as any)[map_list[3].list].length"
+			class="my-20 yun-sheet"
+			:round="3"
+			:shadow="2"
+			:margin="[0, 12]"
+		>
+			<tm-text _class="font-weight-b" :label="map_list[3].title"></tm-text>
+			<view class="list-divider"></view>
+			<view class="scroll-container scroll-container-liuri">
+				<scroll-view
+					ref="scrollView_3"
+					class="scroll-view scroll-view-liuri draggable-scroll"
+					scroll-x="true"
+					:show-scrollbar="true"
+					:enable-flex="true"
+				>
+					<view
+						class="scroll-view-item"
+						v-for="(ditem, dindex) in limitedDayList"
+						:key="dindex"
+					>
+						<view
+							class="scroll-view-item-default"
+							:class="{
+								'scroll-view-item-active':
+									(yun_store as any)[map_list[3].index] == getOriginalDayIndex(dindex)
+							}"
+							@click="ScrollItemClick(3, getOriginalDayIndex(dindex))"
+						>
+							<view><tm-text :label="formatSolarDate(ditem.date)"></tm-text></view>
+							<view><tm-text :label="ditem.nongli"></tm-text></view>
+							<view><tm-text :label="ditem.ganzhi"></tm-text></view>
+							<view><tm-text :label="ditem.shishen"></tm-text></view>
+						</view>
+					</view>
+				</scroll-view>
+
+				<view v-if="(yun_store as any)[map_list[3].index] >= 0" class="selected-info">
+					<view v-if="getCachedShenSha(3).length > 0" class="px-20 py-10">
+						<tm-text label="神煞：" :font-size="32" color="primary" _class="font-weight-b"></tm-text>
+						<tm-text :label="getCachedShenSha(3).join('、')" :font-size="30" color="grey-darken-1" class="ml-10"></tm-text>
+					</view>
+					<view v-if="getCachedHasRelations(3)" class="px-20 py-10">
+						<tm-text label="关系：" :font-size="32" color="primary" _class="font-weight-b"></tm-text>
+						<view class="mt-6">
+							<view v-if="getCachedRelationValue(3, 'ganHe')" class="mb-6">
+								<tm-text :label="getCachedRelationValue(3, 'ganHe')" :font-size="30" color="orange"></tm-text>
+							</view>
+							<view v-if="getCachedRelationValue(3, 'zhiLiuHe')" class="mb-6">
+								<tm-text :label="getCachedRelationValue(3, 'zhiLiuHe')" :font-size="30" color="green"></tm-text>
+							</view>
+							<view v-if="getCachedRelationValue(3, 'zhiSanHe')" class="mb-6">
+								<tm-text :label="getCachedRelationValue(3, 'zhiSanHe')" :font-size="30" color="blue"></tm-text>
+							</view>
+							<view v-if="getCachedRelationValue(3, 'zhiSanHui')" class="mb-6">
+								<tm-text :label="getCachedRelationValue(3, 'zhiSanHui')" :font-size="30" color="purple"></tm-text>
+							</view>
+							<view v-if="getCachedRelationArray(3, 'zhiLiuChong').length > 0" class="mb-6">
+								<tm-text :label="'冲：' + getCachedRelationArray(3, 'zhiLiuChong').join('、')" :font-size="30" color="red"></tm-text>
+							</view>
+							<view v-if="getCachedRelationArray(3, 'zhiXing').length > 0" class="mb-6">
+								<tm-text :label="'刑：' + getCachedRelationArray(3, 'zhiXing').join('、')" :font-size="30" color="red-darken-1"></tm-text>
+							</view>
+							<view v-if="getCachedRelationArray(3, 'zhiHai').length > 0" class="mb-6">
+								<tm-text :label="'害：' + getCachedRelationArray(3, 'zhiHai').join('、')" :font-size="30" color="orange-darken-1"></tm-text>
+							</view>
+						</view>
+					</view>
+				</view>
+			</view>
+		</tm-sheet>
 	</view>
 </template>
 
 <script lang="ts" setup>
-import { onMounted, watch, nextTick, computed } from 'vue';
+import { onMounted, watch, nextTick, computed, ref, onUnmounted } from 'vue';
 import { useYunStore } from '@/store/yun';
 import { useBaziStore } from '@/store/bazi';
 import { calculateShenShaForGanZhi, calculateGanZhiRelations } from '@/libs/utils/bazi-enhanced';
 
 const yun_store = useYunStore();
 const bazi_store = useBaziStore();
+const dragCleanups: Array<() => void> = [];
 
 // 限制流日显示数量，只显示当前流月中的每一天
 const limitedDayList = computed(() => {
@@ -467,6 +617,7 @@ function getSelectedShenSha(indexKey: string, listKey: string): string[] {
 	const monthZhi = bazi_store.dizhi?.month || '';
 	const dayZhi = bazi_store.dizhi?.day || '';
 	const timeZhi = bazi_store.dizhi?.time || '';
+	const yearGan = bazi_store.tiangan?.year || '';
 
 	return calculateShenShaForGanZhi(
 		bazi_store.tiangan.day,
@@ -475,7 +626,8 @@ function getSelectedShenSha(indexKey: string, listKey: string): string[] {
 		yearZhi,
 		monthZhi,
 		dayZhi,
-		timeZhi
+		timeZhi,
+		yearGan
 	);
 }
 
@@ -693,6 +845,69 @@ watch(
 	{ immediate: true }
 );
 
+// 仅针对流日行（mindex===3）的滚动区域启用指针拖动
+// 拖动手感与排盘详情中的拖动逻辑保持一致：按下变抓手、跟随指针位移滚动
+function enableLiuriDrag(el: HTMLElement | null) {
+	if (!el) return;
+	if (typeof (el as any).addEventListener !== 'function') return;
+
+	let isDown = false;
+	let startX = 0;
+	let startY = 0;
+	let scrollLeft = 0;
+	let scrollTop = 0;
+
+	const onPointerDown = (e: PointerEvent) => {
+		if (e.pointerType === 'mouse' || e.pointerType === 'pen' || e.pointerType === 'touch') {
+			isDown = true;
+			el.classList?.add('dragging');
+			const rect = el.getBoundingClientRect();
+			startX = e.clientX - rect.left;
+			startY = e.clientY - rect.top;
+			scrollLeft = el.scrollLeft || 0;
+			scrollTop = el.scrollTop || 0;
+			el.setPointerCapture?.(e.pointerId);
+		}
+	};
+
+	const onPointerMove = (e: PointerEvent) => {
+		if (!isDown) return;
+		e.preventDefault();
+		const x = e.clientX - el.getBoundingClientRect().left;
+		const y = e.clientY - el.getBoundingClientRect().top;
+		const walkX = x - startX;
+		const walkY = y - startY;
+		if (el.scrollLeft !== undefined) {
+			el.scrollLeft = scrollLeft - walkX;
+		}
+		if (el.scrollTop !== undefined) {
+			el.scrollTop = scrollTop - walkY;
+		}
+	};
+
+	const endDrag = (e?: PointerEvent) => {
+		if (!isDown) return;
+		isDown = false;
+		el.classList?.remove('dragging');
+		if (e) el.releasePointerCapture?.(e.pointerId);
+	};
+
+	el.addEventListener('pointerdown', onPointerDown);
+	el.addEventListener('pointermove', onPointerMove);
+	el.addEventListener('pointerup', endDrag);
+	el.addEventListener('pointercancel', endDrag);
+	el.addEventListener('pointerleave', endDrag);
+
+	dragCleanups.push(() => {
+		el.removeEventListener('pointerdown', onPointerDown);
+		el.removeEventListener('pointermove', onPointerMove);
+		el.removeEventListener('pointerup', endDrag);
+		el.removeEventListener('pointercancel', endDrag);
+		el.removeEventListener('pointerleave', endDrag);
+		el.classList?.remove('dragging');
+	});
+}
+
 // 组件挂载时也尝试定位（只在首次加载时执行）
 onMounted(() => {
 	if (
@@ -704,6 +919,19 @@ onMounted(() => {
 		hasAutoLocated = true;
 		autoLocateToCurrentTime();
 	}
+	
+	// 只对流日一栏启用拖动
+	nextTick(() => {
+		setTimeout(() => {
+			if (typeof document === 'undefined') return;
+			const liuriEl = document.querySelector?.('.scroll-view-liuri') as any;
+			enableLiuriDrag(liuriEl);
+		}, 100);
+	});
+});
+
+onUnmounted(() => {
+	dragCleanups.forEach(fn => fn());
 });
 </script>
 
@@ -780,6 +1008,22 @@ onMounted(() => {
 			}
 		}
 	}
+}
+
+.draggable-scroll {
+	cursor: grab;
+	user-select: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+}
+
+.draggable-scroll.dragging {
+	cursor: grabbing;
+	user-select: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
 }
 
 :deep(.yun-sheet) {

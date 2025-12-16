@@ -9,7 +9,8 @@ import config from '@/config/config';
 
 // 神煞映射表
 const SHEN_SHA = {
-	// 天乙贵人
+	// 天乙贵人（严格按照 bz.js 的 Shen_niangan 和 Shen_rigan）
+	// bz.js: "甲戊:丑未","乙己:申子","丙丁:亥酉","壬癸:卯巳","庚辛:寅午"
 	tianyi: {
 		'甲': ['丑', '未'],
 		'乙': ['子', '申'],
@@ -17,15 +18,16 @@ const SHEN_SHA = {
 		'丁': ['亥', '酉'],
 		'戊': ['丑', '未'],
 		'己': ['子', '申'],
-		'庚': ['丑', '未'],
-		'辛': ['午', '寅'],
+		'庚': ['寅', '午'], // 修复：严格按照 bz.js，庚辛应该是寅午
+		'辛': ['寅', '午'], // 修复：严格按照 bz.js，庚辛应该是寅午
 		'壬': ['卯', '巳'],
 		'癸': ['卯', '巳']
 	},
-	// 文昌
+	// 文昌（严格按照 bz.js 的 Shen_niangan 和 Shen_rigan）
+	// bz.js: "甲乙:巳午","丙戊:申","丁己:酉","庚:亥","辛:子","壬:寅","癸:卯"
 	wenchang: {
-		'甲': '巳',
-		'乙': '午',
+		'甲': ['巳', '午'], // 修复：甲可以是巳或午
+		'乙': ['巳', '午'], // 修复：乙可以是巳或午
 		'丙': '申',
 		'丁': '酉',
 		'戊': '申',
@@ -35,8 +37,18 @@ const SHEN_SHA = {
 		'壬': '寅',
 		'癸': '卯'
 	},
-	// 桃花（子午卯酉）
-	taohua: ['子', '午', '卯', '酉'],
+	// 桃花（严格按照 bz.js 的 Shen_nianzhi 和 Shen_rizhi）
+	// bz.js: "申子辰:酉","寅午戌:卯","巳酉丑:午","亥卯未:子"
+	// 逻辑：如果年支或日支是申、子、辰之一，且当前地支是酉 -> 桃花
+	//      如果年支或日支是寅、午、戌之一，且当前地支是卯 -> 桃花
+	//      如果年支或日支是巳、酉、丑之一，且当前地支是午 -> 桃花
+	//      如果年支或日支是亥、卯、未之一，且当前地支是子 -> 桃花
+	taohua: {
+		'申': '酉', '子': '酉', '辰': '酉',
+		'寅': '卯', '午': '卯', '戌': '卯',
+		'巳': '午', '酉': '午', '丑': '午',
+		'亥': '子', '卯': '子', '未': '子'
+	},
 	// 驿马（申子辰见寅，寅午戌见申，巳酉丑见亥，亥卯未见巳）
 	yima: {
 		'申': '寅',
@@ -64,7 +76,8 @@ const SHEN_SHA = {
 		'午': '丙', '未': '甲', '申': '壬', '酉': '庚',
 		'戌': '丙', '亥': '甲', '子': '壬', '丑': '庚'
 	},
-	// 太极贵人（根据日干）
+	// 太极贵人（根据日干，严格按照 bz.js 的 Shen_niangan）
+	// bz.js: "甲乙:子午","丙丁:卯酉","戊己:辰戌丑未","庚辛:寅亥","壬癸:巳申"
 	taiji: {
 		'甲': ['子', '午'],
 		'乙': ['子', '午'],
@@ -72,10 +85,10 @@ const SHEN_SHA = {
 		'丁': ['卯', '酉'],
 		'戊': ['辰', '戌', '丑', '未'],
 		'己': ['辰', '戌', '丑', '未'],
-		'庚': ['寅', '申'],
-		'辛': ['寅', '申'],
-		'壬': ['巳', '亥'],
-		'癸': ['巳', '亥']
+		'庚': ['寅', '亥'], // 修复：严格按照 bz.js，庚辛应该是寅亥，不是寅申
+		'辛': ['寅', '亥'], // 修复：严格按照 bz.js，庚辛应该是寅亥，不是寅申
+		'壬': ['巳', '申'], // 修复：严格按照 bz.js，壬癸应该是巳申，不是巳亥
+		'癸': ['巳', '申']  // 修复：严格按照 bz.js，壬癸应该是巳申，不是巳亥
 	},
 	// 福星贵人（根据日干）
 	fuxing: {
@@ -245,7 +258,52 @@ const SHEN_SHA = {
 	// 日德（根据日干，甲寅、戊辰、丙辰、壬戌、庚辰）
 	ride: ['甲寅', '戊辰', '丙辰', '壬戌', '庚辰'],
 	// 日贵（根据日干，丁酉、丁亥、癸巳、癸卯）
-	rigui: ['丁酉', '丁亥', '癸巳', '癸卯']
+	rigui: ['丁酉', '丁亥', '癸巳', '癸卯'],
+	// 天厨贵人（根据年干或日干，严格按照 bz.js 的 Shen_niangan 和 Shen_rigan）
+	tianchu: {
+		'甲': '巳',
+		'乙': '午',
+		'丙': '子',
+		'丁': '巳',
+		'戊': '午',
+		'己': '申',
+		'庚': '寅',
+		'辛': '午',
+		'壬': '酉',
+		'癸': '亥'
+	},
+	// 元辰（根据年支，有两个版本，根据性别选择）
+	yuanchen1: { // 第一个版本（sx == 0 时使用）
+		'子': '未', '丑': '申', '寅': '酉', '卯': '戌',
+		'辰': '亥', '巳': '子', '午': '丑', '未': '寅',
+		'申': '卯', '酉': '辰', '戌': '巳', '亥': '午'
+	},
+	yuanchen2: { // 第二个版本（sx == 1 时使用）
+		'子': '巳', '丑': '午', '寅': '未', '卯': '申',
+		'辰': '酉', '巳': '戌', '午': '亥', '未': '子',
+		'申': '丑', '酉': '寅', '戌': '卯', '亥': '辰'
+	},
+	// 灾煞（根据年支三合局）
+	zaisha: {
+		'申': '午', '子': '午', '辰': '午',
+		'亥': '酉', '卯': '酉', '未': '酉',
+		'寅': '子', '午': '子', '戌': '子',
+		'巳': '卯', '酉': '卯', '丑': '卯'
+	},
+	// 劫煞（根据年支三合局）
+	jiesha: {
+		'申': '巳', '子': '巳', '辰': '巳',
+		'亥': '申', '卯': '申', '未': '申',
+		'寅': '亥', '午': '亥', '戌': '亥',
+		'巳': '寅', '酉': '寅', '丑': '寅'
+	},
+	// 亡神（根据年支三合局）
+	wangshen: {
+		'寅': '巳', '午': '巳', '戌': '巳',
+		'亥': '寅', '卯': '寅', '未': '寅',
+		'巳': '申', '酉': '申', '丑': '申',
+		'申': '亥', '子': '亥', '辰': '亥'
+	}
 };
 
 // 格局判断
@@ -293,7 +351,7 @@ export interface BaziEnhancedData {
 	shensha: {
 		tianyi?: string[]; // 天乙贵人
 		wenchang?: string[]; // 文昌
-		taohua?: string[]; // 桃花
+		taohua?: string[]; // 桃花（根据年支或日支的三合局判断）
 		yima?: string[]; // 驿马
 		tiande?: string[]; // 天德贵人
 		yuede?: string[]; // 月德贵人
@@ -348,9 +406,11 @@ export interface BaziEnhancedData {
 		sanXing?: string[]; // 三刑，如 ["子卯刑", "寅巳申刑"]
 		sanHui?: string[]; // 三会，如 ["寅卯辰会木"]
 		ganHe?: string[]; // 天干合化，如 ["甲己合化土"]
+		ganChong?: string[]; // 天干相冲，如 ["甲庚冲"]（严格按照 bz.js 的 liuyi 数组）
 		zhiHe?: string[]; // 地支六合，如 ["子丑合"]
-		chong?: string[]; // 冲，如 ["子午冲"]
-		hai?: string[]; // 害，如 ["子未害"]
+		chong?: string[]; // 地支六冲，如 ["子午冲"]
+		hai?: string[]; // 地支相害，如 ["子未害"]
+		zhiPo?: string[]; // 地支相破，如 ["子酉破"]（严格按照 bz.js 的 liuyi 数组）
 	};
 }
 
@@ -396,6 +456,26 @@ export function calculateKongWangForGanZhi(ganzhi: string): string[] {
 }
 
 /**
+ * 获取纳音（严格按照 bz.js 的 getNayin 函数）
+ */
+function getNayinForGanZhi(ganzhi: string): string {
+	const gzu = ["甲子","丙寅","戊辰","庚午","壬申","甲戌","丙子","戊寅","庚辰","壬午","甲申","丙戌","戊子","庚寅","壬辰","甲午","丙申","戊戌","庚子","壬寅","甲辰","丙午","戊申","庚戌","壬子","甲寅","丙辰","戊午","庚申","壬戌"];
+	const zzu = ["乙丑","丁卯","己巳","辛未","癸酉","乙亥","丁丑","己卯","辛巳","癸未","乙酉","丁亥","己丑","辛卯","癸巳","乙未","丁酉","己亥","辛丑","癸卯","乙巳","丁未","己酉","辛亥","癸丑","乙卯","丁巳","己未","辛酉","癸亥"];
+	const nyzu = ["海中金","炉中火","大林木","路旁土","剑锋金","山头火","涧下水","城头土","白腊金","杨柳木","泉中水","屋上土","霹雳火","松柏木","长流水","砂石金","山下火","平地木","壁上土","金薄金","覆灯火","天河水","大驿土","钗环金","桑柘木","大溪水","沙中土","天上火","石榴木","大海水"];
+	
+	const z1 = gzu.indexOf(ganzhi);
+	if (z1 !== -1) {
+		return nyzu[z1];
+	} else {
+		const z2 = zzu.indexOf(ganzhi);
+		if (z2 !== -1) {
+			return nyzu[z2];
+		}
+	}
+	return '';
+}
+
+/**
  * 获取天干对应的五行
  */
 function getGanWuxing(gan: string): string {
@@ -432,9 +512,11 @@ function getZhiWuxing(zhi: string): string {
  * @param monthZhi 月支（可选，用于计算天德贵人、月德贵人）
  * @param dayZhi   日支（可选，用于金神等）
  * @param timeZhi  时支（可选，用于金神等）
+ * @param yearGan 年干（可选，用于计算天厨贵人）
+ * @param gender 性别（可选，0=男，1=女，用于元辰选择）
  * @returns 神煞数组
  */
-export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, originalZhiList?: string[], yearZhi?: string, monthZhi?: string, dayZhi?: string, timeZhi?: string): string[] {
+export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, originalZhiList?: string[], yearZhi?: string, monthZhi?: string, dayZhi?: string, timeZhi?: string, yearGan?: string, gender?: number): string[] {
 	const shenshaList: string[] = [];
 	const pushUnique = (value?: string) => {
 		if (value && !shenshaList.includes(value)) shenshaList.push(value);
@@ -453,14 +535,29 @@ export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, origin
 		pushUnique(`天乙贵人(${zhi})`);
 	}
 	
-	// 文昌
-	const wenchangMap = SHEN_SHA.wenchang as { [key: string]: string };
-	if (wenchangMap[dayGan] === zhi) {
-		pushUnique(`文昌(${zhi})`);
+	// 文昌（严格按照 bz.js 的 Shen_niangan 和 Shen_rigan）
+	const wenchangMap = SHEN_SHA.wenchang as { [key: string]: string | string[] };
+	const wenchangValue = wenchangMap[dayGan];
+	if (wenchangValue) {
+		if (Array.isArray(wenchangValue)) {
+			// 甲、乙可以是巳或午
+			if (wenchangValue.includes(zhi)) {
+				pushUnique(`文昌(${zhi})`);
+			}
+		} else if (wenchangValue === zhi) {
+			pushUnique(`文昌(${zhi})`);
+		}
 	}
 	
-	// 桃花
-	if (SHEN_SHA.taohua.includes(zhi)) {
+	// 桃花（严格按照 bz.js 的 Shen_nianzhi 和 Shen_rizhi）
+	// bz.js: "申子辰:酉","寅午戌:卯","巳酉丑:午","亥卯未:子"
+	const taohuaMap = SHEN_SHA.taohua as { [key: string]: string };
+	// 检查年支
+	if (yearZhi && taohuaMap[yearZhi] === zhi) {
+		pushUnique(`桃花(${zhi})`);
+	}
+	// 检查日支
+	if (dayZhi && taohuaMap[dayZhi] === zhi) {
 		pushUnique(`桃花(${zhi})`);
 	}
 	
@@ -477,11 +574,16 @@ export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, origin
 		}
 	}
 	
-	// 天德贵人（根据月支）
+	// 天德贵人（根据月支，严格按照 bz.js 的 Shen_yuezhi）
+	// bz.js: 天德贵人可以是天干或地支，检查 str[1] == tgx || str[1] == dzy
 	if (monthZhi) {
 		const tiandeMap = SHEN_SHA.tiande as { [key: string]: string };
-		if (tiandeMap[monthZhi] === gan) {
-			pushUnique(`天德贵人(${gan})`);
+		const tiandeValue = tiandeMap[monthZhi];
+		if (tiandeValue) {
+			// 检查天干或地支
+			if (tiandeValue === gan || tiandeValue === zhi) {
+				pushUnique(`天德贵人(${tiandeValue})`);
+			}
 		}
 	}
 	
@@ -511,16 +613,36 @@ export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, origin
 		pushUnique(`国印贵人(${zhi})`);
 	}
 	
-	// 学堂（根据日干）
-	const xuetangMap = SHEN_SHA.xuetang as { [key: string]: string };
-	if (xuetangMap[dayGan] === zhi) {
-		pushUnique(`学堂(${zhi})`);
+	// 学堂（根据日干，严格按照 bz.js 的 Shen_niangan 和 Shen_rigan）
+	// bz.js 逻辑：需要日干匹配、干支完全匹配，且日干五行等于纳音第三个字符
+	const xuetangMap: { [key: string]: string } = {
+		'甲': '己亥', '乙': '壬午', '丙': '丙寅', '丁': '丁酉',
+		'戊': '戊寅', '己': '己酉', '庚': '辛巳', '辛': '甲子',
+		'壬': '甲申', '癸': '乙卯'
+	};
+	if (xuetangMap[dayGan] === ganzhi) {
+		// 检查日干五行是否等于纳音第三个字符（严格按照 bz.js）
+		const ganWuxing = getGanWuxing(dayGan);
+		const nayin = getNayinForGanZhi(ganzhi);
+		if (nayin && nayin.length >= 3 && ganWuxing === nayin[2]) {
+			pushUnique(`学堂(${ganzhi})`);
+		}
 	}
 	
-	// 词馆（根据日干）
-	const ciguanMap = SHEN_SHA.ciguan as { [key: string]: string };
-	if (ciguanMap[dayGan] === zhi) {
-		pushUnique(`词馆(${zhi})`);
+	// 词馆（根据日干，严格按照 bz.js 的 Shen_niangan 和 Shen_rigan）
+	// bz.js 逻辑：需要日干匹配、干支完全匹配，且日干五行等于纳音第三个字符
+	const ciguanMap: { [key: string]: string } = {
+		'甲': '庚寅', '乙': '辛卯', '丙': '乙巳', '丁': '戊午',
+		'戊': '丁巳', '己': '庚午', '庚': '壬申', '辛': '癸酉',
+		'壬': '癸亥', '癸': '壬戌'
+	};
+	if (ciguanMap[dayGan] === ganzhi) {
+		// 检查日干五行是否等于纳音第三个字符（严格按照 bz.js）
+		const ganWuxing = getGanWuxing(dayGan);
+		const nayin = getNayinForGanZhi(ganzhi);
+		if (nayin && nayin.length >= 3 && ganWuxing === nayin[2]) {
+			pushUnique(`词馆(${ganzhi})`);
+		}
 	}
 	
 	// 金舆（根据日干）
@@ -587,15 +709,22 @@ export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, origin
 		}
 	}
 	
-	// 天德合（根据月支）
+	// 天德合（根据月支，天德贵人的合干）
+	// 注意：天德合仅在天德贵人为天干时计算，如果天德贵人是地支（如"卯:申"、"午:亥"、"酉:寅"），则不计算天德合
 	if (monthZhi) {
-		const tiandeheMap = SHEN_SHA.tiandehe as { [key: string]: string };
-		if (tiandeheMap[monthZhi] === gan) {
-			pushUnique(`天德合(${gan})`);
+		const tiandeMap = SHEN_SHA.tiande as { [key: string]: string };
+		const tiandeValue = tiandeMap[monthZhi];
+		// 只有当天德贵人是天干时，才计算天德合
+		if (tiandeValue && ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'].includes(tiandeValue)) {
+			const tiandeheMap = SHEN_SHA.tiandehe as { [key: string]: string };
+			if (tiandeheMap[monthZhi] === gan) {
+				pushUnique(`天德合(${gan})`);
+			}
 		}
 	}
 	
-	// 月德合（根据月支）
+	// 月德合（根据月支，月德贵人的合干）
+	// 月德贵人都是天干，所以可以直接计算
 	if (monthZhi) {
 		const yuedeheMap = SHEN_SHA.yuedehe as { [key: string]: string };
 		if (yuedeheMap[monthZhi] === gan) {
@@ -626,6 +755,120 @@ export function calculateShenShaForGanZhi(dayGan: string, ganzhi: string, origin
 		const dayGanZhi = dayGan + (dayZhi || '');
 		if (jinshenRizhu.includes(dayGanZhi) && jinshenMap[dayGan] && jinshenMap[dayGan].includes(timeZhi)) {
 			pushUnique(`金神(${timeZhi})`);
+		}
+	}
+	
+	// 天厨贵人（根据年干或日干，严格按照 bz.js 的 Shen_niangan 和 Shen_rigan）
+	const tianchuMap = SHEN_SHA.tianchu as { [key: string]: string };
+	// 先检查年干（如果传入）
+	if (yearGan && tianchuMap[yearGan] === zhi) {
+		pushUnique(`天厨贵人(${zhi})`);
+	}
+	// 再检查日干（如果年干没有匹配）
+	else if (tianchuMap[dayGan] === zhi) {
+		pushUnique(`天厨贵人(${zhi})`);
+	}
+	
+	// 元辰（根据年支，有两个版本，根据性别选择）
+	if (yearZhi && gender !== undefined) {
+		const yuanchen1Map = SHEN_SHA.yuanchen1 as { [key: string]: string };
+		const yuanchen2Map = SHEN_SHA.yuanchen2 as { [key: string]: string };
+		// gender: 0=男，1=女（与 bz.js 的 sx 相反：sx==0 用第一个，sx==1 用第二个）
+		if (gender === 0 && yuanchen1Map[yearZhi] === zhi) {
+			pushUnique(`元辰(${zhi})`);
+		} else if (gender === 1 && yuanchen2Map[yearZhi] === zhi) {
+			pushUnique(`元辰(${zhi})`);
+		}
+	}
+	
+	// 灾煞（根据年支三合局）
+	if (yearZhi) {
+		const zaishaMap = SHEN_SHA.zaisha as { [key: string]: string };
+		if (zaishaMap[yearZhi] === zhi) {
+			pushUnique(`灾煞(${zhi})`);
+		}
+	}
+	
+	// 劫煞（根据年支三合局）
+	if (yearZhi) {
+		const jieshaMap = SHEN_SHA.jiesha as { [key: string]: string };
+		if (jieshaMap[yearZhi] === zhi) {
+			pushUnique(`劫煞(${zhi})`);
+		}
+	}
+	
+	// 亡神（根据年支三合局）
+	if (yearZhi) {
+		const wangshenMap = SHEN_SHA.wangshen as { [key: string]: string };
+		if (wangshenMap[yearZhi] === zhi) {
+			pushUnique(`亡神(${zhi})`);
+		}
+	}
+	
+	// 天罗地网（严格按照 bz.js 的 Shen_nianzhi 和 Shen_rizhi）
+	// bz.js: "辰:巳","巳:辰","戌:亥","亥:戌"
+	// 逻辑：如果年支是辰，当前地支是巳 -> 天罗地网；如果年支是巳，当前地支是辰 -> 天罗地网
+	// 或者：如果日支是辰，当前地支是巳 -> 天罗地网；如果日支是巳，当前地支是辰 -> 天罗地网
+	if (yearZhi) {
+		if (yearZhi === '辰' && zhi === '巳') {
+			pushUnique(`天罗地网(${zhi})`);
+		} else if (yearZhi === '巳' && zhi === '辰') {
+			pushUnique(`天罗地网(${zhi})`);
+		} else if (yearZhi === '戌' && zhi === '亥') {
+			pushUnique(`天罗地网(${zhi})`);
+		} else if (yearZhi === '亥' && zhi === '戌') {
+			pushUnique(`天罗地网(${zhi})`);
+		}
+	}
+	if (dayZhi) {
+		if (dayZhi === '辰' && zhi === '巳') {
+			pushUnique(`天罗地网(${zhi})`);
+		} else if (dayZhi === '巳' && zhi === '辰') {
+			pushUnique(`天罗地网(${zhi})`);
+		} else if (dayZhi === '戌' && zhi === '亥') {
+			pushUnique(`天罗地网(${zhi})`);
+		} else if (dayZhi === '亥' && zhi === '戌') {
+			pushUnique(`天罗地网(${zhi})`);
+		}
+	}
+	
+	// 披麻、吊客、丧门（根据年支索引计算，严格按照 bz.js 的 Shen_nianzhi）
+	if (yearZhi) {
+		const dizhiArr = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+		const yearZhiIndex = dizhiArr.indexOf(yearZhi);
+		if (yearZhiIndex >= 0) {
+			const pmz = (yearZhiIndex + 3) % 12; // 披麻
+			const dkz = (yearZhiIndex + 2) % 12; // 吊客
+			const smz = (yearZhiIndex + 10) % 12; // 丧门
+			if (dizhiArr[pmz] === zhi) {
+				pushUnique(`披麻(${zhi})`);
+			}
+			if (dizhiArr[dkz] === zhi) {
+				pushUnique(`吊客(${zhi})`);
+			}
+			if (dizhiArr[smz] === zhi) {
+				pushUnique(`丧门(${zhi})`);
+			}
+		}
+	}
+	
+	// 披麻、吊客、丧门（根据日支索引计算，严格按照 bz.js 的 Shen_rizhi）
+	if (dayZhi) {
+		const dizhiArr = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+		const dayZhiIndex = dizhiArr.indexOf(dayZhi);
+		if (dayZhiIndex >= 0) {
+			const pmz = (dayZhiIndex + 3) % 12; // 披麻
+			const dkz = (dayZhiIndex + 2) % 12; // 吊客
+			const smz = (dayZhiIndex + 10) % 12; // 丧门
+			if (dizhiArr[pmz] === zhi) {
+				pushUnique(`披麻(${zhi})`);
+			}
+			if (dizhiArr[dkz] === zhi) {
+				pushUnique(`吊客(${zhi})`);
+			}
+			if (dizhiArr[smz] === zhi) {
+				pushUnique(`丧门(${zhi})`);
+			}
 		}
 	}
 	
@@ -664,17 +907,41 @@ function calculateShenSha(bazi: any): BaziEnhancedData['shensha'] {
 		}
 	}
 
-	// 文昌
-	const wenchangMap = SHEN_SHA.wenchang as { [key: string]: string };
-	if (wenchangMap[dayGan] && allZhi.includes(wenchangMap[dayGan])) {
-		shensha.wenchang = [wenchangMap[dayGan]];
-		if (shensha.all) {
-			shensha.all.push(`文昌(${wenchangMap[dayGan]})`);
+	// 文昌（严格按照 bz.js 的 Shen_niangan 和 Shen_rigan）
+	const wenchangMap = SHEN_SHA.wenchang as { [key: string]: string | string[] };
+	const wenchangValue = wenchangMap[dayGan];
+	if (wenchangValue) {
+		if (Array.isArray(wenchangValue)) {
+			// 甲、乙可以是巳或午
+			const matched = wenchangValue.filter((z: string) => allZhi.includes(z));
+			if (matched.length > 0) {
+				shensha.wenchang = matched;
+				if (shensha.all) {
+					shensha.all.push(...matched.map((z: string) => `文昌(${z})`));
+				}
+			}
+		} else if (allZhi.includes(wenchangValue)) {
+			shensha.wenchang = [wenchangValue];
+			if (shensha.all) {
+				shensha.all.push(`文昌(${wenchangValue})`);
+			}
 		}
 	}
 
-	// 桃花
-	const taohua = allZhi.filter((zhi: string) => SHEN_SHA.taohua.includes(zhi));
+	// 桃花（严格按照 bz.js 的 Shen_nianzhi 和 Shen_rizhi）
+	// bz.js: "申子辰:酉","寅午戌:卯","巳酉丑:午","亥卯未:子"
+	const taohuaMap = SHEN_SHA.taohua as { [key: string]: string };
+	const taohua: string[] = [];
+	// 检查年支和日支
+	const checkZhi = [yearZhi, dayZhi].filter(Boolean);
+	checkZhi.forEach((zhi: string) => {
+		if (taohuaMap[zhi] && allZhi.includes(taohuaMap[zhi])) {
+			const taohuaZhi = taohuaMap[zhi];
+			if (!taohua.includes(taohuaZhi)) {
+				taohua.push(taohuaZhi);
+			}
+		}
+	});
 	if (taohua.length > 0) {
 		shensha.taohua = taohua;
 		if (shensha.all) {
@@ -697,14 +964,16 @@ function calculateShenSha(bazi: any): BaziEnhancedData['shensha'] {
 		}
 	}
 
-	// 天德贵人（根据月支）
+	// 天德贵人（根据月支，严格按照 bz.js 的 Shen_yuezhi）
+	// bz.js: 天德贵人可以是天干或地支，检查 str[1] == tgx || str[1] == dzy
 	const tiandeMap = SHEN_SHA.tiande as { [key: string]: string };
 	if (tiandeMap[monthZhi]) {
-		const tiandeGan = tiandeMap[monthZhi];
-		if (allGan.includes(tiandeGan)) {
-			shensha.tiande = [tiandeGan];
+		const tiandeValue = tiandeMap[monthZhi];
+		// 检查天干或地支
+		if (allGan.includes(tiandeValue) || allZhi.includes(tiandeValue)) {
+			shensha.tiande = [tiandeValue];
 			if (shensha.all) {
-				shensha.all.push(`天德贵人(${tiandeGan})`);
+				shensha.all.push(`天德贵人(${tiandeValue})`);
 			}
 		}
 	}
@@ -1405,6 +1674,8 @@ export function enhanceBaziAnalysis(bazi: any, solar: Solar, shishen: any): Bazi
 export interface GanZhiRelation {
 	// 天干合化
 	ganHe?: string; // 如 "甲己合化土"
+	// 天干相冲（严格按照 bz.js 的 liuyi 数组）
+	ganChong?: string[]; // 如 ["甲庚冲"]
 	// 地支六合
 	zhiLiuHe?: string; // 如 "子丑合"
 	// 地支三合
@@ -1417,6 +1688,8 @@ export interface GanZhiRelation {
 	zhiXing?: string[]; // 如 ["子卯刑"]
 	// 地支相害
 	zhiHai?: string[]; // 如 ["子未害"]
+	// 地支相破（严格按照 bz.js 的 liuyi 数组）
+	zhiPo?: string[]; // 如 ["子酉破"]
 	// 五行生克关系
 	wuxingShengKe?: string[]; // 如 ["金生水", "木克土"]
 }
@@ -1430,6 +1703,20 @@ const GAN_HE_MAP: { [key: string]: string } = {
 	'丙辛': '水',
 	'丁壬': '木',
 	'戊癸': '火'
+};
+
+/**
+ * 天干相冲映射（严格按照 bz.js 的 liuyi 数组）
+ */
+const GAN_CHONG_MAP: { [key: string]: boolean } = {
+	'甲庚': true,
+	'庚甲': true,
+	'乙辛': true,
+	'辛乙': true,
+	'丙壬': true,
+	'壬丙': true,
+	'丁癸': true,
+	'癸丁': true
 };
 
 /**
@@ -1501,7 +1788,8 @@ const ZHI_XING_MAP: { [key: string]: string[] } = {
 };
 
 /**
- * 地支相害映射
+ * 地支相害映射（严格按照 bz.js 的 liuyi 数组）
+ * 注意：bz.js 中写的是"酉戍"，但应该是"酉戌"（可能是错字）
  */
 const ZHI_HAI_MAP: { [key: string]: string } = {
 	'子': '未',
@@ -1516,6 +1804,25 @@ const ZHI_HAI_MAP: { [key: string]: string } = {
 	'亥': '申',
 	'酉': '戌',
 	'戌': '酉'
+};
+
+/**
+ * 地支相破映射（严格按照 bz.js 的 liuyi 数组）
+ * bz.js: 子酉相破、寅亥相破、卯午相破、辰丑相破、巳申相破、未戌相破
+ */
+const ZHI_PO_MAP: { [key: string]: string } = {
+	'子': '酉',
+	'酉': '子',
+	'寅': '亥',
+	'亥': '寅',
+	'卯': '午',
+	'午': '卯',
+	'辰': '丑',
+	'丑': '辰',
+	'巳': '申',
+	'申': '巳',
+	'未': '戌',
+	'戌': '未'
 };
 
 /**
@@ -1544,22 +1851,21 @@ const ZHI_SAN_HE_GROUPS = [
 	{ members: ['巳', '酉', '丑'], wuxing: '金' }
 ];
 
+/**
+ * 地支暗合映射（严格按照 bz.js 的 liuyi 数组）
+ * bz.js: 寅午暗合土、子巳暗合火、巳酉暗合水、卯申暗合金、亥午暗合木
+ */
 const ZHI_AN_HE_PAIRS: Record<string, string> = {
-	'子未': '暗合',
-	'未子': '暗合',
-	'丑申': '暗合',
-	'申丑': '暗合',
-	'寅酉': '暗合',
-	'酉寅': '暗合',
-	'卯午': '暗合',
-	'午卯': '暗合',
-	'辰亥': '暗合',
-	'亥辰': '暗合',
-	'巳戌': '暗合',
-	'戌巳': '暗合',
-	// 兼容常见用法：申午暗合（示例数据中出现）
-	'申午': '暗合',
-	'午申': '暗合'
+	'寅午': '暗合土',
+	'午寅': '暗合土',
+	'子巳': '暗合火',
+	'巳子': '暗合火',
+	'巳酉': '暗合水',
+	'酉巳': '暗合水',
+	'卯申': '暗合金',
+	'申卯': '暗合金',
+	'亥午': '暗合木',
+	'午亥': '暗合木'
 };
 
 /**
@@ -1575,6 +1881,15 @@ function checkGanHe(gan1: string, gan2: string): string | null {
 		return `${gan2}${gan1}合化${GAN_HE_MAP[key2]}`;
 	}
 	return null;
+}
+
+/**
+ * 检查天干相冲（严格按照 bz.js 的 liuyi 数组）
+ */
+function checkGanChong(gan1: string, gan2: string): boolean {
+	const key1 = gan1 + gan2;
+	const key2 = gan2 + gan1;
+	return GAN_CHONG_MAP[key1] === true || GAN_CHONG_MAP[key2] === true;
 }
 
 /**
@@ -1668,6 +1983,13 @@ function checkZhiHai(zhi1: string, zhi2: string): boolean {
 }
 
 /**
+ * 检查地支相破（严格按照 bz.js 的 liuyi 数组）
+ */
+function checkZhiPo(zhi1: string, zhi2: string): boolean {
+	return ZHI_PO_MAP[zhi1] === zhi2 || ZHI_PO_MAP[zhi2] === zhi1;
+}
+
+/**
  * 计算五行生克关系
  */
 function getWuxingShengKe(wx1: string, wx2: string): string[] {
@@ -1727,6 +2049,15 @@ export function calculateGanZhiRelations(ganzhi: string, originalGanZhi: string[
 			relations.ganHe = ganHe;
 		}
 		
+		// 检查天干相冲（严格按照 bz.js 的 liuyi 数组）
+		if (checkGanChong(gan, origGan)) {
+			const chong = `${gan}${origGan}冲`;
+			if (!relations.ganChong?.includes(chong)) {
+				if (!relations.ganChong) relations.ganChong = [];
+				relations.ganChong.push(chong);
+			}
+		}
+		
 		// 检查地支六合
 		const zhiLiuHe = checkZhiLiuHe(zhi, origZhi);
 		if (zhiLiuHe && !relations.zhiLiuHe) {
@@ -1757,6 +2088,15 @@ export function calculateGanZhiRelations(ganzhi: string, originalGanZhi: string[
 			if (!relations.zhiHai?.includes(hai)) {
 				if (!relations.zhiHai) relations.zhiHai = [];
 				relations.zhiHai.push(hai);
+			}
+		}
+		
+		// 检查地支相破（严格按照 bz.js 的 liuyi 数组）
+		if (checkZhiPo(zhi, origZhi)) {
+			const po = `${zhi}${origZhi}破`;
+			if (!relations.zhiPo?.includes(po)) {
+				if (!relations.zhiPo) relations.zhiPo = [];
+				relations.zhiPo.push(po);
 			}
 		}
 		
@@ -1822,9 +2162,11 @@ function calculateGanZhiRelationsFromList(ganzhiList: string[]): BaziEnhancedDat
 		sanXing: [],
 		sanHui: [],
 		ganHe: [],
+		ganChong: [],
 		zhiHe: [],
 		chong: [],
-		hai: []
+		hai: [],
+		zhiPo: []
 	};
 
 	if (!ganzhiList || ganzhiList.length < 2) {
@@ -1953,6 +2295,22 @@ function calculateGanZhiRelationsFromList(ganzhiList: string[]): BaziEnhancedDat
 		}
 	}
 
+	// 4.5. 检查天干相冲（严格按照 bz.js 的 liuyi 数组）
+	if (gans.length >= 2) {
+		const foundGanChong = new Set<string>();
+		for (let i = 0; i < gans.length; i++) {
+			for (let j = i + 1; j < gans.length; j++) {
+				if (checkGanChong(gans[i], gans[j])) {
+					const chong = `${gans[i]}${gans[j]}冲`;
+					if (!foundGanChong.has(chong)) {
+						foundGanChong.add(chong);
+						relations.ganChong!.push(chong);
+					}
+				}
+			}
+		}
+	}
+
 	// 5. 检查地支六合
 	if (zhis.length >= 2) {
 		const foundZhiHe = new Set<string>();
@@ -1999,6 +2357,22 @@ function calculateGanZhiRelationsFromList(ganzhiList: string[]): BaziEnhancedDat
 		}
 	}
 
+	// 8. 检查破（严格按照 bz.js 的 liuyi 数组）
+	if (zhis.length >= 2) {
+		const foundPo = new Set<string>();
+		for (let i = 0; i < zhis.length; i++) {
+			for (let j = i + 1; j < zhis.length; j++) {
+				if (checkZhiPo(zhis[i], zhis[j])) {
+					const po = `${zhis[i]}${zhis[j]}破`;
+					if (!foundPo.has(po)) {
+						foundPo.add(po);
+						relations.zhiPo!.push(po);
+					}
+				}
+			}
+		}
+	}
+
 	return relations;
 }
 
@@ -2015,9 +2389,11 @@ export function calculateOriginalGanZhiRelations(bazi: any, extraGanZhi: string[
 			sanXing: [],
 			sanHui: [],
 			ganHe: [],
+			ganChong: [],
 			zhiHe: [],
 			chong: [],
-			hai: []
+			hai: [],
+			zhiPo: []
 		};
 	}
 
@@ -2076,7 +2452,11 @@ export function buildGanZhiDiagram(ganzhiList: string[], labels: string[] = []):
 			if (rel) {
 				addEdge(ganEdges, i, j, 'ganHe', rel);
 			}
-			// 天干克：按五行克制关系生成（方向只按克表，不会出现反向如“木克金”）
+			// 天干相冲（严格按照 bz.js 的 liuyi 数组）
+			if (checkGanChong(nodes[i].gan, nodes[j].gan)) {
+				addEdge(ganEdges, i, j, 'ganChong', `${nodes[i].gan}${nodes[j].gan}冲`);
+			}
+			// 天干克：按五行克制关系生成（方向只按克表，不会出现反向如"木克金"）
 			const ganWx1 = getGanWuxing(nodes[i].gan);
 			const ganWx2 = getGanWuxing(nodes[j].gan);
 			const ganKeLabel =
@@ -2127,6 +2507,8 @@ export function buildGanZhiDiagram(ganzhiList: string[], labels: string[] = []):
 			if (checkZhiLiuChong(zhi1, zhi2)) addEdge(zhiEdges, i, j, 'chong', `${zhi1}${zhi2}冲`);
 			if (checkZhiXing(zhi1, zhi2)) addEdge(zhiEdges, i, j, 'xing', `${zhi1}${zhi2}刑`);
 			if (checkZhiHai(zhi1, zhi2)) addEdge(zhiEdges, i, j, 'hai', `${zhi1}${zhi2}害`);
+			// 地支相破（严格按照 bz.js 的 liuyi 数组）
+			if (checkZhiPo(zhi1, zhi2)) addEdge(zhiEdges, i, j, 'po', `${zhi1}${zhi2}破`);
 			// 地支克：按五行克制关系生成
 			const zhiWx1 = getZhiWuxing(zhi1);
 			const zhiWx2 = getZhiWuxing(zhi2);

@@ -15,6 +15,73 @@ const { apiSignatureMiddleware } = require('../middleware/api-signature');
 const db = getDatabase();
 
 /**
+ * 公告管理
+ */
+router.get('/announcements', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
+	try {
+		const rows = await db.all(
+			'SELECT id, title, content, expires_at AS expiresAt, updated_at AS updatedAt, created_at AS createdAt FROM announcements ORDER BY updated_at DESC'
+		);
+		res.json(rows || []);
+	} catch (err) {
+		console.error('获取公告列表失败:', err);
+		return res.status(500).json({ error: '获取公告列表失败' });
+	}
+});
+
+router.post('/announcements', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
+	const { title, content, expiresAt } = req.body || {};
+	if (!title || !content) {
+		return res.status(400).json({ error: '标题和内容不能为空' });
+	}
+	try {
+		const result = await db.run(
+			'INSERT INTO announcements (title, content, expires_at, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())',
+			[title, content, expiresAt || null]
+		);
+		res.json({ success: true, id: result.lastID });
+	} catch (err) {
+		console.error('创建公告失败:', err);
+		return res.status(500).json({ error: '创建公告失败' });
+	}
+});
+
+router.put('/announcements/:id', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
+	const id = parseInt(req.params.id, 10);
+	if (!id) {
+		return res.status(400).json({ error: '无效的公告ID' });
+	}
+	const { title, content, expiresAt } = req.body || {};
+	if (!title || !content) {
+		return res.status(400).json({ error: '标题和内容不能为空' });
+	}
+	try {
+		await db.run(
+			'UPDATE announcements SET title = ?, content = ?, expires_at = ?, updated_at = NOW() WHERE id = ?',
+			[title, content, expiresAt || null, id]
+		);
+		res.json({ success: true });
+	} catch (err) {
+		console.error('更新公告失败:', err);
+		return res.status(500).json({ error: '更新公告失败' });
+	}
+});
+
+router.delete('/announcements/:id', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
+	const id = parseInt(req.params.id, 10);
+	if (!id) {
+		return res.status(400).json({ error: '无效的公告ID' });
+	}
+	try {
+		await db.run('DELETE FROM announcements WHERE id = ?', [id]);
+		res.json({ success: true });
+	} catch (err) {
+		console.error('删除公告失败:', err);
+		return res.status(500).json({ error: '删除公告失败' });
+	}
+});
+
+/**
  * 获取邮箱配置
  */
 router.get('/email-config', adminMiddleware, async (req, res) => {
@@ -281,7 +348,6 @@ router.get('/users-quotas', adminMiddleware, async (req, res) => {
 			u.email,
 			u.username,
 			COALESCE(q.remaining_count, 0) as remainingCount,
-			COALESCE(q.remaining_token, 0) as remainingToken,
 			q.updated_at as updatedAt
 		FROM users u
 		LEFT JOIN user_llm_quotas q ON u.id = q.user_id
@@ -341,7 +407,6 @@ router.get('/users/:id/quota', adminMiddleware, async (req, res) => {
 			email: user.email,
 			username: user.username,
 			remainingCount: quota?.remaining_count || 0,
-			remainingToken: quota?.remaining_token || 0,
 			updatedAt: quota?.updated_at || null,
 		});
 	} catch (err) {
@@ -359,10 +424,7 @@ router.put('/users/:id/quota', adminMiddleware, apiSignatureMiddleware(), async 
 		return res.status(400).json({ error: '无效的用户ID' });
 	}
 
-	const { 
-		remainingCount,
-		remainingToken
-	} = req.body || {};
+	const { remainingCount } = req.body || {};
 
 	try {
 		const user = await db.get('SELECT id FROM users WHERE id = ?', [id]);
@@ -375,20 +437,12 @@ router.put('/users/:id/quota', adminMiddleware, apiSignatureMiddleware(), async 
 
 		if (existing) {
 			// 更新现有记录
-			if (remainingCount === undefined && remainingToken === undefined) {
-				return res.status(400).json({ error: '没有提供要更新的字段' });
-			}
-
 			const updateFields = [];
 			const updateValues = [];
 
 			if (remainingCount !== undefined) {
 				updateFields.push('remaining_count = ?');
 				updateValues.push(remainingCount);
-			}
-			if (remainingToken !== undefined) {
-				updateFields.push('remaining_token = ?');
-				updateValues.push(remainingToken);
 			}
 
 			updateFields.push('per_minute_limit = 1');
@@ -406,11 +460,10 @@ router.put('/users/:id/quota', adminMiddleware, apiSignatureMiddleware(), async 
 			await db.run(
 				`INSERT INTO user_llm_quotas 
 				(user_id, per_minute_limit, remaining_count, remaining_token, updated_at) 
-				VALUES (?, 1, ?, ?, NOW())`,
+				VALUES (?, 1, ?, 0, NOW())`,
 				[
 					id,
-					remainingCount !== undefined ? remainingCount : 0,
-					remainingToken !== undefined ? remainingToken : 0,
+					remainingCount !== undefined ? remainingCount : 0
 				]
 			);
 		}

@@ -90,6 +90,14 @@
       }
     },
     {
+      "path": "pages/admin/announcements",
+      "style": {
+        "navigationBarTitleText": "mana玄学AI",
+        "enablePullDownRefresh": false,
+        "navigationStyle": "custom"
+      }
+    },
+    {
       "path": "pages/about/index",
       "style": {
         "navigationBarTitleText": "mana玄学AI",

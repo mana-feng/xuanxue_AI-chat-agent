@@ -307,11 +307,13 @@ export const useBaziStore = defineStore('bazi', {
 
 			// 计算每个四柱的神煞
 			const dayGan = bazi.getDayGan();
+			const yearGan = this.tiangan.year || '';
 			const yearZhi = this.dizhi.year || '';
 			const monthZhi = this.dizhi.month || '';
 			const dayZhi = this.dizhi.day || '';
 			const timeZhi = this.dizhi.time || '';
 			const allZhi = [yearZhi, monthZhi, dayZhi, timeZhi];
+			// 前端统一标准：0=男，1=女（与 bz.js 的 sx 相反：sx==0 用第一个元辰，sx==1 用第二个元辰）
 			const shensha = {
 				year: calculateShenShaForGanZhi(
 					dayGan,
@@ -320,7 +322,9 @@ export const useBaziStore = defineStore('bazi', {
 					yearZhi,
 					monthZhi,
 					dayZhi,
-					timeZhi
+					timeZhi,
+					yearGan,
+					gender
 				),
 				month: calculateShenShaForGanZhi(
 					dayGan,
@@ -329,7 +333,9 @@ export const useBaziStore = defineStore('bazi', {
 					yearZhi,
 					monthZhi,
 					dayZhi,
-					timeZhi
+					timeZhi,
+					yearGan,
+					gender
 				),
 				day: calculateShenShaForGanZhi(
 					dayGan,
@@ -338,7 +344,9 @@ export const useBaziStore = defineStore('bazi', {
 					yearZhi,
 					monthZhi,
 					dayZhi,
-					timeZhi
+					timeZhi,
+					yearGan,
+					gender
 				),
 				time: calculateShenShaForGanZhi(
 					dayGan,
@@ -347,7 +355,9 @@ export const useBaziStore = defineStore('bazi', {
 					yearZhi,
 					monthZhi,
 					dayZhi,
-					timeZhi
+					timeZhi,
+					yearGan,
+					gender
 				),
 			};
 

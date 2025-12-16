@@ -12,24 +12,12 @@ import { theme, tiangan, dizhi } from './constants';
  * - 生产环境：使用构建时注入的环境变量
  * - 默认值：本地开发地址
  */
-const resolveApiBase = (): string => {
-	// uni-app 使用 import.meta.env 获取环境变量（Vite 模式）
-	// #ifdef VITE
-	const viteEnv = (import.meta as any)?.env?.VITE_API_BASE_URL;
-	if (viteEnv) return viteEnv;
-	// #endif
-	
-	// 兼容处理：检查是否有全局配置
-	// @ts-ignore - 运行时可能注入的全局变量
-	if (typeof globalThis !== 'undefined' && (globalThis as any).__API_BASE_URL__) {
-		return (globalThis as any).__API_BASE_URL__;
-	}
-	
-	// 默认值：本地开发地址
-	return 'http://localhost:3001';
-};
+// 仅根据 .env 中的 VITE_API_BASE_URL 读取，未设置则使用默认值
+const resolveApiBase = (): string =>
+	(import.meta as any)?.env?.VITE_API_BASE_URL || 'https://xuanapi.manafeng.com';
 
 export const API_BASE_URL = resolveApiBase();
+export const API_SIGNATURE_SECRET = (import.meta as any)?.env?.VITE_API_SIGNATURE_SECRET || '';
 
 export { theme };
 

@@ -1,9 +1,10 @@
 <template>
 	<tm-app>
-		<view class="page-wrapper">
+		<view class="page-wrapper theme-page-bg">
 			<yx-nav-header></yx-nav-header>
 			
-			<view class="page-content" :style="pageContentStyle">
+			<view class="page-content theme-container" :style="pageContentStyle">
+				<view class="theme-card theme-card-glass">
 				<!-- 顶部标题 -->
 				<view class="header">
 					<tm-text
@@ -14,8 +15,10 @@
 					></tm-text>
 					<view class="header-buttons">
 						<tm-button
+							class="btn-gradient"
 							size="small"
-							type="primary"
+							color="teal"
+							linear="right"
 							label="返回"
 							:margin="[0, 12, 0, 0]"
 							:round="12"
@@ -78,22 +81,15 @@
 										:label="`${quota.remainingCount || 0}次`"
 									></tm-text>
 								</view>
-								<view class="quota-info-item">
-									<tm-text :font-size="22" color="#718096" label="剩余Token:"></tm-text>
-									<tm-text 
-										:font-size="26" 
-										:bold="true" 
-										:color="(quota.remainingToken || 0) > 0 ? '#4299e1' : '#a0aec0'"
-										:label="formatNumber(quota.remainingToken || 0)"
-									></tm-text>
-								</view>
 							</view>
 
 							<!-- 右侧：操作按钮 -->
 							<view class="quota-action">
 								<tm-button
-									size="small"
-									type="primary"
+									class="btn-gradient"
+									size="mini"
+									color="teal"
+									linear="right"
 									label="调整额度"
 									:round="8"
 									@tap="openEditDialog(quota)"
@@ -117,6 +113,10 @@
 				<!-- 分页 -->
 				<view v-if="!loading && quotaList.length > 0" class="pagination">
 					<tm-button
+						class="btn-gradient"
+						size="small"
+						color="teal"
+						linear="right"
 						:disabled="currentPage === 1"
 						label="上一页"
 						:round="8"
@@ -125,6 +125,10 @@
 					></tm-button>
 					<tm-text :font-size="24" color="#4b5563" :label="`第 ${currentPage} / ${totalPages} 页`"></tm-text>
 					<tm-button
+						class="btn-gradient"
+						size="small"
+						color="teal"
+						linear="right"
 						:disabled="currentPage >= totalPages"
 						label="下一页"
 						:round="8"
@@ -163,30 +167,20 @@
 					></tm-input>
 				</view>
 
-				<view class="form-item">
-					<tm-text :font-size="22" class="form-label" label="剩余Token"></tm-text>
-					<tm-input
-						v-model.number="editForm.remainingToken"
-						type="number"
-						placeholder="剩余Token"
-						:border="1"
-						:round="12"
-						:padding="[20, 20]"
-						:height="88"
-						:font-size="28"
-					></tm-input>
-				</view>
-
 				<view class="dialog-actions">
 					<tm-button
-						type="default"
+						class="btn-gradient"
+						color="teal"
+						linear="right"
 						label="取消"
 						:round="12"
 						:margin="[0, 12, 0, 0]"
 						@tap="showEditDialog = false"
 					></tm-button>
 					<tm-button
-						type="primary"
+						class="btn-gradient"
+						color="teal"
+						linear="right"
 						label="保存"
 						:round="12"
 						:loading="saving"
@@ -195,6 +189,7 @@
 				</view>
 			</view>
 		</tm-drawer>
+		</view>
 	</tm-app>
 </template>
 
@@ -227,7 +222,6 @@ const showEditDialog = ref(false);
 const editingQuota = ref<UserQuota | null>(null);
 const editForm = ref({
 	remainingCount: 0,
-	remainingToken: 0,
 });
 const saving = ref(false);
 
@@ -297,8 +291,7 @@ function nextPage() {
 function openEditDialog(quota: UserQuota) {
 	editingQuota.value = quota;
 	editForm.value = {
-		remainingCount: quota.remainingCount || 0,
-		remainingToken: quota.remainingToken || 0,
+		remainingCount: quota.remainingCount || 0
 	};
 	showEditDialog.value = true;
 }
@@ -330,15 +323,7 @@ function saveQuota() {
 		});
 }
 
-function formatNumber(num: number): string {
-	if (num >= 1000000) {
-		return (num / 1000000).toFixed(1) + 'M';
-	}
-	if (num >= 1000) {
-		return (num / 1000).toFixed(1) + 'K';
-	}
-	return num.toString();
-}
+// Token 计数已删除，不再需要格式化
 
 function goBack() {
 	uni.navigateBack();

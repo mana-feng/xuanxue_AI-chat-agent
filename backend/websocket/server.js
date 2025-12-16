@@ -11,13 +11,19 @@ const { checkLLMQuota, recordLLMUsage } = require('../services/quota');
 const { buildLLMRequest } = require('../services/llm');
 const config = require('../config');
 
-const db = getDatabase();
+// 在初始化阶段获取数据库和密钥，确保已完成 initDatabase 后再调用
+let cachedDb = null;
 const JWT_SECRET = config.JWT_SECRET;
 
 /**
  * 初始化 WebSocket 服务器
  */
 function initWebSocketServer(server) {
+	// 确保在 app.js 调用 initDatabase() 之后再获取数据库实例
+	if (!cachedDb) {
+		cachedDb = getDatabase();
+	}
+	const db = cachedDb;
 	const wss = new WebSocketServer({ server, path: '/api/llm/chat/ws' });
 	
 	wss.on('connection', (ws, req) => {
@@ -272,10 +278,9 @@ function initWebSocketServer(server) {
 						}
 					}
 					
-					// 记录使用情况（估算token数量）
-					const estimatedTokens = Math.ceil(totalText.length / 4);
+					// 记录使用情况（仅按次数计数，不再按 Token 扣减）
 					try {
-						await recordLLMUsage(userId, estimatedTokens);
+						await recordLLMUsage(userId, 0);
 					} catch (err) {
 						console.error('记录使用情况失败:', err);
 					}
