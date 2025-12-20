@@ -38,6 +38,8 @@
 									type="primary"
 									:round="12"
 									:padding="[24, 18]"
+									:loading="saving"
+									:disabled="saving"
 									icon="tmicon-md-cloud-upload"
 									label="保存排盘"
 									@tap="handleAction('save')"
@@ -170,13 +172,14 @@
 </template>
 
 <script lang="ts" setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 import { useLiuyaoStore } from '@/store/liuyao';
 import { GUAS, GUA5, XING5 } from '@/features/liuyao/najiaConst';
 import { getYaoSymbol } from '@/features/liuyao/uiHelpers';
 import ParamPreview from '@/components/liuyao/ParamPreview.vue';
 import { getGuaName as getGuaciGuaName, getCanonicalNameByName } from '@/features/liuyao/guaci';
+import { request } from '@/services/api';
 import { setShiYao } from '@/features/liuyao/najiaCore';
 import { SYMBOL } from '@/features/liuyao/najiaConst';
 
@@ -187,6 +190,7 @@ const liuyaoStore = useLiuyaoStore();
 const compiled = computed(() => liuyaoStore.compiled);
 const display = computed(() => liuyaoStore.display);
 const profile = computed(() => liuyaoStore.profile);
+const saving = ref(false);
 
 const summaryTiles = computed(() => {
 	const p = profile.value;
@@ -349,7 +353,157 @@ const bianParams = computed(() => {
 	return mark.split('').map((ch: string) => parseInt(ch, 10) || 0);
 });
 
-function handleAction(action: ActionType) {
+async function handleAction(action: ActionType) {
+	if (action === 'save') {
+		// 保存到后端（若后端未启用则回退到本地保存）
+		if (!compiled.value || !display.value || !profile.value) {
+			uni.showToast({ title: '无可保存的排盘数据', icon: 'none' });
+			return;
+		}
+		saving.value = true;
+		try {
+			let rawPayload: any = null;
+			try {
+				rawPayload = {
+					compiled: compiled.value,
+					display: display.value,
+					profile: profile.value
+				};
+				// 限制大小：如果序列化过大则缩减到最小必要字段
+				const serialized = JSON.stringify(rawPayload);
+				if (serialized.length > 800000) {
+					rawPayload = {
+						compiled: {
+							params: compiled.value?.params,
+							mark: compiled.value?.mark,
+							name: compiled.value?.name
+						},
+						display: {
+							// minimal display
+							god6: display.value?.god6,
+							qin6: display.value?.qin6
+						},
+						profile: profile.value
+					};
+				}
+			} catch (e) {
+				rawPayload = { profile: profile.value };
+			}
+
+			const requestData = {
+				name: profile.value?.title || profile.value?.questioner || '佚名',
+				profile: profile.value,
+				rawPayload: rawPayload
+			};
+
+			// 验证可序列化
+			try {
+				JSON.stringify(requestData);
+			} catch (e: any) {
+				uni.showToast({ title: '数据格式错误，无法保存', icon: 'none' });
+				return;
+			}
+
+			// 发送到后端
+			try {
+				const res: any = await request('/api/liuyao', {
+					method: 'POST',
+					needAuth: true,
+					data: requestData
+				});
+				if (res?.success === false) {
+					const errMsg = res.error || '保存失败';
+					uni.showToast({ title: errMsg, icon: 'none' });
+				} else {
+					const responseData = res?.data || res;
+					liuyaoStore.createdAt = Date.now();
+					uni.showToast({ title: '已保存到账号', icon: 'success', duration: 1500 });
+				}
+				return;
+			} catch (err: any) {
+				// 如果是 404（后端未启用该接口），回退到本地 storage
+				const is404 = err?.error?.includes('404') || (err?.error && String(err.error).includes('404'));
+				if (is404) {
+					try {
+						const key = 'liuyao_local_records';
+						const listRaw = (uni.getStorageSync && uni.getStorageSync(key)) || '[]';
+						let list = [];
+						try {
+							list = typeof listRaw === 'string' ? JSON.parse(listRaw) : listRaw;
+						} catch (e) {
+							list = [];
+						}
+						list.unshift({
+							name: requestData.name,
+							createdAt: Date.now(),
+							payload: requestData.rawPayload
+						});
+						uni.setStorageSync(key, JSON.stringify(list.slice(0, 100)));
+						uni.showToast({ title: '后端未启用，已保存到本地', icon: 'success', duration: 1500 });
+						liuyaoStore.createdAt = Date.now();
+						return;
+					} catch (e) {
+						uni.showToast({ title: '保存失败', icon: 'none' });
+					}
+				}
+				uni.showToast({ title: '保存失败，请稍后重试', icon: 'none' });
+			}
+		} finally {
+			saving.value = false;
+		}
+	}
+	if (action === 'export') {
+		// export JSON payload
+		if (!compiled.value || !display.value || !profile.value) {
+			uni.showToast({ title: '无可导出的排盘数据', icon: 'none' });
+			return;
+		}
+		let payload: any = {
+			compiled: compiled.value,
+			display: display.value,
+			profile: profile.value,
+			createdAt: liuyaoStore.createdAt || Date.now()
+		};
+		let jsonStr = '';
+		try {
+			jsonStr = JSON.stringify(payload, null, 2);
+		} catch (e: any) {
+			uni.showToast({ title: '生成导出数据失败', icon: 'none' });
+			return;
+		}
+
+		const filename = `liuyao-${(new Date(payload.createdAt)).toISOString().replace(/[:.]/g, '-')}.json`;
+
+		// #ifdef H5
+		try {
+			const blob = new Blob([jsonStr], { type: 'application/json' });
+			const url = URL.createObjectURL(blob);
+			const link = document.createElement('a');
+			link.href = url;
+			link.download = filename;
+			link.click();
+			URL.revokeObjectURL(url);
+			uni.showToast({ title: '已下载 JSON 文件', icon: 'none', duration: 1500 });
+			// mark todo completed
+			return;
+		} catch (e) {
+			// fallback to clipboard
+		}
+		// #endif
+
+		uni.setClipboardData({
+			data: jsonStr,
+			success() {
+				uni.showToast({ title: 'JSON 已复制，可粘贴保存', icon: 'none', duration: 1500 });
+			},
+			fail(err) {
+				uni.showToast({ title: '导出失败，无法复制到剪贴板', icon: 'none' });
+			}
+		});
+		return;
+	}
+
+	// fallback for other actions
 	const messageMap: Record<ActionType, string> = {
 		save: '保存与同步账号功能待接入后端',
 		export: '导出排盘（JSON/图片）功能待接入',
