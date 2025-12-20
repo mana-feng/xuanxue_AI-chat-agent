@@ -128,7 +128,7 @@ uni-page-body {
 	box-sizing: border-box;
 }
 
-/* 小屏幕时调整 main 内边距 */
+/* 小屏幕时调整 main 内边�?*/
 @media screen and (max-width: 640px) {
 	.app-main {
 		padding-inline: 16px;

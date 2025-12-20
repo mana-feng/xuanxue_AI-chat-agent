@@ -1,0 +1,660 @@
+<template>
+	<tm-app>
+		<view class="app-shell">
+			<yx-nav-header></yx-nav-header>
+			<view class="app-main">
+				<view class="page-shell">
+					<view class="page-card detail-card liuyao-card">
+						<view class="page-title-wrapper">
+							<view class="form-header-text">
+								<h1 class="page-title">六爻排盘结果</h1>
+								<p class="page-subtitle">查看已生成的卦象、六爻明细与卦辞</p>
+							</view>
+							<tm-tag type="primary" :round="8" label="结果页"></tm-tag>
+						</view>
+
+						<view v-if="!compiled || !display" class="section empty-state">
+							<tm-icon name="tmicon-md-time" :font-size="72" color="#cbd5e0"></tm-icon>
+							<tm-text :font-size="26" color="#718096" label="暂无排盘数据，请先返回起卦页面进行排盘。" class="mt-4"></tm-text>
+							<tm-button type="primary" :round="12" :padding="[22, 16]" class="mt-4" @tap="goStart" label="返回起卦"></tm-button>
+						</view>
+
+						<template v-else>
+							<view class="section info-summary">
+								<header class="section__header">
+									<tm-icon name="tmicon-md-planet" :font-size="26" color="#667eea"></tm-icon>
+									<h2 class="section__title">起卦概要</h2>
+								</header>
+								<view class="section__body info-grid">
+									<view v-for="item in summaryTiles" :key="item.label" class="info-tile">
+										<tm-text :font-size="24" color="#718096" :label="item.label"></tm-text>
+										<tm-text :font-size="30" :bold="true" color="#2d3748" :label="item.value"></tm-text>
+									</view>
+								</view>
+							</view>
+
+							<view class="actions-row" style="display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;">
+								<tm-button
+									type="primary"
+									:round="12"
+									:padding="[24, 18]"
+									icon="tmicon-md-cloud-upload"
+									label="保存排盘"
+									@tap="handleAction('save')"
+								></tm-button>
+								<tm-button
+									type="grey"
+									:round="12"
+									:padding="[24, 18]"
+									icon="tmicon-md-download"
+									label="导出排盘"
+									@tap="handleAction('export')"
+								></tm-button>
+								<tm-button
+									type="primary"
+									:round="12"
+									:padding="[24, 18]"
+									icon="tmicon-md-create"
+									label="AI 解读"
+									@tap="handleAction('ai')"
+								></tm-button>
+							</view>
+
+							<view class="section gua-overview">
+								<header class="section__header">
+									<tm-icon name="tmicon-md-grid" :font-size="26" color="#667eea"></tm-icon>
+									<h2 class="section__title">卦象总览</h2>
+								</header>
+								<view class="section__body gua-grid">
+									<view class="gua-card">
+										<view class="gua-card__header">
+											<view>
+												<p class="card-label">本卦</p>
+												<h3 class="gua-name">{{ guaOverview.main.name }}</h3>
+												<p class="gua-meta">{{ guaOverview.main.palace }} · {{ guaOverview.main.type }}</p>
+											</view>
+											<tm-tag type="primary" :round="8" label="主卦"></tm-tag>
+										</view>
+										<view class="gua-tags">
+											<tm-tag :round="8" type="white" :font-size="24" :label="guaOverview.main.wuxing"></tm-tag>
+											<tm-tag :round="8" type="white" :font-size="24" :label="guaOverview.main.shiying"></tm-tag>
+										</view>
+										<view class="gua-note">
+											<tm-text :font-size="24" color="#4a5568" :label="guaOverview.main.trend"></tm-text>
+										</view>
+									</view>
+
+									<view class="gua-card secondary">
+										<view class="gua-card__header">
+											<view>
+												<p class="card-label">变卦</p>
+												<h3 class="gua-name">{{ guaOverview.changed.name }}</h3>
+												<p class="gua-meta">{{ guaOverview.changed.palace }} · {{ guaOverview.changed.type }}</p>
+											</view>
+											<tm-tag type="grey" :round="8" label="变卦"></tm-tag>
+										</view>
+										<view class="gua-tags">
+											<tm-tag :round="8" type="white" :font-size="24" :label="guaOverview.changed.wuxing"></tm-tag>
+											<tm-tag :round="8" type="white" :font-size="24" :label="guaOverview.changed.shiying"></tm-tag>
+										</view>
+										<view class="gua-note">
+											<tm-text :font-size="24" color="#4a5568" :label="guaOverview.changed.trend"></tm-text>
+										</view>
+									</view>
+								</view>
+								<view class="gua-footnote">
+									<tm-icon name="tmicon-md-information-circle" :font-size="22" color="#94a3b8"></tm-icon>
+									<tm-text :font-size="22" color="#94a3b8" :label="guaOverview.note"></tm-text>
+								</view>
+							</view>
+
+							<!-- 生成的卦象预览已移除（按要求） -->
+
+							<view class="section yao-section">
+								<header class="section__header">
+									<tm-icon name="tmicon-md-list" :font-size="26" color="#667eea"></tm-icon>
+									<h2 class="section__title">六爻明细</h2>
+								</header>
+								<view class="section__body">
+									<view class="table-wrapper draggable-scroll">
+										<view class="yao-table">
+											<view class="yao-row head">
+												<text class="cell col-yao">爻位</text>
+												<text class="cell col-god">六神</text>
+												<text class="cell col-qin">六亲</text>
+												<text class="cell col-symbol">爻</text>
+												<text class="cell col-hide">伏藏</text>
+												<text class="cell col-dong-shi">动静 / 世应</text>
+												<text class="cell col-bian">变爻</text>
+												<text class="cell col-bian-dyn">变爻动静 / 世应</text>
+											</view>
+											<view v-for="row in yaoRows" :key="row.id" class="yao-row">
+												<text class="cell col-yao">{{ row.order }}</text>
+												<text class="cell col-god">{{ formatDisplay(row.liushen) }}</text>
+												<text class="cell col-qin">{{ formatDisplay(row.relation) }}</text>
+												<text class="cell col-symbol">{{ row.symbol || '—' }}</text>
+												<text class="cell col-hide">{{ formatDisplay(row.hidden) }}</text>
+												<text class="cell col-dong-shi" :class="{ active: row.moving }">
+													{{ row.moving ? '动爻' : '静' }} / {{ formatDisplay(row.role) }}
+												</text>
+												<text class="cell col-bian">
+													<text v-if="row.change && row.change.trim() !== ''">→{{ row.change }}</text>
+													<text v-else>—</text>
+												</text>
+												<text class="cell col-bian-dyn">
+													{{ row.bianChanged ? (row.moving ? '动爻' : '静') : '—' }} / {{ formatDisplay(bianShiyDisplay[row.idx] || '') }}
+												</text>
+											</view>
+										</view>
+									</view>
+								</view>
+							</view>
+
+							<view class="section guaci-section">
+								<header class="section__header">
+									<tm-icon name="tmicon-md-book" :font-size="26" color="#667eea"></tm-icon>
+									<h2 class="section__title">卦辞与解读</h2>
+								</header>
+								<view class="section__body">
+									<view class="guaci-card">
+										<tm-text :font-size="26" color="#1f2937" :label="guaciText"></tm-text>
+									</view>
+								</view>
+							</view>
+						</template>
+					</view>
+				</view>
+			</view>
+		</view>
+	</tm-app>
+</template>
+
+<script lang="ts" setup>
+import { computed } from 'vue';
+import { onShow } from '@dcloudio/uni-app';
+import { useLiuyaoStore } from '@/store/liuyao';
+import { GUAS, GUA5, XING5 } from '@/features/liuyao/najiaConst';
+import { getYaoSymbol } from '@/features/liuyao/uiHelpers';
+import ParamPreview from '@/components/liuyao/ParamPreview.vue';
+import { getGuaName as getGuaciGuaName, getCanonicalNameByName } from '@/features/liuyao/guaci';
+import { setShiYao } from '@/features/liuyao/najiaCore';
+import { SYMBOL } from '@/features/liuyao/najiaConst';
+
+type ActionType = 'save' | 'export' | 'ai';
+
+const liuyaoStore = useLiuyaoStore();
+
+const compiled = computed(() => liuyaoStore.compiled);
+const display = computed(() => liuyaoStore.display);
+const profile = computed(() => liuyaoStore.profile);
+
+const summaryTiles = computed(() => {
+	const p = profile.value;
+	if (!p) return [];
+	const gz = compiled.value?.lunar?.gz || {};
+	const xkong = compiled.value?.lunar?.xkong || '';
+	return [
+		{ label: '起卦主题', value: p.title || '—' },
+		{ label: '问卦人', value: p.questioner || '—' },
+		{ label: '所在位置', value: p.location || '—' },
+		{ label: '性别', value: p.gender || '—' },
+		{ label: '起卦时间', value: p.timeLabel || '—' },
+		{ label: '年干支', value: gz.year || '—' },
+		{ label: '月干支', value: gz.month || '—' },
+		{ label: '日干支', value: gz.day || '—' },
+		{ label: '时干支', value: gz.hour || '—' },
+		{ label: '空亡', value: xkong || '—' }
+	];
+});
+
+function formatDisplay(value: string) {
+	return value && value.trim() ? value : '—';
+}
+
+function buildShiyLabel(d: any) {
+	const shiIndex = d?.shiyDisplay?.findIndex((x: string) => x.trim() === '世') ?? -1;
+	const yingIndex = d?.shiyDisplay?.findIndex((x: string) => x.trim() === '应') ?? -1;
+	const map = ['初爻', '二爻', '三爻', '四爻', '五爻', '上爻'];
+	const shi = shiIndex >= 0 ? map[shiIndex] : '—';
+	const ying = yingIndex >= 0 ? map[yingIndex] : '—';
+	return `世：${shi} · 应：${ying}`;
+}
+
+const guaOverview = computed(() => {
+	const c = compiled.value;
+	const d = display.value;
+	if (!c || !d) {
+		return {
+			main: { name: '—', palace: '—', type: '—', wuxing: '—', shiying: '—', trend: '—' },
+			changed: { name: '—', palace: '—', type: '—', wuxing: '—', shiying: '—', trend: '—' },
+			note: '暂无数据'
+		};
+	}
+	const gongIndex = GUAS.indexOf(c.gong);
+	const wuxing = gongIndex >= 0 ? XING5[GUA5[gongIndex]] : '—';
+	const bianGongIndex = c.bian ? GUAS.indexOf(c.bian.gong) : -1;
+	const bianWuxing = bianGongIndex >= 0 ? XING5[GUA5[bianGongIndex]] : '—';
+	const preferName = (mark: string, fallback: string) => {
+		const n = getGuaciGuaName(mark);
+		return n && n.trim() ? n : (fallback || '—');
+	};
+
+	return {
+		main: {
+			name: preferName(c.mark, c.name),
+			palace: c.gong || '—',
+			type: d?.main?.type || '—',
+			wuxing: `卦宫：${c.gong || '—'} · 五行：${wuxing}`,
+			shiying: buildShiyLabel(d),
+			trend: '可结合世应、动爻与变卦解读'
+		},
+		changed: {
+			name: (() => {
+				if (!c.bian) return '无变卦';
+				// try to resolve mark in several formats
+				const rawMark = c.bian.mark;
+				let resolvedMark = '';
+				if (typeof rawMark === 'string' && /^[01]{6}$/.test(rawMark)) {
+					resolvedMark = rawMark;
+				} else if (Array.isArray(rawMark) && rawMark.length === 6) {
+					// try map symbol back to bit (symbol index % 2)
+					const bits = rawMark.map((s: string) => {
+						const idx = SYMBOL.indexOf(s);
+						if (idx === -1) return '';
+						return String(idx % 2);
+					});
+					if (bits.every((b: string) => b === '0' || b === '1')) {
+						resolvedMark = bits.join('');
+					}
+				}
+				if (resolvedMark) {
+					const byMark = getGuaciGuaName(resolvedMark);
+					if (byMark && byMark.trim()) return byMark;
+				}
+				// fallback: try canonical by name
+				const byName = getCanonicalNameByName(c.bian?.name || '');
+				if (byName && byName.trim()) return byName;
+				// last resort: original name
+				return c.bian?.name || '无变卦';
+			})(),
+			palace: c.bian?.gong || '—',
+			type: d?.bian?.type || '—',
+			wuxing: c.bian ? `卦宫：${c.bian.gong || '—'} · 五行：${bianWuxing}` : '—',
+			shiying: c.bian ? '变卦已生成' : '本卦静卦',
+			trend: c.bian ? '动爻生成的变卦，建议结合世应及动爻解读' : '无动爻，静观其变'
+		},
+		note: c.guaci ? '已加载卦辞，可结合 AI 解读使用' : '暂无卦辞文本'
+	};
+});
+
+const yaoRows = computed(() => {
+	const d = display.value;
+	if (!d) return [];
+	const orderLabels = ['初爻', '二爻', '三爻', '四爻', '五爻', '上爻'];
+	const rows: any[] = [];
+		for (let i = 5; i >= 0; i--) {
+		const order = orderLabels[i];
+		rows.push({
+			id: `${6 - i}`,
+			idx: i,
+			order,
+			liushen: formatDisplay(d?.god6?.[i] || ''),
+			relation: formatDisplay(`${d?.qin6?.[i] || ''}${d?.qinx?.[i] || ''}`),
+			hidden: formatDisplay(d?.hide?.qin6?.[i] || ''),
+			change: d?.bian ? `${d?.bian?.mark?.[i] || ''} ${d?.bian?.qin6?.[i] || ''}`.trim() : '',
+			moving: !!d?.dyao?.[i],
+			symbol: getYaoSymbol(compiled.value?.params?.[i]),
+			role: formatDisplay(d?.shiyDisplay?.[i] || ''),
+			// bian-related fields for transformed display
+			bianMark: d?.bian?.mark?.[i] || '',
+			bianQin: d?.bian?.qin6?.[i] || '',
+			bianChanged: !!(d?.bian && (d?.bian?.mark?.[i] || '').trim())
+		});
+	}
+	return rows;
+});
+
+const bianShiyDisplay = computed(() => {
+	const mark = compiled.value?.bian?.mark || '';
+	const res: string[] = [];
+	if (!mark || typeof mark !== 'string' || mark.length !== 6) {
+		return Array(6).fill('  ');
+	}
+	const shiy = setShiYao(mark);
+	if (!shiy || !Array.isArray(shiy)) return Array(6).fill('  ');
+	for (let x = 0; x < 6; x++) {
+		if (x === shiy[0] - 1) {
+			res.push('世');
+		} else if (x === shiy[1] - 1) {
+			res.push('应');
+		} else {
+			res.push('  ');
+		}
+	}
+	return res;
+});
+
+const guaciText = computed(() => {
+	const entry = compiled.value?.guaciEntry;
+	if (entry) {
+		// prefer enriched text, fall back to guaci string
+		return entry.text || entry.guaci || compiled.value?.guaci || '暂无卦辞，可后续接入 AI 解读。';
+	}
+	return compiled.value?.guaci || '暂无卦辞，可后续接入 AI 解读。';
+});
+
+const bianParams = computed(() => {
+	const mark = compiled.value?.bian?.mark || '';
+	if (!mark) return [];
+	return mark.split('').map((ch: string) => parseInt(ch, 10) || 0);
+});
+
+function handleAction(action: ActionType) {
+	const messageMap: Record<ActionType, string> = {
+		save: '保存与同步账号功能待接入后端',
+		export: '导出排盘（JSON/图片）功能待接入',
+		ai: 'AI 解读将复用聊天页，敬请期待'
+	};
+	uni.showToast({
+		title: messageMap[action] || '功能待接入',
+		icon: 'none',
+		duration: 1800
+	});
+}
+
+function goStart() {
+	uni.redirectTo({ url: '/pages/liuyao/index' });
+}
+
+onShow(() => {
+	if (!liuyaoStore.compiled) {
+		// 若无数据，保持空状态
+	}
+});
+</script>
+
+<style scoped>
+.app-main {
+	background: radial-gradient(circle at 20% 20%, rgba(102, 126, 234, 0.08), transparent 40%),
+		radial-gradient(circle at 80% 10%, rgba(118, 75, 162, 0.08), transparent 38%),
+		#f6f8fc;
+}
+
+.page-shell {
+	width: 100%;
+	display: flex;
+	justify-content: center;
+	padding: 28px 16px 56px;
+	box-sizing: border-box;
+}
+
+.page-card {
+	width: 100%;
+	max-width: 1180px;
+	background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+	border: 1px solid #e5e9f2;
+	border-radius: 20px;
+	box-shadow: 0 18px 60px rgba(31, 41, 55, 0.12);
+	padding: 24px 22px;
+	position: relative;
+	overflow: hidden;
+}
+
+.page-card::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(circle at 12% 12%, rgba(102, 126, 234, 0.08), transparent 35%),
+		radial-gradient(circle at 88% 6%, rgba(118, 75, 162, 0.07), transparent 32%);
+	pointer-events: none;
+}
+
+.detail-card {
+	gap: 14px;
+	display: flex;
+	flex-direction: column;
+}
+
+.detail-card .page-title-wrapper {
+	margin-bottom: 6px;
+	padding-bottom: 8px;
+	gap: 8px;
+	align-items: center;
+	justify-content: space-between;
+	border-bottom: 1px dashed #e5e7eb;
+}
+
+.section {
+	background: #ffffff;
+	border-radius: 14px;
+	border: 1px solid #e2e8f0;
+	padding: 20px 18px 18px;
+	margin-bottom: 18px;
+	box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+	position: relative;
+	z-index: 1;
+}
+
+.section__header {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 12px;
+	border-bottom: 1px dashed #e5e7eb;
+	padding-bottom: 12px;
+}
+
+.section__title {
+	font-size: 22px;
+	color: #2d3748;
+}
+
+.section__body {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.info-summary .info-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 12px;
+}
+
+.info-tile {
+	padding: 14px 16px;
+	border: 1px solid #e5e7eb;
+	border-radius: 12px;
+	background: #f8fafc;
+}
+
+.actions-row {
+	display: flex;
+	gap: 12px;
+	flex-wrap: nowrap;
+	align-items: center;
+	justify-content: flex-start;
+	overflow-x: auto;
+}
+
+.actions-row :deep(.tm-button) {
+	display: inline-flex !important;
+	width: auto !important;
+	min-width: 0 !important;
+	flex: 0 0 auto !important;
+	max-width: none !important;
+	white-space: nowrap;
+}
+
+.actions-row :deep(.tm-button__body) {
+	display: inline-flex !important;
+	width: auto !important;
+}
+
+.gua-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	gap: 12px;
+}
+
+.gua-card {
+	padding: 12px;
+	border: 1px solid #e5e7eb;
+	border-radius: 12px;
+	background: #f9fafb;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.gua-card.secondary {
+	background: #fdfcfb;
+}
+
+.gua-card__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.gua-name {
+	margin: 0;
+	font-size: 22px;
+	color: #111827;
+}
+
+.card-label {
+	margin: 0;
+	font-size: 13px;
+	color: #9ca3af;
+}
+
+.gua-meta {
+	margin: 2px 0 0;
+	font-size: 14px;
+	color: #6b7280;
+}
+
+.gua-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.gua-note {
+	padding: 8px 10px;
+	background: #fff;
+	border: 1px dashed #e5e7eb;
+	border-radius: 10px;
+}
+
+.gua-footnote {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 4px;
+	color: #94a3b8;
+}
+
+.table-wrapper {
+	width: 100%;
+	overflow-x: auto;
+	box-sizing: border-box;
+	scrollbar-width: thin;
+}
+
+.yao-table {
+	min-width: 860px;
+	width: 100%;
+	border: 1px solid #e5e7eb;
+	border-radius: 12px;
+	overflow: hidden;
+	background: #fff;
+}
+
+.yao-row {
+	display: grid;
+	/* 列宽（按新顺序）：爻位 | 六神 | 六亲 | 爻 | 伏藏 | 动静/世应 | 变爻 | 变爻动静/世应 */
+	grid-template-columns: 70px 120px 1fr 70px 1fr 120px 120px 160px;
+	gap: 0;
+	align-items: center;
+	border-bottom: 1px solid #f1f5f9;
+}
+
+.yao-row:last-child {
+	border-bottom: none;
+}
+
+.yao-row.head {
+	background: #f8fafc;
+}
+
+.cell {
+	padding: 12px 10px;
+	font-size: 18px;
+	color: #334155;
+	box-sizing: border-box;
+}
+
+.col-symbol {
+	padding: 12px 10px;
+	font-size: 18px;
+	color: #64748b;
+	box-sizing: border-box;
+	text-align: center;
+}
+
+.param-strip :deep(.param-grid) {
+	flex-wrap: nowrap;
+	overflow-x: auto;
+}
+.param-strip :deep(.param-chip) {
+	min-width: 110px;
+}
+
+.yao-row.head .cell {
+	font-weight: 600;
+	color: #1f2937;
+}
+
+.col-yao {
+	font-weight: 600;
+}
+
+.col-dong.active {
+	color: #2563eb;
+	font-weight: 700;
+}
+
+.guaci-card {
+	border: 1px dashed #e5e7eb;
+	border-radius: 12px;
+	padding: 12px;
+	background: #fdfdfd;
+	line-height: 1.6;
+}
+
+.draggable-scroll {
+	cursor: grab;
+}
+
+.draggable-scroll:active {
+	cursor: grabbing;
+}
+
+@media (max-width: 768px) {
+	.page-card {
+		padding: 18px 16px;
+		border-radius: 16px;
+	}
+
+	.section {
+		padding: 14px 12px;
+	}
+
+	.page-shell {
+		padding: 20px 12px 40px;
+	}
+}
+</style>

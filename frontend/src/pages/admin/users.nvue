@@ -214,7 +214,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useUserStore } from '@/store/user';
-import { getUserList, updateUserRole, deleteUser, createUser, updateUser, type UserInfo } from '@/api/admin';
+import { getUserList, updateUserRole, deleteUser, createUser, updateUser, type UserInfo } from '@/services/api/admin';
 
 const userStore = useUserStore();
 const userList = ref<UserInfo[]>([]);

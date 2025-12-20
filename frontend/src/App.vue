@@ -45,7 +45,7 @@ body {
 	padding-bottom: 0 !important;
 }
 
-/* 以 1200px 为基准宽度缩放，始终水平居中并铺满宽度 */
+/* �?1200px 为基准宽度缩放，始终水平居中并铺满宽�?*/
 .page-content-scale {
 	width: 100%;
 	max-width: 1200px;
@@ -54,10 +54,12 @@ body {
 }
 /* #endif */
 
+/* #ifdef APP-PLUS */
 @font-face {
 	font-family: PingFangSC-Medium;
-	src: url('@/static/fonts/pingfang-font.ttf');
+	src: url('@/assets/fonts/pingfang-font.ttf');
 }
+/* #endif */
 
 view,
 text,
@@ -67,6 +69,11 @@ uni-view,
 uni-text,
 uni-label,
 uni-input {
+	/* #ifdef APP-PLUS */
 	font-family: 'PingFangSC-Medium';
+	/* #endif */
+	/* #ifdef H5 */
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+	/* #endif */
 }
 </style>

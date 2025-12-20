@@ -113,7 +113,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, computed } from 'vue';
 import { useUserStore } from '@/store/user';
-import { getAdminEmailConfig, updateAdminEmailConfig } from '@/api/admin';
+import { getAdminEmailConfig, updateAdminEmailConfig } from '@/services/api/admin';
 
 const userStore = useUserStore();
 

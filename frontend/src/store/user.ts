@@ -102,7 +102,7 @@ export const useUserStore = defineStore('user', {
 		async logout() {
 			// 调用后端 logout 接口撤销 refresh token
 			try {
-				const { request } = await import('@/api/index');
+				const { request } = await import('@/services/api/index');
 				const { getDeviceId } = await import('@/utils/device');
 				const { getRefreshToken } = await import('@/utils/tokenStore');
 

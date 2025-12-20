@@ -277,7 +277,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useUserStore } from '@/store/user';
-import { getAdminStats, type AdminStats } from '@/api/admin';
+import { getAdminStats, type AdminStats } from '@/services/api/admin';
 
 const userStore = useUserStore();
 const stats = ref<AdminStats | null>(null);

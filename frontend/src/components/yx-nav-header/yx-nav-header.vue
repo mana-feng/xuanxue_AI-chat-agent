@@ -217,9 +217,8 @@ const onLogout = () => {
 };
 
 const goLiuyao = () => {
-	uni.showToast({
-		title: '六爻排盘即将上线',
-		icon: 'none',
+	uni.navigateTo({
+		url: '/pages/liuyao/index',
 	});
 };
 

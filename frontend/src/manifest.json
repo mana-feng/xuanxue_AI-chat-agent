@@ -77,9 +77,9 @@
             }
         }
     },
-    "_comment_quickapp" : "快应用特有相关",
+    "_comment_quickapp" : "快应用特有相�?,
     "quickapp" : {},
-    "_comment_mp" : "小程序特有相关",
+    "_comment_mp" : "小程序特有相�?,
     "mp-weixin" : {
         "appid" : "wx359a9552c91dfe2b",
         "setting" : {

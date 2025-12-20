@@ -128,7 +128,7 @@
 <script setup lang="ts">
 import { reactive, ref, onMounted, computed } from 'vue';
 import { useUserStore } from '@/store/user';
-import { request } from '@/api/index';
+import { request } from '@/services/api/index';
 
 const userStore = useUserStore();
 const saving = ref(false);

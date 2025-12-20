@@ -28,6 +28,14 @@ export default defineConfig({
 		sourcemap: false,
 		// 启用 CSS 代码分割
 		cssCodeSplit: true,
+		// 强制使用 ES 格式，避免 rollup 在分包时尝试 iife/umd 导致报错
+		rollupOptions: {
+			output: {
+				// 若外部工具强行设为 iife，开启 inlineDynamicImports 以避免报错
+				inlineDynamicImports: true,
+				format: 'es',
+			},
+		},
 		// 优化构建
 		minify: 'terser',
 		terserOptions: {

@@ -237,7 +237,7 @@ import { Solar } from 'lunar-javascript';
 import {useUserStore} from '@/store/user'
 import {useBaziStore} from '@/store/bazi'
 import utils from '@/libs/utils/utils';
-import { fetchAnnouncementMeta, fetchAnnouncements, type Announcement, type AnnouncementMeta } from '@/api/announcement';
+import { fetchAnnouncementMeta, fetchAnnouncements, type Announcement, type AnnouncementMeta } from '@/services/api/announcement';
 
 let realname = ref('');
 let gender = ref(0);

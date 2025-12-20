@@ -191,7 +191,7 @@ import {
 	adminUpdateAnnouncement,
 	adminDeleteAnnouncement,
 	Announcement,
-} from '@/api/announcement';
+} from '@/services/api/announcement';
 
 const loading = ref(false);
 const saving = ref(false);

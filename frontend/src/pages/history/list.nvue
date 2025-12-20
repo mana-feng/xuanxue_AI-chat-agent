@@ -252,10 +252,10 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import { useUserStore } from '@/store/user';
 import { useBaziStore } from '@/store/bazi';
-import { request } from '@/api/index';
+import { request } from '@/services/api/index';
 import { getAccessToken } from '@/utils/tokenStore';
 import utils from '@/libs/utils/utils';
-import { fetchAnnouncementMeta, fetchAnnouncements, Announcement, AnnouncementMeta } from '@/api/announcement';
+import { fetchAnnouncementMeta, fetchAnnouncements, Announcement, AnnouncementMeta } from '@/services/api/announcement';
 
 interface ChartItem {
 	id: number;

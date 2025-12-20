@@ -169,7 +169,7 @@ import { useUserStore } from '@/store/user';
 import { calculateGanZhiRelationsForList, buildGanZhiDiagram } from '@/libs/utils/bazi-enhanced';
 import utils from '@/libs/utils/utils';
 import { API_BASE_URL } from '@/config/config';
-import { request } from '@/api/index';
+import { request } from '@/services/api/index';
 
 const bazi_store = useBaziStore();
 const yun_store = useYunStore();
