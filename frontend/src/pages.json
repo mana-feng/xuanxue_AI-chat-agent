@@ -10,123 +10,36 @@
   "_comment_pages": "pages数组中第一项表示应用启动页，参考：https://uniapp.dcloud.io/collocation/pages",
   "pages": [
     {
-      "path": "pages/index/index",
-      "style": {
-        "navigationBarTitleText": "mana玄学AI",
-        "enablePullDownRefresh": false,
-        "navigationStyle": "custom"
-      }
+      "path": "pages/index/index"
     },
     {
-      "path": "pages/index/detail",
-      "style": {
-        "navigationBarTitleText": "mana玄学AI",
-        "enablePullDownRefresh": false,
-        "navigationStyle": "custom"
-      }
+      "path": "pages/index/detail"
     },
     {
-      "path": "pages/history/list",
-      "style": {
-        "navigationBarTitleText": "mana玄学AI",
-        "enablePullDownRefresh": false,
-        "navigationStyle": "custom"
-      }
+      "path": "pages/history/list"
     },
     {
-      "path": "pages/auth/auth",
-      "style": {
-        "navigationBarTitleText": "mana玄学AI",
-        "enablePullDownRefresh": false,
-        "navigationStyle": "custom"
-      }
+      "path": "pages/auth/auth"
     },
     {
-      "path": "pages/admin/dashboard",
-      "style": {
-        "navigationBarTitleText": "mana玄学AI",
-        "enablePullDownRefresh": false,
-        "navigationStyle": "custom"
-      }
+      "path": "pages/about/index"
     },
     {
-      "path": "pages/admin/users",
-      "style": {
-        "navigationBarTitleText": "mana玄学AI",
-        "enablePullDownRefresh": false,
-        "navigationStyle": "custom"
-      }
+      "path": "pages/settings/index"
     },
     {
-      "path": "pages/admin/records",
-      "style": {
-        "navigationBarTitleText": "mana玄学AI",
-        "enablePullDownRefresh": false,
-        "navigationStyle": "custom"
-      }
-    },
-    {
-      "path": "pages/admin/email-config",
-      "style": {
-        "navigationBarTitleText": "mana玄学AI",
-        "enablePullDownRefresh": false,
-        "navigationStyle": "custom"
-      }
-    },
-    {
-      "path": "pages/admin/llm-config",
-      "style": {
-        "navigationBarTitleText": "mana玄学AI",
-        "enablePullDownRefresh": false,
-        "navigationStyle": "custom"
-      }
-    },
-    {
-      "path": "pages/admin/llm-quota",
-      "style": {
-        "navigationBarTitleText": "mana玄学AI",
-        "enablePullDownRefresh": false,
-        "navigationStyle": "custom"
-      }
-    },
-    {
-      "path": "pages/admin/announcements",
-      "style": {
-        "navigationBarTitleText": "mana玄学AI",
-        "enablePullDownRefresh": false,
-        "navigationStyle": "custom"
-      }
-    },
-    {
-      "path": "pages/about/index",
-      "style": {
-        "navigationBarTitleText": "mana玄学AI",
-        "enablePullDownRefresh": false,
-        "navigationStyle": "custom"
-      }
-    },
-    {
-      "path": "pages/chat/index",
-      "style": {
-        "navigationBarTitleText": "mana玄学AI",
-        "enablePullDownRefresh": false,
-        "navigationStyle": "custom"
-      }
+      "path": "pages/chat/index"
     },
     {
       "path": "pages/liuyao/index",
       "style": {
-        "navigationBarTitleText": "六爻排盘",
-        "enablePullDownRefresh": false,
-        "navigationStyle": "custom"
+        "navigationBarTitleText": "六爻排盘"
       }
     },
     {
       "path": "pages/liuyao/result",
       "style": {
-        "navigationBarTitleText": "六爻排盘结果",
-        "enablePullDownRefresh": false,
-        "navigationStyle": "custom"
+        "navigationBarTitleText": "六爻排盘结果"
       }
     }
   ],
@@ -134,7 +47,9 @@
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "mana玄学AI",
     "navigationBarBackgroundColor": "#FFFFFF",
-    "backgroundColor": "#FFFFFF"
+    "backgroundColor": "#FFFFFF",
+    "navigationStyle": "custom",
+    "enablePullDownRefresh": false
   },
   "condition": {
     "current": 0,

@@ -1,0 +1,502 @@
+<template>
+	<tm-app>
+		<view class="page-wrapper theme-page-bg">
+			<yx-nav-header></yx-nav-header>
+			
+			<view class="page-content theme-container" :style="pageContentStyle">
+				<view class="theme-card theme-card-glass">
+				<!-- 顶部标题 -->
+				<view class="header">
+					<tm-text
+						:font-size="42"
+						:bold="true"
+						color="#2d3748"
+						label="管理员后台"
+					></tm-text>
+					<view class="header-buttons">
+						<tm-button
+							class="btn-gradient"
+							size="small"
+							color="teal"
+							linear="right"
+							label="返回首页"
+							:margin="[0, 12, 0, 0]"
+							:round="12"
+							:padding="[20, 24]"
+							@tap="goToHome"
+						></tm-button>
+						<tm-button
+							class="btn-gradient"
+							size="small"
+							color="teal"
+							linear="right"
+							label="退出登录"
+							:round="12"
+							:padding="[20, 24]"
+							@tap="handleLogout"
+						></tm-button>
+					</view>
+				</view>
+				
+				<!-- 统计卡片 -->
+				<view class="stats-grid" v-if="stats">
+					<tm-sheet
+						:round="16"
+						:shadow="4"
+						:padding="[32, 28]"
+						class="stat-card stat-card-primary"
+					>
+						<tm-text
+							:font-size="26"
+							color="#718096"
+							label="总用户数"
+						></tm-text>
+						<tm-text
+							class="mt-12"
+							:font-size="48"
+							:bold="true"
+							color="#667eea"
+							:label="formatStat(stats?.totalUsers)"
+						></tm-text>
+					</tm-sheet>
+					
+					<tm-sheet
+						:round="16"
+						:shadow="4"
+						:padding="[32, 28]"
+						class="stat-card stat-card-success"
+					>
+						<tm-text
+							:font-size="26"
+							color="#718096"
+							label="总记录数"
+						></tm-text>
+						<tm-text
+							class="mt-12"
+							:font-size="48"
+							:bold="true"
+							color="#48bb78"
+							:label="formatStat(stats?.totalRecords)"
+						></tm-text>
+					</tm-sheet>
+					
+					<tm-sheet
+						:round="16"
+						:shadow="4"
+						:padding="[32, 28]"
+						class="stat-card stat-card-warning"
+					>
+						<tm-text
+							:font-size="26"
+							color="#718096"
+							label="今日新增用户"
+						></tm-text>
+						<tm-text
+							class="mt-12"
+							:font-size="48"
+							:bold="true"
+							color="#ed8936"
+							:label="formatStat(stats?.todayUsers)"
+						></tm-text>
+					</tm-sheet>
+					
+					<tm-sheet
+						:round="16"
+						:shadow="4"
+						:padding="[32, 28]"
+						class="stat-card stat-card-info"
+					>
+						<tm-text
+							:font-size="26"
+							color="#718096"
+							label="今日新增记录"
+						></tm-text>
+						<tm-text
+							class="mt-12"
+							:font-size="48"
+							:bold="true"
+							color="#4299e1"
+							:label="formatStat(stats?.todayRecords)"
+						></tm-text>
+					</tm-sheet>
+				</view>
+				
+				<!-- 功能菜单 -->
+				<view class="menu-section theme-section">
+					<tm-text
+						:font-size="28"
+						:bold="true"
+						label="功能菜单"
+						:margin="[0, 0, 20, 0]"
+					></tm-text>
+					
+					<tm-sheet
+						:round="4"
+						:shadow="2"
+						:padding="[20, 20]"
+						:margin="[0, 0, 20, 0]"
+						@tap="goToUsers"
+					>
+						<view class="menu-item">
+							<tm-text
+								:font-size="28"
+								:bold="true"
+								label="用户管理"
+							></tm-text>
+							<tm-icon name="chevron-right" :font-size="24"></tm-icon>
+						</view>
+						<tm-text
+							class="mt-8"
+							:font-size="22"
+							color="#999"
+							label="查看和管理所有用户账号"
+						></tm-text>
+					</tm-sheet>
+					
+					<tm-sheet
+						:round="4"
+						:shadow="2"
+						:padding="[20, 20]"
+						:margin="[0, 0, 20, 0]"
+						@tap="goToRecords"
+					>
+						<view class="menu-item">
+							<tm-text
+								:font-size="28"
+								:bold="true"
+								label="八字记录管理"
+							></tm-text>
+							<tm-icon name="chevron-right" :font-size="24"></tm-icon>
+						</view>
+						<tm-text
+							class="mt-8"
+							:font-size="22"
+							color="#999"
+							label="查看和管理所有八字排盘记录"
+						></tm-text>
+					</tm-sheet>
+
+					<tm-sheet
+						:round="4"
+						:shadow="2"
+						:padding="[20, 20]"
+						:margin="[0, 0, 20, 0]"
+						@tap="goToLiuyaoRecords"
+					>
+						<view class="menu-item">
+							<tm-text
+								:font-size="28"
+								:bold="true"
+								label="六爻记录管理"
+							></tm-text>
+							<tm-icon name="chevron-right" :font-size="24"></tm-icon>
+						</view>
+						<tm-text
+							class="mt-8"
+							:font-size="22"
+							color="#999"
+							label="查看和管理所有六爻排盘记录"
+						></tm-text>
+					</tm-sheet>
+
+					<tm-sheet
+						:round="4"
+						:shadow="2"
+						:padding="[20, 20]"
+						:margin="[0, 0, 20, 0]"
+						@tap="goToAnnouncements"
+					>
+						<view class="menu-item">
+							<tm-text
+								:font-size="28"
+								:bold="true"
+								label="公告管理"
+							></tm-text>
+							<tm-icon name="chevron-right" :font-size="24"></tm-icon>
+						</view>
+						<tm-text
+							class="mt-8"
+							:font-size="22"
+							color="#999"
+							label="配置前端公告（标题/内容/到期）"
+						></tm-text>
+					</tm-sheet>
+
+					<tm-sheet
+						:round="4"
+						:shadow="2"
+						:padding="[20, 20]"
+						:margin="[0, 0, 20, 0]"
+						@tap="goToEmailConfig"
+					>
+						<view class="menu-item">
+							<tm-text
+								:font-size="28"
+								:bold="true"
+								label="邮箱服务配置"
+							></tm-text>
+							<tm-icon name="chevron-right" :font-size="24"></tm-icon>
+						</view>
+						<tm-text
+							class="mt-8"
+							:font-size="22"
+							color="#999"
+							label="后台设置验证码邮箱服务（仅管理员）"
+						></tm-text>
+					</tm-sheet>
+
+					<tm-sheet
+						:round="4"
+						:shadow="2"
+						:padding="[20, 20]"
+						:margin="[0, 0, 20, 0]"
+						@tap="goToLLMConfig"
+					>
+						<view class="menu-item">
+							<tm-text
+								:font-size="28"
+								:bold="true"
+								label="大模型管理"
+							></tm-text>
+							<tm-icon name="chevron-right" :font-size="24"></tm-icon>
+						</view>
+						<tm-text
+							class="mt-8"
+							:font-size="22"
+							color="#999"
+							label="配置聊天界面对接的 API 信息"
+						></tm-text>
+					</tm-sheet>
+
+					<tm-sheet
+						:round="4"
+						:shadow="2"
+						:padding="[20, 20]"
+						:margin="[0, 0, 20, 0]"
+						@tap="goToLLMQuota"
+					>
+						<view class="menu-item">
+							<tm-text
+								:font-size="28"
+								:bold="true"
+								label="AI额度管理"
+							></tm-text>
+							<tm-icon name="chevron-right" :font-size="24"></tm-icon>
+						</view>
+						<tm-text
+							class="mt-8"
+							:font-size="22"
+							color="#999"
+							label="管理每个用户的AI解答额度"
+						></tm-text>
+					</tm-sheet>
+				</view>
+				</view>
+			</view>
+		</view>
+	</tm-app>
+</template>
+
+<script setup lang="ts">
+import { ref, computed } from 'vue';
+import { onShow } from '@dcloudio/uni-app';
+import { useUserStore } from '@/store/user';
+import { getAdminStats, type AdminStats } from '@/services/api/admin';
+
+const userStore = useUserStore();
+const stats = ref<AdminStats | null>(null);
+
+// navbar 高度（rpx），与 yx-nav-header 中的 navbarHeight 保持一致
+const navbarHeight = 40;
+
+// 计算页面内容的 padding-top，避免被 fixed 的 header 遮挡
+const pageContentStyle = computed(() => {
+	return {
+		paddingTop: `${navbarHeight + 20}rpx` // navbar高度 + 原有padding
+	};
+});
+
+function formatStat(value?: number | null) {
+	return String(value ?? 0);
+}
+
+onShow(() => {
+	// 先恢复登录状态
+	userStore.restoreAuth();
+	
+	// 检查是否为管理员
+	if (!userStore.isAdmin) {
+		uni.reLaunch({
+			url: '/pages/auth/auth'
+		});
+		return;
+	}
+	
+	loadStats();
+});
+
+async function loadStats() {
+	try {
+		const res = await getAdminStats();
+		if (res.success && res.data) {
+			stats.value = res.data;
+		}
+	} catch (err) {
+		console.error('加载统计数据失败:', err);
+		uni.showToast({
+			title: '加载失败',
+			icon: 'none'
+		});
+	}
+}
+
+function goToUsers() {
+	uni.navigateTo({
+		url: '/pages/admin/users'
+	});
+}
+
+function goToRecords() {
+	uni.navigateTo({
+		url: '/pages/admin/records'
+	});
+}
+
+function goToLiuyaoRecords() {
+	uni.navigateTo({
+		url: '/pages/admin/liuyao-records'
+	});
+}
+
+function goToAnnouncements() {
+	uni.navigateTo({
+		url: '/pages/admin/announcements'
+	});
+}
+
+function goToLLMConfig() {
+	uni.navigateTo({
+		url: '/pages/admin/llm-config'
+	});
+}
+
+function goToLLMQuota() {
+	uni.navigateTo({
+		url: '/pages/admin/llm-quota'
+	});
+}
+
+function goToEmailConfig() {
+	uni.navigateTo({
+		url: '/pages/admin/email-config'
+	});
+}
+
+function goToHome() {
+	uni.reLaunch({
+		url: '/pages/admin/dashboard'
+	});
+}
+
+function handleLogout() {
+	userStore.logout();
+	uni.reLaunch({
+		url: '/pages/auth/auth'
+	});
+}
+</script>
+
+<style scoped>
+.page-wrapper {
+	padding-bottom: 40rpx;
+}
+
+.page-content {
+	/* padding-top 通过 :style 动态设置，与 navbar 高度联动 */
+}
+
+.theme-card {
+	padding: 32rpx 28rpx;
+}
+
+.header {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 30rpx;
+}
+
+.header-buttons {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 12rpx;
+}
+
+.stats-grid {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	margin-bottom: 40rpx;
+	gap: 20rpx;
+}
+
+.stats-grid > view {
+	flex: 1 1 calc(50% - 20rpx);
+	min-width: 320rpx;
+}
+
+.stat-card {
+	background: #ffffff;
+}
+
+.menu-section {
+	margin-top: 20rpx;
+}
+
+.menu-card {
+	background: #ffffff;
+}
+
+.menu-item {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+.menu-item > view {
+	margin-right: 24rpx;
+}
+
+.menu-item > view:last-child {
+	margin-right: 0;
+}
+
+.menu-icon-wrapper {
+	width: 88rpx;
+	height: 88rpx;
+	border-radius: 16rpx;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.menu-icon-primary {
+	background: rgba(102, 126, 234, 0.1);
+}
+
+.menu-icon-success {
+	background: rgba(72, 187, 120, 0.1);
+}
+
+.menu-icon-warning {
+	background: rgba(237, 137, 54, 0.1);
+}
+
+.menu-content {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+}
+</style>

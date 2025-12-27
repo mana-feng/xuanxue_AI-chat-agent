@@ -4,7 +4,7 @@ import config from "@/config/config"
 
 export default {
 	// 获取十神
-	GetShiShen(ganzhi) {
+	GetShiShen(ganzhi: any) {
 		const bazi_store = useBaziStore();
 
 		const { tiangan, dizhi } = config
@@ -21,11 +21,13 @@ export default {
 			zhi = ganzhi[1]
 		}
 
-		return this.TransformShiShen(tiangan[selfgan][gan], dizhi[selfgan][zhi])
+		if (!selfgan || !gan || !zhi) return '';
+
+		return this.TransformShiShen((tiangan as any)[selfgan][gan], (dizhi as any)[selfgan][zhi])
 	},
 	// 转换十神
-	TransformShiShen(a, b) {
-		const map = {
+	TransformShiShen(a: string, b: string) {
+		const map: Record<string, string> = {
 			"正印": "印",
 			"正官": "官",
 			"劫财": "劫",
@@ -40,14 +42,14 @@ export default {
 		return map[a] + map[b]
 	},
 	// 获取生肖
-	GetChineseZodiac(year) {
+	GetChineseZodiac(year: number) {
 		const animals = ['猴', '鸡', '狗', '猪', '鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊'];
 		return animals[year % 12];
 	},
 	// 获取五行
-	Get5Elements(str, type = 't') {
-		let list = [];
-		let el = []
+	Get5Elements(str: string, type = 't') {
+		let list: string[] = [];
+		let el: string[] = []
 		if (type == 't') {
 			// 天干
 			list = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
@@ -64,10 +66,11 @@ export default {
 		return el[list.indexOf(str)] || '*';
 	},
 	// 结构数组
-	DeArray(arr, type = "default") {
+	DeArray(arr: any[] | null, type = "default") {
+		if (!arr) return "";
 		if (type == "canggan") {
 			let str = ""
-			for (let key of arr) {
+			for (const key of arr) {
 				str += key + this.Get5Elements(key) + "\r\n"
 			}
 			return str
@@ -75,7 +78,7 @@ export default {
 			return arr.join('\r\n');
 		}
 	},
-	HideSecond(time){
+	HideSecond(time: any){
 		try {
 			if (!time || isNaN(time)) {
 				return '';

@@ -6,28 +6,28 @@ export const QING6 = ['兄弟', '父母', '官鬼', '妻财', '子孙'];
 export const XING5 = ['木', '火', '土', '金', '水'];
 
 export const NAJIA = [
-	['甲子寅辰', '壬午申戌'],
-	['丁巳卯丑', '丁亥酉未'],
-	['己卯丑亥', '己酉未巳'],
-	['庚子寅辰', '庚午申戌'],
-	['辛丑亥酉', '辛未巳卯'],
-	['戊寅辰午', '戊申戌子'],
-	['丙辰午申', '丙戌子寅'],
-	['乙未巳卯', '癸丑亥酉']
+	['甲子寅辰', '壬午申戌'], // 乾
+	['辛丑亥酉', '辛未巳卯'], // 巽
+	['己卯丑亥', '己酉未巳'], // 离
+	['丙辰午申', '丙戌子寅'], // 艮
+	['丁巳卯丑', '丁亥酉未'], // 兑
+	['戊寅辰午', '戊申戌子'], // 坎
+	['庚子寅辰', '庚午申戌'], // 震
+	['乙未巳卯', '癸丑亥酉']  // 坤
 ];
 
 export const TRIGRAM_LABEL: Record<string, { name: string; element: string }> = {
 	'111': { name: '乾', element: '天' },
-	'110': { name: '巽', element: '风' },
+	'011': { name: '巽', element: '风' }, // 自下而上：初阴二阳三阳
 	'101': { name: '离', element: '火' },
-	'100': { name: '艮', element: '山' },
-	'011': { name: '兑', element: '泽' },
+	'001': { name: '艮', element: '山' }, // 自下而上：初阴二阴三阳
+	'110': { name: '兑', element: '泽' }, // 自下而上：初阳二阳三阴
 	'010': { name: '坎', element: '水' },
-	'001': { name: '震', element: '雷' },
+	'100': { name: '震', element: '雷' }, // 自下而上：初阳二阴三阴
 	'000': { name: '坤', element: '地' }
 };
 
-export const YAOS = ['111', '110', '101', '100', '011', '010', '001', '000'];
+export const YAOS = ['111', '011', '101', '001', '110', '010', '100', '000'];
 export const GUAS = YAOS.map(code => TRIGRAM_LABEL[code].name);
 export const GUA5 = GUAS.map(name => {
 	switch (name) {
@@ -48,34 +48,66 @@ export const GUA5 = GUAS.map(name => {
 	}
 });
 
-// Build GUA64 mapping robustly whether guaci is an object (by mark) or an array
+// 使用 guaci.json 中的卦名，保证与结果页一致
 export const GUA64 = (() => {
 	const result: Record<string, string> = {};
-	// generate all 64 marks from YAOS (8 trigram codes)
 	const trigramCodes = Object.keys(TRIGRAM_LABEL);
+
+	// 如果 guaciRaw 是数组，先用 code 建立直接映射 mark -> 卦名
+	const codeNameMap: Record<string, string> = {};
+	if (Array.isArray(guaciRaw)) {
+		(guaciRaw as any[]).forEach((entry: any) => {
+			// guaci.json 中的 code 是 [上, 五, 四, 三, 二, 初] (自上而下)
+			// 我们需要转换为 [初, 二, 三, 四, 五, 上] (自下而上)
+			if (Array.isArray(entry?.code) && entry.code.length === 6) {
+				const mark = entry.code.slice().reverse().map((n: any) => String(n)).join('');
+				const name = entry.zhuguaName || entry.name || '';
+				if (mark) codeNameMap[mark] = name;
+			} else if (typeof entry?.code === 'string' && entry.code.length === 6) {
+				const mark = entry.code.split('').reverse().join('');
+				const name = entry.zhuguaName || entry.name || '';
+				codeNameMap[mark] = name;
+			}
+		});
+	}
+
 	for (let i = 0; i < trigramCodes.length; i++) {
 		for (let j = 0; j < trigramCodes.length; j++) {
 			const upper = trigramCodes[i];
 			const lower = trigramCodes[j];
-			const mark = `${upper}${lower}`;
-			const upperLabel = TRIGRAM_LABEL[upper];
-			const lowerLabel = TRIGRAM_LABEL[lower];
-			// try to get hexagram name from guaciRaw if possible
+			// mark 采用自下而上的顺序：下卦在前，上卦在后
+			// 此时 upper 和 lower 已经是自下而上的字符串了，直接拼接即可
+			const mark = `${lower}${upper}`;
 			let hexName = '';
-			if (!Array.isArray(guaciRaw)) {
-				hexName = (guaciRaw as Record<string, any>)[mark]?.name || '';
-			} else {
-				// if array, try to find an entry whose zhuguaName contains the upper or lower trigram name
+
+			if (codeNameMap[mark]) {
+				hexName = codeNameMap[mark];
+			} else if (!Array.isArray(guaciRaw)) {
+				// 兼容对象格式的 guaciRaw（如果有）
+				hexName =
+					(guaciRaw as Record<string, any>)[mark]?.name ||
+					(guaciRaw as Record<string, any>)[mark]?.zhuguaName ||
+					'';
+			}
+
+			if (!hexName && Array.isArray(guaciRaw)) {
+				const upperLabel = TRIGRAM_LABEL[upper];
+				const lowerLabel = TRIGRAM_LABEL[lower];
 				const arr = guaciRaw as any[];
-				const found = arr.find(
-					(e: any) =>
-						(e?.zhuguaName && e.zhuguaName.indexOf(upperLabel.name) !== -1 && e.zhuguaName.indexOf(lowerLabel.name) !== -1) ||
-						(e?.zhuguaName && e.zhuguaName.indexOf(upperLabel.name) !== -1 && upper === lower)
-				);
+				const found = arr.find((e: any) => {
+					const n = (e?.zhuguaName || e?.name || '').replace(/\s+/g, '');
+					return n.includes(upperLabel.name) && n.includes(lowerLabel.name);
+				});
 				hexName = (found && (found.zhuguaName || found.name)) || '';
 			}
-			const display = upper === lower ? `${upperLabel.element}为${hexName || upperLabel.name}` : `${upperLabel.element}${lowerLabel.element}${hexName || ''}`.trim();
-			result[mark] = display;
+
+			if (!hexName) {
+				const upperLabel = TRIGRAM_LABEL[upper];
+				const lowerLabel = TRIGRAM_LABEL[lower];
+				hexName = upper === lower ? upperLabel.name : `${upperLabel.name}${lowerLabel.name}`;
+			}
+
+			result[mark] = hexName;
 		}
 	}
 	return result;

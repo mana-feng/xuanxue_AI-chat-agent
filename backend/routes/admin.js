@@ -253,9 +253,9 @@ router.post('/llm-models/:id/activate', adminMiddleware, apiSignatureMiddleware(
 router.get('/stats', adminMiddleware, async (req, res) => {
 	const queries = {
 		totalUsers: 'SELECT COUNT(*) as count FROM users',
-		totalRecords: 'SELECT COUNT(*) as count FROM bazi_records',
+		totalRecords: 'SELECT (SELECT COUNT(*) FROM bazi_records) + (SELECT COUNT(*) FROM liuyao_records) as count',
 		todayUsers: `SELECT COUNT(*) as count FROM users WHERE DATE(created_at) = CURDATE()`,
-		todayRecords: `SELECT COUNT(*) as count FROM bazi_records WHERE DATE(created_at) = CURDATE()`,
+		todayRecords: `SELECT (SELECT COUNT(*) FROM bazi_records WHERE DATE(created_at) = CURDATE()) + (SELECT COUNT(*) FROM liuyao_records WHERE DATE(created_at) = CURDATE()) as count`,
 		adminUsers: "SELECT COUNT(*) as count FROM users WHERE role = 'admin'",
 	};
 
@@ -1117,6 +1117,345 @@ router.delete('/records/:id', adminMiddleware, apiSignatureMiddleware(), async (
 		res.json({ success: true });
 	} catch (err) {
 		console.error('删除记录失败:', err);
+		return res.status(500).json({ error: '删除失败' });
+	}
+});
+
+/**
+ * 获取六爻记录列表
+ */
+router.get('/liuyao-records', adminMiddleware, async (req, res) => {
+	const page = parseInt(req.query.page) || 1;
+	const pageSize = parseInt(req.query.pageSize) || 20;
+	const offset = (page - 1) * pageSize;
+	const userId = req.query.userId ? parseInt(req.query.userId) : null;
+	const search = req.query.search || '';
+
+	let query = `
+		SELECT 
+			r.id, 
+			r.name, 
+			r.gender, 
+			r.birth_datetime AS birthDatetime, 
+			r.calendar_type AS calendarType,
+			r.created_at AS createdAt,
+			u.id AS userId,
+			u.email AS userEmail,
+			u.username AS userUsername
+		FROM liuyao_records r
+		LEFT JOIN users u ON r.user_id = u.id
+	`;
+	let countQuery = 'SELECT COUNT(*) as count FROM liuyao_records r';
+	const params = [];
+	const conditions = [];
+
+	if (userId) {
+		conditions.push('r.user_id = ?');
+		params.push(userId);
+	}
+
+	if (search) {
+		conditions.push('(r.name LIKE ? OR u.email LIKE ? OR u.username LIKE ?)');
+		const searchPattern = `%${search}%`;
+		params.push(searchPattern, searchPattern, searchPattern);
+	}
+
+	if (conditions.length > 0) {
+		const whereClause = ' WHERE ' + conditions.join(' AND ');
+		query += whereClause;
+		countQuery += whereClause;
+	}
+
+	query += ' ORDER BY r.created_at DESC LIMIT ? OFFSET ?';
+	const queryParams = [...params, pageSize, offset];
+	const countParams = params;
+
+	try {
+		const countRow = await db.get(countQuery, countParams);
+		const total = countRow?.count || 0;
+
+		const rows = await db.all(query, queryParams);
+
+		res.json({
+			list: rows || [],
+			total,
+			page,
+			pageSize,
+			totalPages: Math.ceil(total / pageSize),
+		});
+	} catch (err) {
+		console.error('查询六爻记录列表失败:', err);
+		return res.status(500).json({ error: '查询失败' });
+	}
+});
+
+/**
+ * 获取六爻记录详情
+ */
+router.get('/liuyao-records/:id', adminMiddleware, async (req, res) => {
+	const id = SecurityUtils.validateId(req.params.id);
+	if (!id) {
+		return res.status(400).json({ error: '无效的记录ID' });
+	}
+
+	try {
+		const row = await db.get(
+			`SELECT 
+				r.id, 
+				r.name, 
+				r.gender, 
+				r.birth_datetime AS birthDatetime,
+				r.calendar_type AS calendarType,
+				r.raw_payload AS rawPayload,
+				r.created_at AS createdAt,
+				u.id AS userId,
+				u.email AS userEmail,
+				u.username AS userUsername
+			FROM liuyao_records r
+			LEFT JOIN users u ON r.user_id = u.id
+			WHERE r.id = ?`,
+			[id]
+		);
+
+		if (!row) {
+			return res.status(404).json({ error: '记录不存在' });
+		}
+
+		let parsedPayload = null;
+		if (row.rawPayload) {
+			try {
+				if (typeof row.rawPayload === 'string') {
+					parsedPayload = JSON.parse(row.rawPayload);
+				} else {
+					parsedPayload = row.rawPayload;
+				}
+			} catch (e) {
+				console.error('解析 rawPayload 失败:', e);
+				parsedPayload = row.rawPayload;
+			}
+		}
+
+		res.json({
+			id: row.id,
+			name: row.name,
+			gender: row.gender,
+			birthDatetime: row.birthDatetime,
+			calendarType: row.calendarType,
+			createdAt: row.createdAt,
+			userId: row.userId,
+			userEmail: row.userEmail,
+			userUsername: row.userUsername,
+			rawPayload: parsedPayload,
+		});
+	} catch (err) {
+		console.error('查询六爻记录详情失败:', err);
+		if (err.code === 'ER_MALFORMED_PACKET') {
+			console.error('数据包错误，可能是查询结果过大或连接问题');
+			return res.status(500).json({
+				error: '查询失败：数据包错误，请检查数据库连接或联系管理员',
+			});
+		}
+		return res.status(500).json({ error: '查询失败' });
+	}
+});
+
+/**
+ * 创建六爻记录
+ */
+router.post('/liuyao-records', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
+	const { userId, name, gender, birthDatetime, calendarType, rawPayload } = req.body || {};
+
+	if (!userId || birthDatetime === null || birthDatetime === undefined || birthDatetime === '') {
+		return res.status(400).json({ error: '缺少 userId 或 birthDatetime' });
+	}
+
+	try {
+		// 验证用户是否存在
+		const userRow = await db.get('SELECT id FROM users WHERE id = ?', [userId]);
+
+		if (!userRow) {
+			return res.status(404).json({ error: '用户不存在' });
+		}
+
+		// 使用安全工具验证和清理输入
+		const sanitizedName = name
+			? SecurityUtils.sanitizeString(String(name), { maxLength: 100 })
+			: null;
+		const validatedGender = SecurityUtils.validateGender(gender);
+		const validatedDateTime = SecurityUtils.validateDateTime(birthDatetime);
+
+		if (!validatedDateTime) {
+			return res.status(400).json({ error: '出生时间格式不正确' });
+		}
+
+		const sanitizedCalendarType = calendarType
+			? SecurityUtils.sanitizeString(String(calendarType), { maxLength: 20 })
+			: null;
+
+		// 安全地序列化 rawPayload
+		let rawPayloadJson = null;
+		if (rawPayload) {
+			try {
+				const payloadStr = JSON.stringify(rawPayload);
+				if (payloadStr.length > 1000000) {
+					return res.status(400).json({ error: '数据过大，无法保存' });
+				}
+				rawPayloadJson = payloadStr;
+			} catch (e) {
+				console.error('序列化 rawPayload 失败:', e);
+				return res.status(400).json({ error: '数据格式错误，无法保存: ' + e.message });
+			}
+		}
+
+		const insertSql =
+			'INSERT INTO liuyao_records (user_id, name, gender, birth_datetime, calendar_type, raw_payload, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())';
+
+		const result = await db.run(insertSql, [
+			userId,
+			sanitizedName,
+			validatedGender,
+			validatedDateTime,
+			sanitizedCalendarType,
+			rawPayloadJson,
+		]);
+
+		res.json({
+			success: true,
+			record: {
+				id: result.lastID,
+				userId,
+				name: sanitizedName,
+				gender: validatedGender,
+				birthDatetime: validatedDateTime,
+				calendarType: sanitizedCalendarType,
+			},
+		});
+	} catch (err) {
+		console.error('创建六爻记录失败:', err);
+		return res.status(500).json({ error: '创建失败' });
+	}
+});
+
+/**
+ * 更新六爻记录
+ */
+router.put('/liuyao-records/:id', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
+	const id = SecurityUtils.validateId(req.params.id);
+	const { userId, name, gender, birthDatetime, calendarType, rawPayload } = req.body || {};
+
+	if (!id) {
+		return res.status(400).json({ error: '无效的记录ID' });
+	}
+
+	try {
+		const recordRow = await db.get('SELECT id, user_id FROM liuyao_records WHERE id = ?', [id]);
+
+		if (!recordRow) {
+			return res.status(404).json({ error: '记录不存在' });
+		}
+
+		if (userId !== undefined && userId !== recordRow.user_id) {
+			const userRow = await db.get('SELECT id FROM users WHERE id = ?', [userId]);
+
+			if (!userRow) {
+				return res.status(404).json({ error: '用户不存在' });
+			}
+		}
+
+		const updates = [];
+		const params = [];
+
+		if (userId !== undefined) {
+			updates.push('user_id = ?');
+			params.push(userId);
+		}
+
+		if (name !== undefined) {
+			if (name === null || name === '') {
+				updates.push('name = NULL');
+			} else {
+				updates.push('name = ?');
+				params.push(SecurityUtils.sanitizeString(String(name), { maxLength: 100 }));
+			}
+		}
+
+		if (gender !== undefined) {
+			const validatedGender = SecurityUtils.validateGender(gender);
+			updates.push('gender = ?');
+			params.push(validatedGender);
+		}
+
+		if (birthDatetime !== undefined) {
+			const validatedDateTime = SecurityUtils.validateDateTime(birthDatetime);
+			if (!validatedDateTime) {
+				return res.status(400).json({ error: '出生时间格式不正确' });
+			}
+			updates.push('birth_datetime = ?');
+			params.push(validatedDateTime);
+		}
+
+		if (calendarType !== undefined) {
+			if (calendarType === null || calendarType === '') {
+				updates.push('calendar_type = NULL');
+			} else {
+				updates.push('calendar_type = ?');
+				params.push(SecurityUtils.sanitizeString(String(calendarType), { maxLength: 20 }));
+			}
+		}
+
+		if (rawPayload !== undefined) {
+			if (rawPayload === null) {
+				updates.push('raw_payload = NULL');
+			} else {
+				try {
+					const payloadStr = JSON.stringify(rawPayload);
+					if (payloadStr.length > 1000000) {
+						return res.status(400).json({ error: '数据过大，无法保存' });
+					}
+					updates.push('raw_payload = ?');
+					params.push(payloadStr);
+				} catch (e) {
+					return res.status(400).json({ error: '数据格式错误: ' + e.message });
+				}
+			}
+		}
+
+		if (updates.length === 0) {
+			return res.status(400).json({ error: '没有要更新的字段' });
+		}
+
+		params.push(id);
+		const updateQuery = `UPDATE liuyao_records SET ${updates.join(', ')} WHERE id = ?`;
+		const result = await db.run(updateQuery, params);
+
+		if (result.changes === 0) {
+			return res.status(404).json({ error: '记录不存在' });
+		}
+
+		res.json({ success: true });
+	} catch (err) {
+		console.error('更新六爻记录失败:', err);
+		return res.status(500).json({ error: '更新失败' });
+	}
+});
+
+/**
+ * 删除六爻记录
+ */
+router.delete('/liuyao-records/:id', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
+	const id = SecurityUtils.validateId(req.params.id);
+	if (!id) {
+		return res.status(400).json({ error: '无效的记录ID' });
+	}
+
+	try {
+		const result = await db.run('DELETE FROM liuyao_records WHERE id = ?', [id]);
+		if (result.changes === 0) {
+			return res.status(404).json({ error: '记录不存在' });
+		}
+		res.json({ success: true });
+	} catch (err) {
+		console.error('删除六爻记录失败:', err);
 		return res.status(500).json({ error: '删除失败' });
 	}
 });

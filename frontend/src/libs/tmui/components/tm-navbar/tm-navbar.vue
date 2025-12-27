@@ -2,33 +2,33 @@
 	<view style="margin: 0; padding: 0;">
 		<view class="fixed l-0 t-0 statusHeightTop flex" :style="{width:_width+'px',height:_barHeight+'px', top: '0px'}">
 			<tm-sheet
-				@click="emits('click', $event)"
 				:blur="_blur"
 				:color="props.color"
 				:_class="_class"
 				:_style="_style"
-				:followTheme="props.followTheme"
+				:follow-theme="props.followTheme"
 				:dark="props.dark"
 				:round="props.round"
 				:shadow="props.shadow"
 				:outlined="props.outlined"
 				:border="props.border"
-				:borderStyle="props.borderStyle"
-				:borderDirection="props.borderDirection"
+				:border-style="props.borderStyle"
+				:border-direction="props.borderDirection"
 				:text="props.text"
 				:transprent="props.transprent"
 				:linear="props.linear"
-				:linearDeep="props.linearDeep"
+				:linear-deep="props.linearDeep"
 				:margin="props.margin"
 				:padding="props.padding"
 				:height='_barHeight'
 				:width="_width"
+				@click="emits('click', $event)"
 				unit='px'
 			>
 				<view class="navbar-content-wrapper">
 					<view class="navbar-left-section">
-						<tm-icon :unit="props.unit" :font-size="props.iconFontSize" _class="pointer" :color="_homeColor" @click="goback" v-if="_pages>1&&props.hideBack" name="tmicon-angle-left"></tm-icon>
-						<tm-icon :unit="props.unit" _class="pointer" @click="backhome" v-if="_pages==1&&!hideHome" :color="_homeColor" :font-size="props.iconFontSize" name="tmicon-md-home"></tm-icon>
+						<tm-icon v-if="_pages>1&&props.hideBack" :unit="props.unit" :font-size="props.iconFontSize" _class="pointer" :color="_homeColor" name="tmicon-angle-left" @click="goback"></tm-icon>
+						<tm-icon v-if="_pages==1&&!hideHome" :unit="props.unit" _class="pointer" :color="_homeColor" :font-size="props.iconFontSize" name="tmicon-md-home" @click="backhome"></tm-icon>
 						<slot name="left"></slot>
 					</view>
 					<view class="navbar-center-section">
@@ -49,6 +49,7 @@
 	 * 标题栏
 	 * @description 页面自定标题栏，时，请务必放置在页面的最顶部。
 	 */
+	/// <reference types="@dcloudio/types" />
 	import tmSheet from "../tm-sheet/tm-sheet.vue";
 	import tmText from "../tm-text/tm-text.vue";
 	import tmIcon from "../tm-icon/tm-icon.vue";
@@ -57,6 +58,7 @@
 	} from '../../tool/lib/minxs';
 	import { getCurrentInstance, computed, ref, provide, inject , onUpdated, onMounted, onUnmounted, nextTick ,watch, PropType } from 'vue';
 	import { useTmpiniaStore } from '../../tool/lib/tmpinia';
+	import { getSystemInfo } from '@/utils/platform';
 	const store = useTmpiniaStore();
 	const emits = defineEmits(['click','close'])
 	const {proxy} = getCurrentInstance() || {};
@@ -165,8 +167,8 @@
 	})
 
 	const _height = computed(()=>props.height)
-	const _width = uni.getSystemInfoSync().windowWidth
-	const statusBarHeight = uni.getSystemInfoSync().statusBarHeight || 0
+	const _width = getSystemInfo().windowWidth
+	const statusBarHeight = getSystemInfo().statusBarHeight || 0
 	const _barHeight = computed(()=>_height.value)
 	const _leftWidth = computed(()=>props.leftWidth)
 	const _rightWidth = computed(()=>props.rightWidth)
@@ -187,7 +189,7 @@
 			url:props.homePath
 		})
 	}
-	let timerId = NaN;
+	let timerId: any = NaN;
 	function debounce(func:Function, wait = 500, immediate = false) {
 	  // 清除定时器
 	  if (!isNaN(timerId)) clearTimeout(timerId);

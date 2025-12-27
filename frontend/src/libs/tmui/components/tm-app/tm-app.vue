@@ -1,6 +1,7 @@
 <template>
-	<view class="flex flex-col relative"
-		:style="[appConfig.theme ? { background: appConfig.theme } : '', { width: appConfig.width + 'px', minHeight: appConfig.height + 'px' }]">
+	<view
+class="flex flex-col relative"
+		:style="[appConfig.theme ? { background: appConfig.theme } : '', { width: '100vw', minWidth: '100vw', minHeight: appConfig.height + 'px' }, layoutCssVars]">
 		<!-- #ifndef APP-NVUE -->
 		<!-- 	<image
 			v-if="appConfig.bgImg"
@@ -10,10 +11,12 @@
 		></image> -->
 		<!-- #endif -->
 	
-		<view v-if="isSetThemeOk" class="flex flex-col flex-1" :class="[blur ? 'blur' : '']" :style="[
+		<view
+v-if="isSetThemeOk" class="flex flex-col flex-1" :class="[blur ? 'blur' : '']" :style="[
 			{
 				zIndex: 1,
-				width: appConfig.width + 'px',
+				width: '100vw',
+				minWidth: '100vw',
 				minHeight: appConfig.height + 'px'
 			},
 			blur ? { backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(248, 248, 248, 0.7)' } : ''
@@ -25,6 +28,7 @@
 	</view>
 </template>
 <script lang="ts" setup>
+	// @ts-nocheck
 	/**
 	 * 应用容器
 	 * @description 这是所有创建应用的最外层基础容器。
@@ -36,7 +40,11 @@
 		watchEffect,
 		ref,
 		watch,
-		onBeforeMount,ComponentInternalInstance, nextTick
+		onBeforeMount,
+		onMounted,
+		onBeforeUnmount,
+		ComponentInternalInstance,
+		nextTick
 	} from 'vue';
 	import {
 		useTmpiniaStore
@@ -58,6 +66,7 @@
 		onLoad,onInit
 	} from "@dcloudio/uni-app";
 	import { useTmRouterAfter,useTmRouterBefore } from "@/router/index"
+	import { getSystemInfo } from '@/utils/platform';
 	//请在scr/目录下创建一个router/index.ts路由,见文档：https://tmui.design/doc/JSTool/router.html
 	const store = useTmpiniaStore();
 	const {proxy} = <ComponentInternalInstance>getCurrentInstance()
@@ -109,6 +118,7 @@
 	// 设置响应式全局组件库配置表。
 	const tmcfg = computed(() => store.tmStore);
 	const isSetThemeOk = ref(false)
+	const layoutCssVars = ref<Record<string, string>>({})
 	//自定义样式：
 	// const customCSSStyle = computed(()=>computedStyle(props));
 	//自定类
@@ -119,7 +129,7 @@
 	const tmcomputed = computed < cssstyle > (() => computedTheme(props, isDark.value,tmcfg.value));
 	//返回应用背景和文件色值。
 
-	const sysinfo:UniApp.GetSystemInfoResult = uni.getSystemInfoSync()
+	const sysinfo:UniApp.GetSystemInfoResult = getSystemInfo()
 	// 视察的宽。
 	const view_width = ref(sysinfo.windowWidth);
 	//视窗的高度。
@@ -163,12 +173,82 @@
 
 	// //https://picsum.photos/750/1440
 	let appConfig = ref({
-		width: view_width,
-		height: view_height,
+		width: view_width.value,
+		height: view_height.value,
 		theme: tmcomputed.value.backgroundColor,
 		bgImg: props.bgImg,
 		dark: isDark.value
 	});
+
+	const syncAppSize = (width?: number, height?: number) => {
+		if (typeof width === 'number') {
+			view_width.value = width;
+		}
+		if (typeof height === 'number') {
+			view_height.value = height;
+		}
+		appConfig.value.width = view_width.value;
+		appConfig.value.height = view_height.value;
+	};
+
+	const updateLayoutCssVars = () => {
+		if (typeof document !== 'undefined') {
+			return;
+		}
+		const systemInfo = getSystemInfo();
+		const statusBarHeight = systemInfo.statusBarHeight || 0;
+		let safeBottom = 0;
+		const safeAreaInsets = (systemInfo as any).safeAreaInsets;
+		if (safeAreaInsets && typeof safeAreaInsets.bottom === 'number') {
+			safeBottom = safeAreaInsets.bottom;
+		} else {
+			const safeArea = (systemInfo as any).safeArea;
+			const screenHeight = (systemInfo as any).screenHeight;
+			if (safeArea && typeof safeArea.bottom === 'number' && typeof screenHeight === 'number') {
+				safeBottom = Math.max(0, screenHeight - safeArea.bottom);
+			}
+		}
+
+		let headerHeight = 52;
+		// #ifdef MP-WEIXIN
+		try {
+			const menuRect = uni.getMenuButtonBoundingClientRect?.();
+			if (menuRect && typeof menuRect.height === 'number' && typeof menuRect.top === 'number') {
+				const gap = Math.max(0, menuRect.top - statusBarHeight);
+				headerHeight = Math.max(44, Math.round(menuRect.height + gap * 2));
+			} else {
+				headerHeight = 44;
+			}
+		} catch (e) {
+			headerHeight = 44;
+		}
+		// #endif
+
+		layoutCssVars.value = {
+			'--safe-top': `${statusBarHeight}px`,
+			'--safe-bottom': `${safeBottom}px`,
+			'--header-height': `${headerHeight}px`,
+			'--bottom-nav-height': '64px',
+		};
+	};
+
+	// #ifdef H5
+	const handleWindowResize = (res?: any) => {
+		const width = res?.size?.windowWidth ?? getSystemInfo().windowWidth;
+		const height = res?.size?.windowHeight ?? getSystemInfo().windowHeight;
+		syncAppSize(width, height);
+	};
+
+	onMounted(() => {
+		updateLayoutCssVars();
+		syncAppSize(view_width.value, view_height.value);
+		uni.onWindowResize(handleWindowResize);
+	});
+
+	onBeforeUnmount(() => {
+		uni.offWindowResize(handleWindowResize);
+	});
+	// #endif
 
 	function setAppStyle() {
 		if (isDark.value) {
@@ -196,9 +276,9 @@
 		}
 		// app安卓下设置底部虚拟区域的颜色。
 		if (uni.getSystemInfoSync().osName == 'android') {
-			var Color = plus.android.importClass("android.graphics.Color");
+			var Color = plus.android.importClass("android.graphics.Color") as any;
 			plus.android.importClass("android.view.Window");
-		 	var mainActivity = plus.android.runtimeMainActivity();
+		 	var mainActivity = plus.android.runtimeMainActivity() as any;
 			var window_android = mainActivity?.getWindow();
 
 			if (appConfig.value.dark) {
@@ -269,7 +349,13 @@
 	});
 	//监视全局主题并立即执行。
 	setAppStyle()
-	onBeforeMount(() => setAppStyle())
+	onBeforeMount(() => {
+		updateLayoutCssVars();
+		setAppStyle();
+	})
+	onShow(() => {
+		updateLayoutCssVars();
+	})
 	watch([()=>tmcfg.value.color, isDark], () => {
 		isSetThemeOk.value = false;
 		setAppStyle();

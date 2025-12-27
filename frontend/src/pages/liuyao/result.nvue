@@ -1,6 +1,6 @@
 <template>
 	<tm-app>
-		<view class="app-shell">
+		<view class="app-shell page-liuyao-result">
 			<yx-nav-header></yx-nav-header>
 			<view class="app-main">
 				<view class="page-shell">
@@ -16,7 +16,7 @@
 						<view v-if="!compiled || !display" class="section empty-state">
 							<tm-icon name="tmicon-md-time" :font-size="72" color="#cbd5e0"></tm-icon>
 							<tm-text :font-size="26" color="#718096" label="暂无排盘数据，请先返回起卦页面进行排盘。" class="mt-4"></tm-text>
-							<tm-button type="primary" :round="12" :padding="[22, 16]" class="mt-4" @tap="goStart" label="返回起卦"></tm-button>
+							<tm-button type="primary" :round="12" :padding="[22, 16]" class="mt-4" label="返回起卦" @tap="goStart"></tm-button>
 						</view>
 
 						<template v-else>
@@ -33,13 +33,11 @@
 								</view>
 							</view>
 
-							<view class="actions-row" style="display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;">
+							<view class="actions-row">
 								<tm-button
 									type="primary"
 									:round="12"
 									:padding="[24, 18]"
-									:loading="saving"
-									:disabled="saving"
 									icon="tmicon-md-cloud-upload"
 									label="保存排盘"
 									@tap="handleAction('save')"
@@ -48,9 +46,9 @@
 									type="grey"
 									:round="12"
 									:padding="[24, 18]"
-									icon="tmicon-md-download"
-									label="导出排盘"
-									@tap="handleAction('export')"
+									icon="tmicon-md-copy"
+									label="复制排盘"
+									@tap="handleAction('copy')"
 								></tm-button>
 								<tm-button
 									type="primary"
@@ -118,35 +116,48 @@
 									<h2 class="section__title">六爻明细</h2>
 								</header>
 								<view class="section__body">
+									<view class="yao-info-bar">
+										<text class="info-text">
+											<text class="info-label">干支：</text>
+											{{ compiled?.lunar?.gz?.year }}年 <text class="text-red">{{ compiled?.lunar?.gz?.month }}月</text> <text class="text-red">{{ compiled?.lunar?.gz?.day }}日</text> {{ compiled?.lunar?.gz?.hour }}时
+										</text>
+										<text class="info-text">
+											<text class="info-label">空亡：</text>
+											{{ compiled?.lunar?.xkong || '—' }}
+										</text>
+									</view>
 									<view class="table-wrapper draggable-scroll">
 										<view class="yao-table">
 											<view class="yao-row head">
 												<text class="cell col-yao">爻位</text>
 												<text class="cell col-god">六神</text>
-												<text class="cell col-qin">六亲</text>
-												<text class="cell col-symbol">爻</text>
-												<text class="cell col-hide">伏藏</text>
-												<text class="cell col-dong-shi">动静 / 世应</text>
-												<text class="cell col-bian">变爻</text>
-												<text class="cell col-bian-dyn">变爻动静 / 世应</text>
-											</view>
-											<view v-for="row in yaoRows" :key="row.id" class="yao-row">
+												<text class="cell col-qin">原卦六亲</text>
+												<text class="cell col-main">原卦</text>
+												<text class="cell col-bian-qin">变卦六亲</text>
+												<text class="cell col-bian-yao">变卦爻</text>
+								</view>
+								<view v-for="row in yaoRows" :key="row.id" class="yao-row">
 												<text class="cell col-yao">{{ row.order }}</text>
 												<text class="cell col-god">{{ formatDisplay(row.liushen) }}</text>
-												<text class="cell col-qin">{{ formatDisplay(row.relation) }}</text>
-												<text class="cell col-symbol">{{ row.symbol || '—' }}</text>
-												<text class="cell col-hide">{{ formatDisplay(row.hidden) }}</text>
-												<text class="cell col-dong-shi" :class="{ active: row.moving }">
-													{{ row.moving ? '动爻' : '静' }} / {{ formatDisplay(row.role) }}
+												<view class="cell col-qin-wrapper">
+													<text class="col-qin-text">{{ formatDisplay(row.relation) }}</text>
+													<text v-if="row.hidden && row.hidden.trim()" class="col-hide-text">{{ row.hidden }}</text>
+												</view>
+												<text class="cell col-main">
+													<view class="main-cell">
+														<text class="yao-symbol">{{ row.mainSymbol || '—' }}</text>
+														<text v-if="row.mainRole" class="yao-meta">{{ row.mainRole }}</text>
+														<text v-if="row.moving" class="yao-meta">动</text>
+													</view>
 												</text>
-												<text class="cell col-bian">
-													<text v-if="row.change && row.change.trim() !== ''">→{{ row.change }}</text>
-													<text v-else>—</text>
-												</text>
-												<text class="cell col-bian-dyn">
-													{{ row.bianChanged ? (row.moving ? '动爻' : '静') : '—' }} / {{ formatDisplay(bianShiyDisplay[row.idx] || '') }}
-												</text>
-											</view>
+												<text class="cell col-bian-qin">{{ formatDisplay(row.bianRelation) }}</text>
+											<text class="cell col-bian-yao">
+												<view class="bian-cell">
+													<text class="yao-symbol">{{ row.bianSymbol || '—' }}</text>
+													<text v-if="row.bianRole" class="yao-meta">{{ row.bianRole }}</text>
+												</view>
+											</text>
+										</view>
 										</view>
 									</view>
 								</view>
@@ -175,39 +186,33 @@
 import { computed, ref } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 import { useLiuyaoStore } from '@/store/liuyao';
-import { GUAS, GUA5, XING5 } from '@/features/liuyao/najiaConst';
+import { useUserStore } from '@/store/user';
+import { request } from '@/services/api/index';
+import { GUAS, GUA5, XING5, TRIGRAM_LABEL } from '@/features/liuyao/najiaConst';
 import { getYaoSymbol } from '@/features/liuyao/uiHelpers';
 import ParamPreview from '@/components/liuyao/ParamPreview.vue';
 import { getGuaName as getGuaciGuaName, getCanonicalNameByName } from '@/features/liuyao/guaci';
-import { request } from '@/services/api';
-import { setShiYao } from '@/features/liuyao/najiaCore';
 import { SYMBOL } from '@/features/liuyao/najiaConst';
+import { setShiYao } from '@/features/liuyao/najiaCore';
 
-type ActionType = 'save' | 'export' | 'ai';
-
+type ActionType = 'save' | 'copy' | 'ai';
 const liuyaoStore = useLiuyaoStore();
+const user_store = useUserStore();
+const saving = ref(false);
 
 const compiled = computed(() => liuyaoStore.compiled);
 const display = computed(() => liuyaoStore.display);
 const profile = computed(() => liuyaoStore.profile);
-const saving = ref(false);
 
 const summaryTiles = computed(() => {
 	const p = profile.value;
 	if (!p) return [];
-	const gz = compiled.value?.lunar?.gz || {};
-	const xkong = compiled.value?.lunar?.xkong || '';
 	return [
 		{ label: '起卦主题', value: p.title || '—' },
 		{ label: '问卦人', value: p.questioner || '—' },
 		{ label: '所在位置', value: p.location || '—' },
 		{ label: '性别', value: p.gender || '—' },
-		{ label: '起卦时间', value: p.timeLabel || '—' },
-		{ label: '年干支', value: gz.year || '—' },
-		{ label: '月干支', value: gz.month || '—' },
-		{ label: '日干支', value: gz.day || '—' },
-		{ label: '时干支', value: gz.hour || '—' },
-		{ label: '空亡', value: xkong || '—' }
+		{ label: '起卦时间', value: p.timeLabel || '—' }
 	];
 });
 
@@ -296,46 +301,68 @@ const yaoRows = computed(() => {
 	if (!d) return [];
 	const orderLabels = ['初爻', '二爻', '三爻', '四爻', '五爻', '上爻'];
 	const rows: any[] = [];
-		for (let i = 5; i >= 0; i--) {
+	const mainShiy = compiled.value?.shiy || [];
+	const bianMark = compiled.value?.bian?.mark || '';
+	const bianShiyArr = bianMark ? setShiYao(bianMark) : [-1, -1, -1];
+	const bianShiy = { shi: bianShiyArr[0] || -1, ying: bianShiyArr[1] || -1 };
+
+	for (let i = 5; i >= 0; i--) {
 		const order = orderLabels[i];
+		const mainParam = compiled.value?.params?.[i];
+		const mainSymbol = mainParam !== undefined ? getYaoSymbol(mainParam) : '';
+		const mainRole = mainShiy[0] - 1 === i ? '世' : mainShiy[1] - 1 === i ? '应' : '';
+		const moving = mainParam !== undefined && mainParam > 2;
+
+		let bianRelation = '';
+		let bRole = '';
+		let bianSymbol = '';
+
+		if (compiled.value?.bian) {
+			let markStr = '';
+			const rawMark = compiled.value.bian.mark;
+			if (typeof rawMark === 'string') {
+				markStr = rawMark;
+			} else if (Array.isArray(rawMark) && rawMark.length === 6) {
+				markStr = rawMark.join('');
+			}
+			
+			// Calculate bianSymbol
+			if (markStr && markStr.length > i) {
+				const bit = markStr[i];
+				bianSymbol = getYaoSymbol(bit);
+			}
+
+			const relMain = (compiled.value.bian.qin6?.[i] || '').trim();
+			const relExtra = (compiled.value.bian.qinx?.[i] || '').trim();
+			if (relMain && relExtra) {
+				if (relMain.includes(relExtra) || relExtra.includes(relMain)) {
+					bianRelation = relMain || relExtra;
+				} else {
+					bianRelation = `${relMain} ${relExtra}`.trim();
+				}
+			} else {
+				bianRelation = relMain || relExtra;
+			}
+
+			if (bianShiy.shi - 1 === i) bRole = '世';
+			else if (bianShiy.ying - 1 === i) bRole = '应';
+		}
+
 		rows.push({
 			id: `${6 - i}`,
-			idx: i,
 			order,
 			liushen: formatDisplay(d?.god6?.[i] || ''),
 			relation: formatDisplay(`${d?.qin6?.[i] || ''}${d?.qinx?.[i] || ''}`),
 			hidden: formatDisplay(d?.hide?.qin6?.[i] || ''),
-			change: d?.bian ? `${d?.bian?.mark?.[i] || ''} ${d?.bian?.qin6?.[i] || ''}`.trim() : '',
-			moving: !!d?.dyao?.[i],
-			symbol: getYaoSymbol(compiled.value?.params?.[i]),
-			role: formatDisplay(d?.shiyDisplay?.[i] || ''),
-			// bian-related fields for transformed display
-			bianMark: d?.bian?.mark?.[i] || '',
-			bianQin: d?.bian?.qin6?.[i] || '',
-			bianChanged: !!(d?.bian && (d?.bian?.mark?.[i] || '').trim())
+			moving,
+			mainSymbol,
+			mainRole,
+			bianRelation: formatDisplay(bianRelation),
+			bianSymbol,
+			bianRole: bRole
 		});
 	}
 	return rows;
-});
-
-const bianShiyDisplay = computed(() => {
-	const mark = compiled.value?.bian?.mark || '';
-	const res: string[] = [];
-	if (!mark || typeof mark !== 'string' || mark.length !== 6) {
-		return Array(6).fill('  ');
-	}
-	const shiy = setShiYao(mark);
-	if (!shiy || !Array.isArray(shiy)) return Array(6).fill('  ');
-	for (let x = 0; x < 6; x++) {
-		if (x === shiy[0] - 1) {
-			res.push('世');
-		} else if (x === shiy[1] - 1) {
-			res.push('应');
-		} else {
-			res.push('  ');
-		}
-	}
-	return res;
 });
 
 const guaciText = computed(() => {
@@ -353,160 +380,187 @@ const bianParams = computed(() => {
 	return mark.split('').map((ch: string) => parseInt(ch, 10) || 0);
 });
 
-async function handleAction(action: ActionType) {
-	if (action === 'save') {
-		// 保存到后端（若后端未启用则回退到本地保存）
-		if (!compiled.value || !display.value || !profile.value) {
-			uni.showToast({ title: '无可保存的排盘数据', icon: 'none' });
-			return;
-		}
-		saving.value = true;
-		try {
-			let rawPayload: any = null;
-			try {
-				rawPayload = {
-					compiled: compiled.value,
-					display: display.value,
-					profile: profile.value
-				};
-				// 限制大小：如果序列化过大则缩减到最小必要字段
-				const serialized = JSON.stringify(rawPayload);
-				if (serialized.length > 800000) {
-					rawPayload = {
-						compiled: {
-							params: compiled.value?.params,
-							mark: compiled.value?.mark,
-							name: compiled.value?.name
-						},
-						display: {
-							// minimal display
-							god6: display.value?.god6,
-							qin6: display.value?.qin6
-						},
-						profile: profile.value
-					};
-				}
-			} catch (e) {
-				rawPayload = { profile: profile.value };
-			}
+function buildCopyText() {
+	const p = profile.value;
+	const c = compiled.value;
+	if (!p || !c) return '';
 
-			const requestData = {
-				name: profile.value?.title || profile.value?.questioner || '佚名',
-				profile: profile.value,
-				rawPayload: rawPayload
-			};
-
-			// 验证可序列化
-			try {
-				JSON.stringify(requestData);
-			} catch (e: any) {
-				uni.showToast({ title: '数据格式错误，无法保存', icon: 'none' });
-				return;
-			}
-
-			// 发送到后端
-			try {
-				const res: any = await request('/api/liuyao', {
-					method: 'POST',
-					needAuth: true,
-					data: requestData
-				});
-				if (res?.success === false) {
-					const errMsg = res.error || '保存失败';
-					uni.showToast({ title: errMsg, icon: 'none' });
-				} else {
-					const responseData = res?.data || res;
-					liuyaoStore.createdAt = Date.now();
-					uni.showToast({ title: '已保存到账号', icon: 'success', duration: 1500 });
-				}
-				return;
-			} catch (err: any) {
-				// 如果是 404（后端未启用该接口），回退到本地 storage
-				const is404 = err?.error?.includes('404') || (err?.error && String(err.error).includes('404'));
-				if (is404) {
-					try {
-						const key = 'liuyao_local_records';
-						const listRaw = (uni.getStorageSync && uni.getStorageSync(key)) || '[]';
-						let list = [];
-						try {
-							list = typeof listRaw === 'string' ? JSON.parse(listRaw) : listRaw;
-						} catch (e) {
-							list = [];
-						}
-						list.unshift({
-							name: requestData.name,
-							createdAt: Date.now(),
-							payload: requestData.rawPayload
-						});
-						uni.setStorageSync(key, JSON.stringify(list.slice(0, 100)));
-						uni.showToast({ title: '后端未启用，已保存到本地', icon: 'success', duration: 1500 });
-						liuyaoStore.createdAt = Date.now();
-						return;
-					} catch (e) {
-						uni.showToast({ title: '保存失败', icon: 'none' });
-					}
-				}
-				uni.showToast({ title: '保存失败，请稍后重试', icon: 'none' });
-			}
-		} finally {
-			saving.value = false;
+	const lines: string[] = [];
+	
+	let timeStr = p.timeLabel || '';
+	if (timeStr.includes('-')) {
+		const parts = timeStr.split(/[- :]/);
+		if (parts.length >= 5) {
+			timeStr = `${parts[0]}年${parts[1]}月${parts[2]}日 ${parts[3]}:${parts[4]}`;
 		}
 	}
-	if (action === 'export') {
-		// export JSON payload
-		if (!compiled.value || !display.value || !profile.value) {
-			uni.showToast({ title: '无可导出的排盘数据', icon: 'none' });
-			return;
+	lines.push(timeStr);
+	lines.push(` 占问： ${p.title || '—'}`);
+	
+	const gz = c.lunar?.gz;
+	const xkong = c.lunar?.xkong || '—';
+	lines.push(` ${gz?.year}年 ${gz?.month}月 ${gz?.day}日 ${gz?.hour}时 (旬空：${xkong})`);
+	
+	const mainType = guaOverview.value.main.type !== '—' ? `(${guaOverview.value.main.type})` : '';
+	lines.push(` 本卦：${guaOverview.value.main.name}/${guaOverview.value.main.palace}${mainType}`);
+	
+	if (c.bian) {
+		const bianType = guaOverview.value.changed.type !== '—' ? `(${guaOverview.value.changed.type})` : '';
+		lines.push(` 变卦：${guaOverview.value.changed.name}/${guaOverview.value.changed.palace}${bianType}`);
+	}
+	
+	yaoRows.value.forEach((row, index) => {
+		const paramIndex = 5 - index;
+		const param = c.params?.[paramIndex];
+		
+		let symbol = '— '; 
+		let marker = ' ';
+		
+		if (String(param) === '0') { 
+			symbol = '--';
+			marker = ' ';
+		} else if (String(param) === '1') { 
+			symbol = '— ';
+			marker = ' ';
+		} else if (String(param) === '3') { 
+			symbol = '— ';
+			marker = 'o';
+		} else if (String(param) === '4') { 
+			symbol = '--';
+			marker = 'x';
 		}
-		let payload: any = {
-			compiled: compiled.value,
-			display: display.value,
-			profile: profile.value,
-			createdAt: liuyaoStore.createdAt || Date.now()
-		};
-		let jsonStr = '';
-		try {
-			jsonStr = JSON.stringify(payload, null, 2);
-		} catch (e: any) {
-			uni.showToast({ title: '生成导出数据失败', icon: 'none' });
-			return;
+		
+		const god = row.liushen || '　';
+		
+		let hidden = row.hidden || '　　';
+		if (hidden === '—') hidden = '　　';
+		if (!hidden.trim()) hidden = '　　';
+		
+		// Ensure relation is not '—'
+		let relation = row.relation || '　　';
+		if (relation === '—') relation = '　　';
+		
+		const role = row.mainRole || '　';
+		
+		let bianStr = '';
+		if (c.bian) {
+			// Re-fetch binary relation directly to avoid '—' from formatDisplay in yaoRows
+			const bQin = c.bian.qin6?.[paramIndex]?.trim() || '';
+			const bDz = c.bian.qinx?.[paramIndex]?.trim() || '';
+			const bRel = bQin || bDz ? `${bQin}${bDz}` : '　　';
+			
+			let bSym = '　 ';
+			// Check binary symbol from row data (which is derived from bian mark)
+			if (row.bianSymbol && row.bianSymbol.includes('━ ━')) bSym = '--';
+			else if (row.bianSymbol && row.bianSymbol.includes('━━━')) bSym = '— ';
+			
+			const bRole = row.bianRole || '　';
+			bianStr = ` ${bRel} ${bSym} ${bRole}`;
 		}
+		
+		lines.push(` ${god} ${hidden} ${relation} ${symbol} ${marker} ${role}${bianStr}`);
+	});
+	
+	return lines.join('\n');
+}
 
-		const filename = `liuyao-${(new Date(payload.createdAt)).toISOString().replace(/[:.]/g, '-')}.json`;
+function copyLiuyaoInfo() {
+	if (!compiled.value) {
+		uni.showToast({ title: '暂无数据', icon: 'none' });
+		return;
+	}
+	const text = buildCopyText();
+	uni.setClipboardData({
+		data: text,
+		success: () => uni.showToast({ title: '排盘信息已复制', icon: 'none' })
+	});
+}
 
-		// #ifdef H5
-		try {
-			const blob = new Blob([jsonStr], { type: 'application/json' });
-			const url = URL.createObjectURL(blob);
-			const link = document.createElement('a');
-			link.href = url;
-			link.download = filename;
-			link.click();
-			URL.revokeObjectURL(url);
-			uni.showToast({ title: '已下载 JSON 文件', icon: 'none', duration: 1500 });
-			// mark todo completed
-			return;
-		} catch (e) {
-			// fallback to clipboard
-		}
-		// #endif
-
-		uni.setClipboardData({
-			data: jsonStr,
-			success() {
-				uni.showToast({ title: 'JSON 已复制，可粘贴保存', icon: 'none', duration: 1500 });
-			},
-			fail(err) {
-				uni.showToast({ title: '导出失败，无法复制到剪贴板', icon: 'none' });
-			}
-		});
+async function saveLiuyao() {
+	if (!compiled.value || !profile.value) {
+		uni.showToast({ title: '无数据可保存', icon: 'none' });
 		return;
 	}
 
-	// fallback for other actions
-	const messageMap: Record<ActionType, string> = {
-		save: '保存与同步账号功能待接入后端',
-		export: '导出排盘（JSON/图片）功能待接入',
+	if (!user_store.isLoggedIn) {
+		uni.showToast({ title: '请先登录账号', icon: 'none' });
+		setTimeout(() => {
+			uni.navigateTo({ url: '/pages/auth/auth?mode=login' });
+		}, 1500);
+		return;
+	}
+
+	if (saving.value) return;
+	saving.value = true;
+
+	try {
+		const p = profile.value;
+		const c = compiled.value;
+		
+		let rawPayload;
+		
+		try {
+			const recordTime = liuyaoStore.createdAt || Date.now();
+			// 构造精简版数据（Lite Mode）
+			// 只保存用于重新计算的参数，不保存完整的计算结果
+			rawPayload = {
+				lite: true,
+				params: c.params,
+				options: {
+					gender: c.gender || p.gender,
+					title: c.title || p.title,
+					date: new Date(recordTime).toISOString(),
+					dayGz: c.dayGz // 干支日柱
+				},
+				profile: p, // 保存完整 profile 以便列表页显示元数据
+				ts: recordTime
+			};
+		} catch (e) {
+			console.warn('构造精简数据失败，降级为完整数据', e);
+			rawPayload = {
+				profile: p,
+				compiled: c,
+				ts: liuyaoStore.createdAt,
+				p: c.params
+			};
+		}
+
+		const requestData = {
+			title: p.title || '六爻排盘',
+			type: 'liuyao',
+			name: p.questioner || p.title || '佚名',
+			gender: p.gender === '男' ? '0' : (p.gender === '女' ? '1' : null),
+			birthDatetime: new Date(liuyaoStore.createdAt || Date.now()).toISOString(),
+			calendarType: 'solar',
+			rawPayload
+		};
+
+		// 尝试调用后端接口
+		await request('/api/liuyao', {
+			method: 'POST',
+			data: requestData,
+			needAuth: true
+		});
+
+		uni.showToast({ title: '保存成功', icon: 'success' });
+	} catch (e: any) {
+		console.error('保存失败:', e);
+		uni.showToast({ title: '保存失败: ' + (e.error || e.message || '未知错误'), icon: 'none' });
+	} finally {
+		saving.value = false;
+	}
+}
+
+function handleAction(action: ActionType) {
+	if (action === 'copy') {
+		copyLiuyaoInfo();
+		return;
+	}
+	if (action === 'save') {
+		saveLiuyao();
+		return;
+	}
+	const messageMap: Partial<Record<ActionType, string>> = {
 		ai: 'AI 解读将复用聊天页，敬请期待'
 	};
 	uni.showToast({
@@ -528,33 +582,42 @@ onShow(() => {
 </script>
 
 <style scoped>
-.app-main {
+.page-liuyao-result .app-main {
+	width: 100%;
+	display: flex;
+	justify-content: center;
+	align-items: flex-start;
+	padding: var(--page-pad-y) var(--page-pad-x);
+	padding-bottom: calc(var(--page-pad-y) + var(--safe-bottom) + var(--bottom-nav-height));
+	box-sizing: border-box;
 	background: radial-gradient(circle at 20% 20%, rgba(102, 126, 234, 0.08), transparent 40%),
 		radial-gradient(circle at 80% 10%, rgba(118, 75, 162, 0.08), transparent 38%),
 		#f6f8fc;
 }
 
-.page-shell {
+.page-liuyao-result .page-shell {
 	width: 100%;
+	max-width: var(--page-max);
 	display: flex;
 	justify-content: center;
-	padding: 28px 16px 56px;
 	box-sizing: border-box;
+	margin: 0 auto;
 }
 
-.page-card {
+.page-liuyao-result .page-card {
 	width: 100%;
-	max-width: 1180px;
+	max-width: var(--page-max);
+	margin-inline: auto;
 	background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
 	border: 1px solid #e5e9f2;
-	border-radius: 20px;
-	box-shadow: 0 18px 60px rgba(31, 41, 55, 0.12);
-	padding: 24px 22px;
+	border-radius: 16px;
+	box-shadow: 0 12px 32px rgba(31, 41, 55, 0.1);
+	padding: 18px 16px;
 	position: relative;
 	overflow: hidden;
 }
 
-.page-card::before {
+.page-liuyao-result .page-card::before {
 	content: '';
 	position: absolute;
 	inset: 0;
@@ -563,33 +626,33 @@ onShow(() => {
 	pointer-events: none;
 }
 
-.detail-card {
+.page-liuyao-result .detail-card {
 	gap: 14px;
 	display: flex;
 	flex-direction: column;
 }
 
-.detail-card .page-title-wrapper {
+.page-liuyao-result .detail-card .page-title-wrapper {
 	margin-bottom: 6px;
 	padding-bottom: 8px;
 	gap: 8px;
-	align-items: center;
-	justify-content: space-between;
+	align-items: flex-start;
+	flex-direction: column;
 	border-bottom: 1px dashed #e5e7eb;
 }
 
-.section {
+.page-liuyao-result .section {
 	background: #ffffff;
 	border-radius: 14px;
 	border: 1px solid #e2e8f0;
-	padding: 20px 18px 18px;
-	margin-bottom: 18px;
-	box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+	padding: 14px 12px 12px;
+	margin-bottom: 14px;
+	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
 	position: relative;
 	z-index: 1;
 }
 
-.section__header {
+.page-liuyao-result .section__header {
 	display: flex;
 	align-items: center;
 	gap: 12px;
@@ -598,60 +661,122 @@ onShow(() => {
 	padding-bottom: 12px;
 }
 
-.section__title {
+.page-liuyao-result .section__title {
 	font-size: 22px;
 	color: #2d3748;
 }
 
-.section__body {
+.page-liuyao-result .section__body {
 	display: flex;
 	flex-direction: column;
 	gap: 14px;
 }
 
-.info-summary .info-grid {
+.page-liuyao-result .info-summary .info-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	grid-template-columns: 1fr;
 	gap: 12px;
 }
 
-.info-tile {
+@media (min-width: 720px) {
+	.page-liuyao-result .info-summary .info-grid {
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	}
+}
+
+.layout-medium .page-liuyao-result .info-summary .info-grid,
+.layout-wide .page-liuyao-result .info-summary .info-grid {
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.page-liuyao-result .info-tile {
 	padding: 14px 16px;
 	border: 1px solid #e5e7eb;
 	border-radius: 12px;
 	background: #f8fafc;
 }
 
-.actions-row {
+.page-liuyao-result .actions-row {
 	display: flex;
 	gap: 12px;
+	flex-direction: column;
+	align-items: stretch;
+	justify-content: center;
+}
+
+.page-liuyao-result .actions-row :deep(.tm-button) {
+	display: inline-flex !important;
+	width: 100% !important;
+	min-width: 0 !important;
+	flex: 1 1 auto !important;
+}
+
+.page-liuyao-result .actions-row :deep(.tm-button__body) {
+	display: inline-flex !important;
+	width: 100% !important;
+}
+
+@media (min-width: 720px) {
+	.page-liuyao-result .actions-row {
+		flex-direction: row;
+		flex-wrap: nowrap;
+		align-items: center;
+		justify-content: flex-start;
+		overflow-x: auto;
+	}
+
+	.page-liuyao-result .actions-row :deep(.tm-button) {
+		width: auto !important;
+		flex: 0 0 auto !important;
+		max-width: none !important;
+		white-space: nowrap;
+	}
+
+	.page-liuyao-result .actions-row :deep(.tm-button__body) {
+		width: auto !important;
+	}
+}
+
+.layout-medium .page-liuyao-result .actions-row,
+.layout-wide .page-liuyao-result .actions-row {
+	flex-direction: row;
 	flex-wrap: nowrap;
 	align-items: center;
 	justify-content: flex-start;
 	overflow-x: auto;
 }
 
-.actions-row :deep(.tm-button) {
-	display: inline-flex !important;
+.layout-medium .page-liuyao-result .actions-row :deep(.tm-button),
+.layout-wide .page-liuyao-result .actions-row :deep(.tm-button) {
 	width: auto !important;
-	min-width: 0 !important;
 	flex: 0 0 auto !important;
 	max-width: none !important;
 	white-space: nowrap;
 }
 
-.actions-row :deep(.tm-button__body) {
-	display: inline-flex !important;
+.layout-medium .page-liuyao-result .actions-row :deep(.tm-button__body),
+.layout-wide .page-liuyao-result .actions-row :deep(.tm-button__body) {
 	width: auto !important;
 }
 
-.gua-grid {
+.page-liuyao-result .gua-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	grid-template-columns: 1fr;
 	gap: 12px;
 }
 
-.gua-card {
+@media (min-width: 720px) {
+	.page-liuyao-result .gua-grid {
+		grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	}
+}
+
+.layout-medium .page-liuyao-result .gua-grid,
+.layout-wide .page-liuyao-result .gua-grid {
+	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.page-liuyao-result .gua-card {
 	padding: 12px;
 	border: 1px solid #e5e7eb;
 	border-radius: 12px;
@@ -661,49 +786,49 @@ onShow(() => {
 	gap: 8px;
 }
 
-.gua-card.secondary {
+.page-liuyao-result .gua-card.secondary {
 	background: #fdfcfb;
 }
 
-.gua-card__header {
+.page-liuyao-result .gua-card__header {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: 8px;
 }
 
-.gua-name {
+.page-liuyao-result .gua-name {
 	margin: 0;
 	font-size: 22px;
 	color: #111827;
 }
 
-.card-label {
+.page-liuyao-result .card-label {
 	margin: 0;
 	font-size: 13px;
 	color: #9ca3af;
 }
 
-.gua-meta {
+.page-liuyao-result .gua-meta {
 	margin: 2px 0 0;
 	font-size: 14px;
 	color: #6b7280;
 }
 
-.gua-tags {
+.page-liuyao-result .gua-tags {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 6px;
 }
 
-.gua-note {
+.page-liuyao-result .gua-note {
 	padding: 8px 10px;
 	background: #fff;
 	border: 1px dashed #e5e7eb;
 	border-radius: 10px;
 }
 
-.gua-footnote {
+.page-liuyao-result .gua-footnote {
 	display: flex;
 	align-items: center;
 	gap: 8px;
@@ -711,15 +836,15 @@ onShow(() => {
 	color: #94a3b8;
 }
 
-.table-wrapper {
+.page-liuyao-result .table-wrapper {
 	width: 100%;
 	overflow-x: auto;
 	box-sizing: border-box;
 	scrollbar-width: thin;
 }
 
-.yao-table {
-	min-width: 860px;
+.page-liuyao-result .yao-table {
+	min-width: 820px;
 	width: 100%;
 	border: 1px solid #e5e7eb;
 	border-radius: 12px;
@@ -727,61 +852,101 @@ onShow(() => {
 	background: #fff;
 }
 
-.yao-row {
+.page-liuyao-result .yao-row {
 	display: grid;
-	/* 列宽（按新顺序）：爻位 | 六神 | 六亲 | 爻 | 伏藏 | 动静/世应 | 变爻 | 变爻动静/世应 */
-	grid-template-columns: 70px 120px 1fr 70px 1fr 120px 120px 160px;
+	/* 爻位 | 六神 | 原卦六亲(含伏神) | 原卦 | 变卦六亲 | 变卦爻(含世应) */
+	grid-template-columns: 70px 80px 140px 180px 180px 140px;
 	gap: 0;
 	align-items: center;
 	border-bottom: 1px solid #f1f5f9;
 }
 
-.yao-row:last-child {
+.page-liuyao-result .yao-row:last-child {
 	border-bottom: none;
 }
 
-.yao-row.head {
+.page-liuyao-result .yao-row.head {
 	background: #f8fafc;
 }
 
-.cell {
+.page-liuyao-result .cell {
 	padding: 12px 10px;
 	font-size: 18px;
 	color: #334155;
 	box-sizing: border-box;
 }
 
-.col-symbol {
-	padding: 12px 10px;
-	font-size: 18px;
-	color: #64748b;
-	box-sizing: border-box;
-	text-align: center;
+.page-liuyao-result .yao-symbol {
+	font-weight: 700;
+	color: #111827;
 }
 
-.param-strip :deep(.param-grid) {
+.page-liuyao-result .yao-meta {
+	margin-left: 6px;
+	color: #667eea;
+	font-size: 14px;
+}
+
+.page-liuyao-result .main-cell,
+.page-liuyao-result .bian-cell {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+.page-liuyao-result .param-strip :deep(.param-grid) {
 	flex-wrap: nowrap;
 	overflow-x: auto;
 }
-.param-strip :deep(.param-chip) {
+.page-liuyao-result .param-strip :deep(.param-chip) {
 	min-width: 110px;
 }
 
-.yao-row.head .cell {
+.page-liuyao-result .yao-row.head .cell {
 	font-weight: 600;
 	color: #1f2937;
 }
 
-.col-yao {
+.page-liuyao-result .col-yao {
 	font-weight: 600;
 }
 
-.col-dong.active {
+.page-liuyao-result .col-bian-yao {
+	font-weight: 700;
+	color: #111827;
+}
+
+.page-liuyao-result .col-bian-role.active {
+	color: #667eea;
+	font-size: 14px;
+}
+
+.page-liuyao-result .col-qin-wrapper {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: flex-start;
+	padding: 8px 10px;
+}
+
+.page-liuyao-result .col-qin-text {
+	font-size: 18px;
+	color: #334155;
+}
+
+.page-liuyao-result .col-hide-text {
+	font-size: 12px;
+	color: #ef4444; /* red-500 */
+	margin-top: 2px;
+}
+
+.page-liuyao-result .col-dong.active {
 	color: #2563eb;
 	font-weight: 700;
 }
 
-.guaci-card {
+.page-liuyao-result .guaci-card {
 	border: 1px dashed #e5e7eb;
 	border-radius: 12px;
 	padding: 12px;
@@ -789,26 +954,84 @@ onShow(() => {
 	line-height: 1.6;
 }
 
-.draggable-scroll {
+.page-liuyao-result .draggable-scroll {
 	cursor: grab;
 }
 
-.draggable-scroll:active {
+.page-liuyao-result .draggable-scroll:active {
 	cursor: grabbing;
 }
 
-@media (max-width: 768px) {
-	.page-card {
-		padding: 18px 16px;
-		border-radius: 16px;
+@media (min-width: 900px) {
+	.page-liuyao-result .page-card {
+		max-width: var(--page-max);
+		padding: 24px 22px;
+		border-radius: 20px;
+		box-shadow: 0 18px 60px rgba(31, 41, 55, 0.12);
 	}
 
-	.section {
-		padding: 14px 12px;
+	.page-liuyao-result .page-shell {
+		padding: var(--page-pad-y) var(--page-pad-x);
 	}
 
-	.page-shell {
-		padding: 20px 12px 40px;
+	.page-liuyao-result .section {
+		padding: 20px 18px 18px;
+		margin-bottom: 18px;
+	}
+
+	.page-liuyao-result .detail-card .page-title-wrapper {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
 	}
 }
-</style>
+
+.page-liuyao-result .yao-info-bar {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 16px;
+	padding: 0 4px 12px;
+	border-bottom: 1px dashed #e5e7eb;
+	margin-bottom: 4px;
+	align-items: center;
+}
+
+.page-liuyao-result .info-text {
+	font-size: 18px;
+	color: #4b5563;
+	display: flex;
+	align-items: center;
+}
+
+.page-liuyao-result .text-red {
+	color: #ef4444;
+}
+
+.page-liuyao-result .info-label {
+	color: #6b7280;
+	margin-right: 4px;
+	font-weight: 500;
+}
+
+.layout-wide .page-liuyao-result .page-card {
+	max-width: var(--page-max);
+	padding: 24px 22px;
+	border-radius: 20px;
+	box-shadow: 0 18px 60px rgba(31, 41, 55, 0.12);
+}
+
+.layout-wide .page-liuyao-result .page-shell {
+	padding: var(--page-pad-y) var(--page-pad-x);
+}
+
+.layout-wide .page-liuyao-result .section {
+	padding: 20px 18px 18px;
+	margin-bottom: 18px;
+}
+
+.layout-wide .page-liuyao-result .detail-card .page-title-wrapper {
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+}</style>

@@ -1,3 +1,8 @@
+const path = require('path');
+
+const frontendNodeModules = path.join(__dirname, 'frontend', 'node_modules');
+const resolveFromFrontend = (moduleName) => require.resolve(moduleName, { paths: [frontendNodeModules] });
+
 module.exports = {
 	root: true,
 	env: {
@@ -11,9 +16,9 @@ module.exports = {
 		'plugin:@typescript-eslint/recommended',
 		'plugin:prettier/recommended',
 	],
-	parser: 'vue-eslint-parser',
+	parser: resolveFromFrontend('vue-eslint-parser'),
 	parserOptions: {
-		parser: '@typescript-eslint/parser',
+		parser: resolveFromFrontend('@typescript-eslint/parser'),
 		ecmaVersion: 'latest',
 		sourceType: 'module',
 		extraFileExtensions: ['.vue', '.nvue'],
@@ -26,6 +31,7 @@ module.exports = {
 	rules: {
 		'vue/multi-word-component-names': 'off',
 		'@typescript-eslint/no-explicit-any': 'off',
+		'prettier/prettier': 'off',
 	},
 	overrides: [
 		{
@@ -48,7 +54,7 @@ module.exports = {
 			},
 		},
 		{
-			files: ['server/**/*.js'],
+			files: ['server/**/*.js', 'backend/**/*.js'],
 			rules: {
 				'@typescript-eslint/no-var-requires': 'off',
 				'@typescript-eslint/no-unused-vars': 'off',

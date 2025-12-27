@@ -1,353 +1,281 @@
 <template>
-			<header class="app-header">
+	<view class="app-header" :style="headerInlineStyle">
 		<view class="app-header__left">
 			<view class="app-header__logo" @tap="goToHome">
 				<image class="logo-icon" src="@/static/icons/F.png" mode="aspectFit"></image>
 			</view>
 		</view>
-		<view class="app-header__nav">
-			<view class="nav-btn" @tap="goToHome">八字排盘</view>
-			<view class="nav-btn" @tap="goLiuyao">六爻排盘</view>
-			<view class="nav-btn" @tap="goQimen">奇门排盘</view>
-			<view class="nav-btn" @tap="goAbout">关于</view>
+	</view>
+
+	<view class="bottom-nav">
+		<view class="bottom-nav__item" :class="{ active: isBaziActive }" @tap="goToBazi">
+			<tm-icon name="tmicon-chart-line" :font-size="24" color="#667eea"></tm-icon>
+			<text class="bottom-nav__label">八字排盘</text>
 		</view>
-		<view class="app-header__right">
-			<view class="icon-btn" @tap.stop="toggleUserMenu" ref="userMenuWrapper">
-				<tm-icon
-					:font-size="28"
-					color="#667eea"
-					name="tmicon-md-person"
-				></tm-icon>
-			</view>
+		<view class="bottom-nav__item" :class="{ active: isLiuyaoActive }" @tap="goToLiuyao">
+			<tm-icon name="tmicon-compass" :font-size="24" color="#667eea"></tm-icon>
+			<text class="bottom-nav__label">六爻排盘</text>
 		</view>
-		<!-- 下拉菜单 - 放在navbar外部，使用fixed定位 -->
-		<view
-			v-if="showUserMenu"
-			class="user-dropdown"
-			:style="dropdownStyle"
-		>
-			<!-- 未登录时显示登录/注册 -->
-			<template v-if="!userStore.isLoggedIn">
-				<view class="dropdown-item" @tap="onAuth">
-					<tm-icon
-						name="tmicon-md-person"
-						:font-size="28"
-						:margin="[0, 12, 0, 0]"
-						color="#667eea"
-					></tm-icon>
-					<tm-text
-						:font-size="28"
-						color="#667eea"
-						label="登录/注册"
-					></tm-text>
-				</view>
-			</template>
-			<!-- 已登录时显示用户菜单 -->
-			<template v-else>
-				<view class="dropdown-item" @tap="goToAnnouncements">
-					<tm-icon name="tmicon-md-bulb" :font-size="28" :margin="[0, 12, 0, 0]"></tm-icon>
-					<tm-text :font-size="28" label="公告"></tm-text>
-				</view>
-				<view class="dropdown-item" @tap="goToHistory">
-					<tm-icon name="tmicon-md-time" :font-size="28" :margin="[0, 12, 0, 0]"></tm-icon>
-					<tm-text :font-size="28" label="历史查询"></tm-text>
-				</view>
-				<view v-if="userStore.isAdmin" class="dropdown-item" @tap="goToAdmin">
-					<tm-icon name="tmicon-md-settings" :font-size="28" :margin="[0, 12, 0, 0]"></tm-icon>
-					<tm-text :font-size="28" label="管理员后台"></tm-text>
-				</view>
-				<view class="dropdown-divider"></view>
-				<view class="dropdown-item" @tap="onLogout">
-					<tm-icon
-						name="tmicon-md-log-out"
-						:font-size="28"
-						:margin="[0, 12, 0, 0]"
-						color="#f56565"
-					></tm-icon>
-					<tm-text :font-size="28" color="#f56565" label="退出登录"></tm-text>
-				</view>
-			</template>
+		<view class="bottom-nav__item" :class="{ active: isHistoryActive }" @tap="handleHistory">
+			<tm-icon name="tmicon-clock" :font-size="24" color="#667eea"></tm-icon>
+			<text class="bottom-nav__label">历史记录</text>
 		</view>
-		<!-- 点击外部关闭菜单的遮罩 -->
-		<view v-if="showUserMenu" class="dropdown-mask" @tap="closeUserMenu"></view>
-	</header>
+		<view class="bottom-nav__item" :class="{ active: isSettingsActive }" @tap="goToSettings">
+			<tm-icon name="tmicon-cog" :font-size="24" color="#667eea"></tm-icon>
+			<text class="bottom-nav__label">我</text>
+		</view>
+	</view>
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, onMounted, nextTick } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { useUserStore } from '@/store/user';
+import { getSystemInfo } from '@/utils/platform';
 
 const userStore = useUserStore();
 
-// 下拉菜单显示状态
-const showUserMenu = ref(false);
-const dropdownStyle = ref({ top: '0px', right: '0px' });
+const extraTopOffset = (() => {
+	let offset = 0;
+	// #ifdef H5
+	offset = 12;
+	// #endif
+	return offset;
+})();
 
-// 初始化时恢复用户状态
+const currentRoute = ref('');
+const isSettingsActive = computed(() => currentRoute.value === 'pages/settings/index');
+const isBaziActive = computed(() => currentRoute.value === 'pages/index/index' || currentRoute.value === 'pages/index/detail');
+const isLiuyaoActive = computed(() => currentRoute.value?.startsWith('pages/liuyao'));
+const isHistoryActive = computed(() => currentRoute.value === 'pages/history/list');
+
 onMounted(() => {
 	userStore.restoreAuth();
+	refreshRoute();
 });
 
-// 动态计算navbar高度，基于屏幕宽度的百分比，确保在不同屏幕下比例一致
-// rpx单位本身就是响应式的，但我们需要确保在不同屏幕下视觉比例一致
-const navbarHeight = computed(() => {
+const navbarHeight = computed(() => 40);
+
+const headerInlineStyle = computed(() => {
 	try {
-		// 使用固定的rpx值，uni-app会自动根据屏幕宽度转换
-		// 40rpx在750rpx设计稿中，在不同屏幕下会自动适配
-		// 为了确保视觉比例一致，我们保持40rpx不变，让uni-app自动处理
-		return 40;
+		const systemInfo = getSystemInfo();
+		const statusBarHeight = systemInfo.statusBarHeight || 0;
+		const safeAreaTop = (systemInfo.safeAreaInsets && systemInfo.safeAreaInsets.top) || 0;
+		const safeTop = statusBarHeight || safeAreaTop || 0;
+		const headerHeight = systemInfo.windowWidth <= 640 ? 48 : 64;
+		const paddingX = 14;
+		const paddingRight = paddingX + 16;
+		return {
+			position: 'fixed',
+			top: '0px',
+			left: '0px',
+			right: '0px',
+			zIndex: 1000,
+			width: '100%',
+			display: 'flex',
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'flex-start',
+			paddingTop: `${safeTop}px`,
+			paddingBottom: '8px',
+			paddingLeft: `${paddingX}px`,
+			paddingRight: `${paddingRight}px`,
+			height: `${safeTop + headerHeight}px`,
+			background: '#ffffff',
+			boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
+			boxSizing: 'border-box',
+		} as Record<string, string | number>;
 	} catch (e) {
-		// 如果计算失败，使用默认值
-		return 40;
+		return {
+			position: 'fixed',
+			top: '0px',
+			left: '0px',
+			right: '0px',
+			zIndex: 1000,
+			width: '100%',
+			display: 'flex',
+			flexDirection: 'row',
+			alignItems: 'center',
+			justifyContent: 'flex-start',
+			paddingTop: '0px',
+			paddingBottom: '8px',
+			paddingLeft: '14px',
+			paddingRight: '30px',
+			height: '52px',
+			background: '#ffffff',
+			boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)',
+			boxSizing: 'border-box',
+		};
 	}
 });
 
-// 计算实际header总高度（包括状态栏），用于主页面动态调整padding-top
 const totalHeaderHeight = computed(() => {
 	try {
-		const systemInfo = uni.getSystemInfoSync();
+		const systemInfo = getSystemInfo();
 		const statusBarHeight = systemInfo.statusBarHeight || 0;
-		// header高度：小屏48px，大屏64px
+		const safeAreaTop = (systemInfo.safeAreaInsets && systemInfo.safeAreaInsets.top) || 0;
+		const headerOffset = (statusBarHeight || safeAreaTop) + extraTopOffset;
 		const headerHeight = systemInfo.windowWidth <= 640 ? 48 : 64;
-		return statusBarHeight + headerHeight;
+		return headerOffset + headerHeight;
 	} catch (e) {
-		// 如果计算失败，使用默认值
-		const systemInfo = uni.getSystemInfoSync();
+		const systemInfo = getSystemInfo();
 		const statusBarHeight = systemInfo.statusBarHeight || 0;
-		return statusBarHeight + 64;
+		const safeAreaTop = (systemInfo.safeAreaInsets && systemInfo.safeAreaInsets.top) || 0;
+		const headerOffset = (statusBarHeight || safeAreaTop) + extraTopOffset;
+		return headerOffset + 64;
 	}
 });
 
-// 计算图标大小，基于header高度的百分比
-const iconSize = computed(() => {
-	// 图标大小设为header高度的150%，确保视觉上完全占满header高度
-	return Math.floor(navbarHeight.value * 1.5);
-});
+const refreshRoute = () => {
+	// eslint-disable-next-line no-undef
+	const pages = getCurrentPages();
+	const current = pages[pages.length - 1];
+	currentRoute.value = current && current.route ? current.route : '';
+};
+
+const handleHistory = () => {
+	goToHistory();
+};
 
 const goToHome = () => {
+	currentRoute.value = 'pages/index/index';
 	uni.reLaunch({
 		url: '/pages/index/index',
 	});
 };
 
-const toggleUserMenu = async () => {
-	if (!showUserMenu.value) {
-		// 打开菜单时计算位置
-		await nextTick();
-		calculateDropdownPosition();
-	}
-	showUserMenu.value = !showUserMenu.value;
+const goToBazi = () => {
+	goToHome();
 };
 
-const calculateDropdownPosition = () => {
-	try {
-		// 获取系统信息
-		const systemInfo = uni.getSystemInfoSync();
-		const statusBarHeight = systemInfo.statusBarHeight || 0;
-		const navbarHeightPx = uni.upx2px(navbarHeight.value); // navbar高度（px）
-		const iconSizeValue = iconSize.value; // 图标大小（rpx）
-		const iconContainerHeightPx = uni.upx2px(iconSizeValue); // 图标容器高度（px）
-
-		// 计算下拉菜单位置：状态栏高度 + navbar高度 + 图标容器高度 + 间距
-		// 由于图标容器向下对齐，下拉栏应该从header底部（即图标容器底部）开始
-		// 统一使用px单位，确保在不同屏幕尺寸下位置一致
-		const spacing = uni.upx2px(8); // 间距（px）
-		const top = statusBarHeight + navbarHeightPx + iconContainerHeightPx + spacing;
-		const right = uni.upx2px(12); // 距离右边缘12rpx
-
-		dropdownStyle.value = {
-			top: `${top}px`,
-			right: `${right}px`,
-		};
-	} catch (e) {
-		// 如果计算失败，使用默认位置
-		const systemInfo = uni.getSystemInfoSync();
-		const statusBarHeight = systemInfo.statusBarHeight || 0;
-		const navbarHeightPx = uni.upx2px(navbarHeight.value);
-		const iconContainerHeightPx = uni.upx2px(iconSize.value);
-		const spacing = uni.upx2px(8);
-		dropdownStyle.value = {
-			top: `${statusBarHeight + navbarHeightPx + iconContainerHeightPx + spacing}px`,
-			right: `${uni.upx2px(12)}px`,
-		};
-	}
-};
-
-const closeUserMenu = () => {
-	showUserMenu.value = false;
-};
-
-const onAuth = () => {
-	closeUserMenu();
-	// 跳转到登录/注册页面
-	uni.navigateTo({
-		url: '/pages/auth/auth',
-	});
-};
-
-const goToHistory = () => {
-	closeUserMenu();
-	uni.navigateTo({
-		url: '/pages/history/list',
-	});
-};
-
-const goToAnnouncements = () => {
-	closeUserMenu();
-	uni.navigateTo({
-		url: '/pages/index/index?showAnnouncements=1',
-	});
-};
-
-const goToAdmin = () => {
-	closeUserMenu();
-	uni.navigateTo({
-		url: '/pages/auth/auth',
-	});
-};
-
-const onLogout = () => {
-	closeUserMenu();
-	userStore.logout();
-	uni.showToast({
-		title: '已退出登录',
-		icon: 'success',
-		duration: 2000,
-	});
-};
-
-const goLiuyao = () => {
+const goToLiuyao = () => {
+	currentRoute.value = 'pages/liuyao/index';
 	uni.navigateTo({
 		url: '/pages/liuyao/index',
 	});
 };
 
-const goQimen = () => {
-	uni.showToast({
-		title: '奇门排盘即将上线',
-		icon: 'none',
-	});
-};
-
-const goAbout = () => {
-	closeUserMenu();
+const goToHistory = () => {
+	currentRoute.value = 'pages/history/list';
 	uni.navigateTo({
-		url: '/pages/about/index',
+		url: '/pages/history/list',
 	});
 };
 
-// 暴露给父组件使用，用于动态计算内容区域的padding-top
+const goToSettings = () => {
+	if (currentRoute.value === 'pages/settings/index') {
+		return;
+	}
+	currentRoute.value = 'pages/settings/index';
+	uni.navigateTo({
+		url: '/pages/settings/index',
+	});
+};
+
 defineExpose({
 	navbarHeight,
-	iconSize,
 	totalHeaderHeight,
 });
 </script>
 
 <style scoped>
-/* Header 样式已在 app-shell.css 中定义 */
-/* 这里只添加组件特定的样式 */
-
 .app-header {
+	width: 100%;
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	justify-content: space-between;
+	justify-content: flex-start;
+	padding-bottom: 8px;
+	box-sizing: border-box;
 }
 
-.app-header__nav {
+.app-header__left {
 	display: flex;
-	flex-direction: row;
 	align-items: center;
-	margin-left: 24rpx;
+	gap: 12px;
+	min-width: 0;
 }
 
-.nav-btn {
-	padding: 12rpx 16rpx;
-	border-radius: 12rpx;
-	font-size: 28rpx;
-	color: #4a5568;
-}
-
-.nav-btn + .nav-btn {
-	margin-left: 12rpx;
-}
-
-.nav-btn:active {
-	background: rgba(102, 126, 234, 0.12);
-}
-
-.app-header__right {
+.app-header__logo {
 	display: flex;
-	flex-direction: row;
 	align-items: center;
-	flex-wrap: nowrap;
+	gap: 10px;
+	cursor: pointer;
+	text-decoration: none;
+	color: inherit;
 }
 
-.app-header__right .icon-btn + .icon-btn {
-	margin-left: 12rpx;
+.app-header__logo .logo-icon {
+	width: 32px;
+	height: 32px;
+	object-fit: contain;
 }
 
-.logo-icon {
-	width: clamp(24px, 4vw, 32px);
-	height: clamp(24px, 4vw, 32px);
-}
-
-.dropdown-mask {
+.bottom-nav {
 	position: fixed;
-	top: 0;
 	left: 0;
 	right: 0;
 	bottom: 0;
-	z-index: 9998;
-	background: transparent;
-	/* 在移动端，遮罩层可以帮助关闭菜单 */
-	/* #ifdef H5 */
-	background: rgba(0, 0, 0, 0.01);
-	/* #endif */
-	pointer-events: auto;
-}
-
-.user-dropdown {
-	position: fixed;
-	min-width: 240rpx;
-	background: #ffffff;
-	border-radius: 12rpx;
-	box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.12);
-	overflow: hidden;
-	z-index: 9999;
-	padding: 8rpx 0;
-	animation: slideDown 0.2s ease;
-	pointer-events: auto;
-}
-
-@keyframes slideDown {
-	from {
-		opacity: 0;
-		transform: translateY(-10rpx);
-	}
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
-}
-
-.dropdown-item {
+	z-index: 1001;
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	padding: 20rpx 24rpx;
-	cursor: pointer;
-	transition: background-color 0.2s ease;
+	justify-content: space-around;
+	height: calc(var(--bottom-nav-height, 56px) + var(--safe-bottom));
+	padding: 8px 8px calc(8px + var(--safe-bottom));
+	background: var(--surface, #ffffff);
+	border-top: 1px solid var(--border-subtle, #e5e7eb);
+	box-shadow: 0 -6px 16px rgba(15, 23, 42, 0.08);
+	box-sizing: border-box;
 }
 
-.dropdown-item:active {
-	background-color: rgba(102, 126, 234, 0.1);
+.bottom-nav__item {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	color: var(--text-secondary);
 }
 
-.dropdown-divider {
-	height: 1rpx;
-	background: #e5e7eb;
-	margin: 8rpx 0;
+.bottom-nav__item.active {
+	color: #4f46e5;
 }
+
+.bottom-nav__label {
+	font-size: 12px;
+}
+
+.panel-mask {
+	position: fixed;
+	inset: 0;
+	background: rgba(15, 23, 42, 0.28);
+	z-index: 1002;
+}
+
+.panel-sheet,
+.panel-mask,
+.panel-handle,
+.panel-section,
+.panel-grid,
+.panel-card,
+.panel-card__label,
+.panel-empty,
+.panel-loading,
+.panel-error,
+.panel-action,
+.history-list,
+.history-item,
+.history-item__title,
+.history-item__meta,
+.panel-footer,
+.panel-link,
+.user-card,
+.user-name,
+.user-sub,
+.user-actions,
+.panel-row {
+	display: none;
+}
+
 </style>

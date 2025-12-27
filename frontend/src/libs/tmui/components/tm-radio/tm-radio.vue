@@ -1,22 +1,24 @@
 <template>
 	<view class="flex flex-col flex-wrap overflow" :class="[_disabled?'opacity-5':'']" style="flex-wrap:wrap;">
-		<view @click="hanlerClick" class="flex flex-row flex-row-center-start flex-1">
+		<view class="flex flex-row flex-row-center-start flex-1" @click="hanlerClick">
 
-			<tm-sheet :linear="props.linear" :linearDeep="props.linearDeep" :followTheme="props.followTheme"
-				:followDark="props.followDark" :dark="props.dark" :shadow="props.shadow" :userInteractionEnabled="false"
-				:width="_is_radio?props.size:0" :height="_is_radio?props.size:0" :text="(!_checked)"
+			<tm-sheet
+:linear="props.linear" :linear-deep="props.linearDeep" :follow-theme="props.followTheme"
+				:follow-dark="props.followDark" :dark="props.dark" :shadow="props.shadow" :user-interaction-enabled="false"
+				:width="_is_radio?scaledSize:0" :height="_is_radio?scaledSize:0" :text="(!_checked)"
 				:border="props.border" :border-style="props.borderStyle" :transprent="props.transprent"
-				:padding="_is_radio?[0,0]:[16,10]" :margin="_is_radio?[16,8]:[8,8]"
-				:color="_disabled?'grey-2':props.color" :round="props.round" _class="flex-row flex-row-center-center">
-				<tm-translate :duration="100" v-if="_checked&&_is_radio" name="zoom" style="line-height: 1;">
-					<tm-icon :font-size="props.size*0.54" :name="props.icon"></tm-icon>
+				:padding="scaledPadding" :margin="scaledMargin"
+				:color="_disabled?'grey-2':props.color" :round="scaledRound" _class="flex-row flex-row-center-center">
+				<tm-translate v-if="_checked&&_is_radio" :duration="100" name="zoom" style="line-height: 1;">
+					<tm-icon :font-size="scaledIconSize" :name="props.icon"></tm-icon>
 				</tm-translate>
 				<tm-text v-if="!_is_radio" :font-size="props.fontSize" :label="props.label"></tm-text>
 			</tm-sheet>
-			<view :userInteractionEnabled="false">
+			<view :user-interaction-enabled="false">
 				<slot>
 					<view class="flex-1 flex-row flex-row-cneter-cneter" style="flex-wrap:wrap;">
-						<tm-text class="flex-1 flex-wrap"  v-if="_is_radio"
+						<tm-text
+v-if="_is_radio"  class="flex-1 flex-wrap"
 							:font-size="props.fontSize" :label="props.label"></tm-text>
 					</view>
 				</slot>
@@ -45,9 +47,9 @@
 		getCurrentInstance,
 		nextTick
 	} from 'vue';
-	const {
-		proxy
-	} = getCurrentInstance();
+	import { useUiScale } from '@/utils/viewport';
+	const instance = getCurrentInstance();
+	const proxy = (instance?.proxy ?? null) as any;
 	const emits = defineEmits(['update:modelValue', 'change', 'click'])
 	const props = defineProps({
 		...custom_props,
@@ -126,6 +128,14 @@
 	const tmCheckedBoxDisabled = inject('tmRadioBoxDisabled', computed(() => false));
 	const _is_radio = inject('tmRadioBoxModel', computed(() => false));
 	const _disabled = computed(() => props.disabled || tmCheckedBoxDisabled.value)
+	const uiScale = useUiScale();
+	const scaleNumber = (value: number) => Math.round(value * uiScale.value * 100) / 100;
+	const scaleInt = (value: number) => Math.round(value * uiScale.value);
+	const scaledSize = computed(() => scaleNumber(props.size));
+	const scaledRound = computed(() => scaleInt(props.round));
+	const scaledIconSize = computed(() => scaleNumber(props.size * 0.54));
+	const scaledPadding = computed(() => (_is_radio.value ? [0, 0] : [scaleInt(16), scaleInt(10)]));
+	const scaledMargin = computed(() => (_is_radio.value ? [scaleInt(16), scaleInt(8)] : [scaleInt(8), scaleInt(8)]));
 	//父级方法。
 	let parent = proxy.$parent
 
@@ -155,7 +165,7 @@
 
 	/** -----------end------------ */
 
-	function callBack(e) {
+	function callBack(e: any) {
 		console.log(e)
 	}
 

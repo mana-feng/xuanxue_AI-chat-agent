@@ -24,20 +24,9 @@
 	:blur="props.blur"
 	_class="flex flex-row flex-center pointer">
 		<button 
-		@click="onclick"
-		@touchstart="touchstart" 
-		@touchend="touchend" 
-		@longpress="emits('longpress',$event)"
-		@touchcancel="isclickOn=false;emits('touchcancel',$event)"
-		@touchmove="emits('touchmove',$event)"
-		@getphonenumber="emits('getphonenumber',$event)"
-		@error="emits('error',$event)"
-		@opensetting="emits('opensetting',$event)"
-		@launchapp="emits('launchapp',$event)"
-		@contact="emits('contact',$event)"
 		:form-type="props.formType"
-		:openType="props.openType"
-		:appParameter="props.appParameter"
+		:openType="props.openType" 
+		:appParameter="props.appParameter" 
 		:sessionFrom="props.sessionFrom"
 		:sendMessageTitle="props.sendMessageTitle"
 		:sendMessagePath="props.sendMessagePath"
@@ -45,15 +34,26 @@
 		:sendMessageCard="props.sendMessageCard"
 		:loading="_load"
 		:disabled="_disabled"
-		:hover-start-time="10000000" 
-		hover-stop-propagation hover-class="buttonHover" 
-		class="button flex-1  flex-center" 
+		@click="onclick"
+		:hover-start-time="10000000"
+		@touchstart="touchstart"
+		hover-stop-propagation
+		@touchend="touchend"
+		hover-class="buttonHover"
+		@longpress="emits('longpress',$event)"
+		class="button flex-1  flex-center"
+		@touchcancel="isclickOn=false;emits('touchcancel',$event)"
 		:class="[customClass]"
+		@touchmove="emits('touchmove',$event)"
 		:style="customCSSStyle" 
-		style="border: 0px solid rgba(0, 0, 0, 0);background: rgba(0, 0, 0, 0);border-radius: 0px;">
+		@getphonenumber="emits('getphonenumber',$event)" style="border: 0px solid rgba(0, 0, 0, 0);background: rgba(0, 0, 0, 0);border-radius: 0px;" 
+		@error="emits('error',$event)" 
+		@opensetting="emits('opensetting',$event)"
+		@launchapp="emits('launchapp',$event)" 
+		@contact="emits('contact',$event)">
 			<slot>
-				<tm-icon v-if="_icon" :userInteractionEnabled="false"  :color="_fontColor"  :_class="_label?'pr-10':''" :fontSize="btnSizeObj.fontSize*0.9" :name="_icon"></tm-icon>
-				<tm-text :userInteractionEnabled="false" :color="_fontColor" :fontSize="btnSizeObj.fontSize"  :label="_label"></tm-text>
+				<tm-icon v-if="_icon" :user-interaction-enabled="false"  :color="_fontColor"  :_class="_label?'pr-10':''" :font-size="btnSizeObj.fontSize*0.9" :name="_icon"></tm-icon>
+				<tm-text :user-interaction-enabled="false" :color="_fontColor" :font-size="btnSizeObj.fontSize"  :label="_label"></tm-text>
 			</slot>
 		</button>
 	</tm-sheet>
@@ -71,6 +71,7 @@ import tmSheet from "../tm-sheet/tm-sheet.vue"
 import tmText from "../tm-text/tm-text.vue"
 import tmIcon from "../tm-icon/tm-icon.vue";
 import {custom_props,computedClass,computedStyle} from "../../tool/lib/minxs";
+import { useUiScale } from '@/utils/viewport';
 /**
  * 事件说明
  * @description 事件属性与原生 一 致
@@ -244,18 +245,26 @@ const sizeObj = {
 	middle:{w:360,h:80,fontSize:30,round:3},
 	large:{w:535,h:88,fontSize:32,round:4},
 }
+const uiScale = useUiScale();
+const scaleNumber = (value: number) => Math.round(value * uiScale.value * 100) / 100;
+const scaleSize = (value: number) => (value ? scaleNumber(value) : value);
 const btnSizeObj = computed(()=>{
 	let fontSize = props.fontSize||0;
 	
 	if(props.block){
-		return {w:0,h:props.height||sizeObj.block.h,fontSize:fontSize||sizeObj.block.fontSize,round:props.round==-1?0:(props.round||sizeObj.normal.round)}
+		return {
+			w: 0,
+			h: scaleSize(props.height||sizeObj.block.h),
+			fontSize: fontSize||sizeObj.block.fontSize,
+			round: props.round==-1?0:(props.round||sizeObj.normal.round)
+		}
 	}
 	
 	return {
-		w:props.width||sizeObj[props.size].w ,
-		h:props.height||sizeObj[props.size].h,
-		fontSize:fontSize||sizeObj[props.size].fontSize,
-		round:props.round==-1?0:(props.round||sizeObj[props.size].round),
+		w: scaleSize(props.width||sizeObj[props.size].w),
+		h: scaleSize(props.height||sizeObj[props.size].h),
+		fontSize: fontSize||sizeObj[props.size].fontSize,
+		round: props.round==-1?0:(props.round||sizeObj[props.size].round),
 	}
 })
 const _fontColor = computed(()=>props.fontColor)

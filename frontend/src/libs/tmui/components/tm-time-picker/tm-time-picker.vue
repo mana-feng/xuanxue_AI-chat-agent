@@ -1,29 +1,31 @@
 <template>
-    <tm-drawer :round="props.round" ref="drawer" :height="dHeight" @update:show="_show = $event" :show="_show" @close="close" @open="open"
-        title="请选择时间" :closable="true" @ok="confirm">
+    <tm-drawer
+ref="drawer" :round="props.round" :height="dHeight" :show="_show" title="请选择时间" :closable="true" @update:show="_show = $event"
+        @close="close" @open="open" @ok="confirm">
          <tm-time-view
             :height="dHeight-300"
-            @update:model-value="_value = $event" 
-            :model-value="_value"
-            @update:model-str="_strvalue = $event" 
-            :model-str="_strvalue" 
-            :default-value="_value"
-            @change="change"
-            :disabledDate="props.disabledDate"
+            :model-value="_value" 
+            :model-str="_strvalue"
+            :default-value="_value" 
+            :disabled-date="props.disabledDate" 
             :format="props.format"
-            :showDetail="props.showDetail"
-            :showSuffix="props.showSuffix"
+            :show-detail="props.showDetail"
+            :show-suffix="props.showSuffix"
             :start="props.start"
             :end="props.end"
+            @update:model-value="_value = $event"
+            @update:model-str="_strvalue = $event"
+            @change="change"
             ></tm-time-view>
-            <tm-button label="确认选择" 
+            <tm-button
+label="确认选择" 
 			block
 			:margin="[32,12]"
 			:color="props.color" 
 			:linear="props.linear" 
 			:linear-deep="props.linearDeep" 
-			@click="confirm" 
-			:round="props.btnRound">
+			:round="props.btnRound" 
+			@click="confirm">
             </tm-button>
 			<view :style="{height: win_bottom+'px'}"></view>
     </tm-drawer>
@@ -73,8 +75,8 @@ const props = defineProps({
 	 * 现在暂时只禁用到天，也就是一个时间到天这如果==下面的禁用日期，就会选不中。
 	 */
 	disabledDate:{
-		type:Array as PropType<Array<Number|String|Date>>,
-		default:():Array<Number|String|Date>=>[]
+		type:Array as PropType<Array<number|string|Date>>,
+		default:():Array<number|string|Date>=>[]
 	},
 	//展示格式。最终影响到modelStr输出格式的内容。
 	format:{

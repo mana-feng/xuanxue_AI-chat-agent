@@ -1,4 +1,4 @@
-
+// @ts-nocheck
 /**
  * 主题工具
  * @author tmzdy tmVuetify
@@ -9,8 +9,8 @@ import { colortool } from './colortool';
 import { cssStyleConfig, cssstyle, colorThemeType, cssDirection , linearDirection,linearDeep,linearDirectionType } from '../lib/interface';
 //导入用户自定义的主题色值。
 import { theme } from '@/config/constants';
-var colors: Array<colorThemeType> = [];
-var colorObj: any = {
+const colors: Array<colorThemeType> = [];
+const colorObj: any = {
 	red: '#ff2414',
 	pink: '#ea2a6a',
 	purple: '#9C27B0',
@@ -56,7 +56,7 @@ for (const key in colorObj) {
 	if (Object.prototype.hasOwnProperty.call(colorObj, key)) {
 		const element: string = String(colorObj[key]);
 		if (isCssColor(element)) {
-			let rgba = colortool.cssToRgba(element);
+			const rgba = colortool.cssToRgba(element);
 			colors.push({
 				name: key,
 				value: element,
@@ -119,7 +119,7 @@ class themeColors {
 		this.colors = (c && c.length > 0) ? c : colors;
 	}
 	public add(colorName:string="",value:string="" ) {
-		let isHand: Array<colorThemeType> = this.colors.filter(function(el, index) {
+		const isHand: Array<colorThemeType> = this.colors.filter(function(el, index) {
 			return el.name == colorName;
 		});
 		if (isHand.length > 0) {
@@ -128,8 +128,8 @@ class themeColors {
 		if(!value){
 			return this.colors;
 		}
-		let rgba = colortool.cssToRgba(value);
-		let color:colorThemeType ={
+		const rgba = colortool.cssToRgba(value);
+		const color:colorThemeType ={
 			csscolor:"",
 			hsva: { h: 0, s: 0, v: 0, a: 0 },
 			hsla: { h: 0, s: 0, l: 0, a: 0 },
@@ -144,7 +144,7 @@ class themeColors {
 		return this.colors;
 	}
 	public del(colorName: string) {
-		let isHand: number = this.colors.findIndex(function(el, index) {
+		const isHand: number = this.colors.findIndex(function(el, index) {
 			return el.name == colorName;
 		});
 		if (isHand != -1) {
@@ -297,19 +297,19 @@ class themeColors {
 			isBlackAndWhite=true;
 		}
 		
-		let css:cssstyle = {};
+		const css:cssstyle = {};
 		css.color = nowColor.value;
 		css.config = { ...config };
 		css.isBlackAndWhite = isBlackAndWhite;
 		css.gradientColor = []
 		css.colorname = config.colorname;
-		let borderhsl = { ...nowColor.hsla };
+		const borderhsl = { ...nowColor.hsla };
 		
-		let borderDir = "all";
+		const borderDir = "all";
 		css.borderCss = {};
 
 		//背景颜色。
-		let bghsl = { ...nowColor.hsla };
+		const bghsl = { ...nowColor.hsla };
 		if(config.dark){
 			if(nowColor.hsla.h != 0 && nowColor.hsla.s != 0){
 				bghsl.l=40
@@ -334,7 +334,7 @@ class themeColors {
 		css.backgroundColorCss = { 'background-color': css.backgroundColor }
 
 		//文字颜色。
-		let txcolor = { ...nowColor.hsla };
+		const txcolor = { ...nowColor.hsla };
 		//当亮度小于（含）50需要降低文本颜色的亮度，即加深。，否则加亮，即变浅色。
 		if(config.dark){
 			txcolor.l = 95;
@@ -371,8 +371,8 @@ class themeColors {
 				txcolor.l = 100
 			}
 			config.borderWidth = config['borderWidth'] || 2;
-			let n_hsl = { h: nowColor.hsla.h, s: nowColor.hsla.s, l: 0, a: 0 };
-			let o_bgcss = colortool.rgbaToCss(colortool.hslaToRgba(n_hsl));
+			const n_hsl = { h: nowColor.hsla.h, s: nowColor.hsla.s, l: 0, a: 0 };
+			const o_bgcss = colortool.rgbaToCss(colortool.hslaToRgba(n_hsl));
 			css.backgroundColor = o_bgcss;
 			css.backgroundColorCss = { 'background-color': o_bgcss }
 
@@ -409,7 +409,7 @@ class themeColors {
 			css.textColor = colortool.rgbaToCss(colortool.hslaToRgba(txcolor));
 			css.border = css.textColor;
 			let o_now_bgColor = nowColor.csscolor;
-			let n_hsl = { h: nowColor.hsla.h, s: nowColor.hsla.s, l: 96, a: nowColor.hsla.a };
+			const n_hsl = { h: nowColor.hsla.h, s: nowColor.hsla.s, l: 96, a: nowColor.hsla.a };
 			if (config.dark) {
 				if(nowColor.hsla.h != 0 && nowColor.hsla.s != 0){
 					n_hsl.l = 12;
@@ -436,7 +436,7 @@ class themeColors {
 				//黑白要反转。
 				n_hsl = { h: 0, s: 0, l: 20, a: 0.07 };
 			}
-			let o_bgcss = colortool.rgbaToCss(colortool.hslaToRgba(n_hsl));
+			const o_bgcss = colortool.rgbaToCss(colortool.hslaToRgba(n_hsl));
 			css.shadowColor = {
 				boxShadow: `0rpx ${config.shadow * 2.5}rpx ${config.shadow * 6}rpx ${o_bgcss}`
 			}
@@ -447,9 +447,9 @@ class themeColors {
 		//处理渐变色
 		if (config.linearDirection) {
 			
-			let liner_color_1 = { h: 0, s: 0, l: 0, a: nowColor.hsla.a };
-			let liner_color_2 = { h: 0, s: 0, l: 0, a: nowColor.hsla.a };
-			let dir_str =   linearDirection[config.linearDirection];
+			const liner_color_1 = { h: 0, s: 0, l: 0, a: nowColor.hsla.a };
+			const liner_color_2 = { h: 0, s: 0, l: 0, a: nowColor.hsla.a };
+			const dir_str =   linearDirection[config.linearDirection];
 			
 			//先计算渐变的亮色系。
 			// 先算白或者黑
@@ -508,11 +508,11 @@ class themeColors {
 				txcolor.l = 90;
 			}
 			// 背景颜色取中间。
-			let color_t_1 = colortool.rgbaToCss(colortool.hslaToRgba(liner_color_1));
-			let color_t_2 = colortool.rgbaToCss(colortool.hslaToRgba(liner_color_2));
+			const color_t_1 = colortool.rgbaToCss(colortool.hslaToRgba(liner_color_1));
+			const color_t_2 = colortool.rgbaToCss(colortool.hslaToRgba(liner_color_2));
 			if (!config.text && !config.outlined) {
 				css.backgroundColorCss = { 'background-image': `linear-gradient(${dir_str},${color_t_1},${color_t_2})` }
-				let newBgcolor = {
+				const newBgcolor = {
 					h:(liner_color_1.h+liner_color_2.h)/2,
 					s:(liner_color_1.s+liner_color_2.s)/2,
 					l:(liner_color_1.l+liner_color_2.l)/2,
@@ -576,7 +576,7 @@ class themeColors {
 			css.borderCss[`border-right`] = `${config.borderWidth}rpx ${config.borderStyle} ${css.border}`;
 			css.borderCss[`border-top`] = `${config.borderWidth}rpx ${config.borderStyle} ${css.border}`;
 		} else {
-			let str = '-' + config.borderDirection;
+			const str = '-' + config.borderDirection;
 			css.borderCss[`border${str}`] = `${config.borderWidth}rpx ${config.borderStyle} ${css.border}`;
 			
 		}

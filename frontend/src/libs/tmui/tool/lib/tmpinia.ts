@@ -2,11 +2,11 @@ import { defineStore} from 'pinia';
 import themeColor from '../theme/theme'
 import * as u from '../function/util'
 import type { tmVuetify,wxshareConfig,colorThemeType } from './interface'
-let pdefault_cookies_color = u.getCookie('setTmVuetifyColor')||"";
-let pdefault_cookies_black = u.getCookie('setTmVuetifyBlack')
-let pdefault_cookies_local = u.getCookie('setTmVuetifyLocal')||'zh-Hans';
-let pdefault_cookies_colorArrayList = u.getCookie('colorArrayList');
-let dark = typeof pdefault_cookies_black === 'boolean' ? pdefault_cookies_black : false;
+const pdefault_cookies_color = u.getCookie('setTmVuetifyColor')||"";
+const pdefault_cookies_black = u.getCookie('setTmVuetifyBlack')
+const pdefault_cookies_local = u.getCookie('setTmVuetifyLocal')||'zh-Hans';
+const pdefault_cookies_colorArrayList = u.getCookie('colorArrayList');
+const dark = typeof pdefault_cookies_black === 'boolean' ? pdefault_cookies_black : false;
 let themeObj = new themeColor.themeColors()
 if(pdefault_cookies_colorArrayList){
 	const result2 = pdefault_cookies_colorArrayList.filter((item:colorThemeType) => themeObj.colors.every(subItem => subItem.name !== item.name));

@@ -73,7 +73,7 @@ export const custom_props = {
 		type: [String],
 		default: borderStyle.solid,
 		validator:(value:borderStyleType)=> {
-			let mp:Array<borderStyleType> = ["dashed","dotted","solid"]
+			const mp:Array<borderStyleType> = ["dashed","dotted","solid"]
 			if(!mp.includes(value)){
 				console.error('边线类型只能为borderStyle中的一种。')
 			}
@@ -87,7 +87,7 @@ export const custom_props = {
 		type: String,
 		default: cssDirection.all,
 		validator:(value:cssDirectionType)=> {
-			let mp:Array<cssDirectionType> = ["all","bottom","bottomleft","bottomright","left","leftright","right","right","top","topbottom","topleft","topright","x","y"]
+			const mp:Array<cssDirectionType> = ["all","bottom","bottomleft","bottomright","left","leftright","right","right","top","topbottom","topleft","topright","x","y"]
 			if(!mp.includes(value)){
 				console.error('边线方向格式只能为cssDirection中的一种。')
 			}
@@ -115,7 +115,7 @@ export const custom_props = {
 		type: [String],
 		default: linearDirection.none,//left:右->左，right:左->右。top:下->上，bottom:上->下。
 		validator:(value:linearDirectionType)=> {
-			let mp = ['left','right','bottom','top','']
+			const mp = ['left','right','bottom','top','']
 			if(!mp.includes(value)){
 				console.error('渐变方向只能为,left:右->左，right:左->右。top:下->上，bottom:上->下,中的一种。')
 			}
@@ -127,7 +127,7 @@ export const custom_props = {
 		type: [String],
 		default: linearDeep.light,//light,dark,accent亮系渐变和深色渐变。
 		validator:(value:linearDeepType)=> {
-			let mp:Array<linearDeepType> = ["accent","dark","light"]
+			const mp:Array<linearDeepType> = ["accent","dark","light"]
 			if(!mp.includes(value)){
 				console.error('渐变方向只能为light,dark,accent中的一种。')
 			}
@@ -170,11 +170,11 @@ export const computedClass = (props: any): string => {
 export const computedStyle = (props: any): object => {
 	const _style = props._style;
 	if (typeof _style == 'string') {
-		let p = _style.split(";");
-		let k = p.map(el => {
+		const p = _style.split(";");
+		const k = p.map(el => {
 			el = el.replace(";", "");
-			let node: any = {};
-			let idx = el.split(":");
+			const node: any = {};
+			const idx = el.split(":");
 			node[idx[0]] = idx[1];
 			return node;
 		})
@@ -226,8 +226,8 @@ export const computedTheme = (props: any, dark:boolean,store:any):cssstyle => {
 		const defaultThemeObj = new colors.themeColors();
 		colorListToUse = defaultThemeObj.colors;
 	}
-	var theme = new colors.themeColors(colorListToUse);
-	let c = theme.getTheme({
+	const theme = new colors.themeColors(colorListToUse);
+	const c = theme.getTheme({
 		colorname: defaultColorName,
 		dark: dark,
 		borderWidth: border,

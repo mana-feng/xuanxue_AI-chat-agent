@@ -4,7 +4,7 @@
 import {onShareAppMessage,onShareTimeline} from "@dcloudio/uni-app"
 import { wxshareConfig } from "./interface"
 export const share = function (args:wxshareConfig={}) {
-	let defaultWxshareConfig:wxshareConfig = {
+	const defaultWxshareConfig:wxshareConfig = {
 		...args
 	}
 	const sapp = (args:wxshareConfig={})=>{

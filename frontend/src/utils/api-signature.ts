@@ -1,6 +1,12 @@
 /**
  * API 签名工具（前端）
  * 用于生成请求签名，防止请求被篡改和重放攻击
+ * 
+ * 安全声明：
+ * 1. 本签名机制仅提供基本的请求完整性校验和防重放保护。
+ * 2. 严禁依赖此签名进行身份认证或授权，必须配合 JWT (Bearer Token) 使用。
+ * 3. 前端持有的 API_SIGNATURE_SECRET 应视为公开信息（即使混淆也可能被提取）。
+ *    如果需要高安全性，请确保后端实施严格的频率限制和异常检测。
  */
 
 import { getDeviceId } from './device';
@@ -26,7 +32,8 @@ async function generateSignature(params: any, timestamp: number, nonce: string):
 		sortedKeys.map((key) => `${key}=${JSON.stringify(params[key])}`).join('&') +
 		`&timestamp=${timestamp}&nonce=${nonce}`;
 
-	// 优先使用与后端一致的 HMAC-SHA256（需要在 .env 配置 VITE_API_SIGNATURE_SECRET，仅用于测试）
+	// 优先使用与后端一致的 HMAC-SHA256（需要在 .env 配置 VITE_API_SIGNATURE_SECRET）
+	// 注意：此密钥暴露在前端代码中，仅用于防篡改，不可作为信任根源
 	if (API_SIGNATURE_SECRET) {
 		try {
 			return await hmacSha256Hex(signString, API_SIGNATURE_SECRET);
@@ -35,7 +42,7 @@ async function generateSignature(params: any, timestamp: number, nonce: string):
 		}
 	}
 
-	// 弱签名：仅用于后端关闭校验或本地调试
+	// 弱签名（无密钥模式）：仅绑定设备ID，防止最简单的重放，无法防止主动篡改
 	const deviceId = getDeviceId();
 	const raw = signString + deviceId;
 	const hash = cryptoDigest(raw);
@@ -154,7 +161,13 @@ export function sanitizeRequestData(data: any): any {
 	// 后端不依赖 rawPayload 进行任何计算
 	if (sanitized.rawPayload && typeof sanitized.rawPayload === 'object') {
 		const payload = sanitized.rawPayload;
-		// 只保留必要的数据，移除可能包含敏感信息的详细计算结果
+		
+		// 如果是 Lite 模式（如六爻排盘），直接保留，不进行 Bazi 特有的过滤
+		if (payload.lite) {
+			return sanitized;
+		}
+
+		// 对于八字排盘，只保留必要的数据，移除可能包含敏感信息的详细计算结果
 		sanitized.rawPayload = {
 			user: payload.user ? {
 				realname: payload.user.realname,

@@ -12,16 +12,14 @@
 </template>
 
 <script lang="ts" setup>
-import { defineProps } from 'vue';
 import { getYaoName, getYaoSymbol } from '@/features/liuyao/uiHelpers';
 
-const props = defineProps({
+defineProps({
 	params: { type: Array as () => number[], default: () => [] }
 });
 </script>
 
 <style scoped>
-.param-preview-component {}
 .param-grid {
 	display: flex;
 	gap: 10px;
@@ -44,16 +42,13 @@ const props = defineProps({
 	min-height: 44px;
 }
 
-.param-chip :deep(.tm-text) {
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
 .param-line {
 	font-size: 16px;
 	color: #0f1724;
 	font-weight: 600;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 </style>
-
 

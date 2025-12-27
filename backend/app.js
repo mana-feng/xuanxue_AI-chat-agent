@@ -3,6 +3,7 @@
  * 仅支持 MySQL
  */
 const path = require('path');
+const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -14,6 +15,7 @@ const { initTables } = require('./database/init');
 const { loadEmailConfig } = require('./services/email');
 const { initWebSocketServer } = require('./websocket/server');
 const config = require('./config');
+const responseWrapper = require('./middleware/response-wrapper');
 
 // 安全防护模块
 const SecurityUtils = require('./security');
@@ -113,6 +115,9 @@ app.use(
 	})
 );
 
+// 统一响应格式
+app.use(responseWrapper);
+
 /**
  * 启动服务器
  */
@@ -141,6 +146,7 @@ async function bootstrap() {
 		const authRouter = require('./routes/auth');
 		const emailRouter = require('./routes/email');
 		const baziRouter = require('./routes/bazi');
+		const liuyaoRouter = require('./routes/liuyao');
 		const llmRouter = require('./routes/llm');
 		const adminRouter = require('./routes/admin');
 		const announcementRouter = require('./routes/announcement');
@@ -149,6 +155,7 @@ async function bootstrap() {
 		app.use('/api/auth', authRouter);
 		app.use('/api/email', emailRouter);
 		app.use('/api/bazi', baziRouter);
+		app.use('/api/liuyao', liuyaoRouter);
 		app.use('/api/llm', llmRouter);
 		app.use('/api/admin', adminRouter);
 		app.use('/api/announcements', announcementRouter);
@@ -163,6 +170,38 @@ async function bootstrap() {
 			req.url = '/api/auth/login';
 			app._router.handle(req, res);
 		});
+
+		// Admin UI (H5 build) static hosting on separate port
+		const adminUiPath = path.join(__dirname, 'admin-ui', 'dist', 'build', 'h5');
+		const ADMIN_PORT = process.env.ADMIN_PORT || 3000;
+		
+		if (fs.existsSync(adminUiPath)) {
+			const adminApp = express();
+			
+			// 启用 gzip 压缩
+			const compression = require('compression');
+			adminApp.use(compression());
+			
+			// 静态文件服务
+			adminApp.use('/', express.static(adminUiPath));
+			
+			// SPA 路由回退到 index.html
+			adminApp.get('*', (req, res) => {
+				res.sendFile(path.join(adminUiPath, 'index.html'));
+			});
+			
+			// 启动 Admin Server
+			const adminServer = http.createServer(adminApp);
+			adminServer.on('error', (err) => {
+				console.error(`Admin Server error on port ${ADMIN_PORT}:`, err.message);
+			});
+			
+			adminServer.listen(ADMIN_PORT, () => {
+				console.log(`Admin UI listening on http://localhost:${ADMIN_PORT}`);
+			});
+		} else {
+			console.warn('Admin UI build not found. Run admin-ui build to enable Admin UI.');
+		}
 
 		// 404处理（必须在所有路由之后，错误处理之前）
 		app.use((req, res) => {

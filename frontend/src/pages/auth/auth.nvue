@@ -1,8 +1,17 @@
 <template>
 	<tm-app>
 		<view class="page-wrapper">
+			<!-- 顶部安全区域和返回按钮 -->
+			<view class="top-status-bar" :style="{ height: statusBarHeight + 'px' }"></view>
+			<view class="top-nav-bar">
+				<view class="nav-back-btn" @tap="goHome">
+					<tm-icon name="tmicon-angle-left" :font-size="38" color="#FFFFFF"></tm-icon>
+					<tm-text :font-size="28" color="#FFFFFF" label="返回首页" :margin="[4, 0, 0, 0]"></tm-text>
+				</view>
+			</view>
+
 			<view class="page-content-scale">
-				<!-- 已登录状�?-->
+				<!-- 已登录状态 -->
 				<view v-if="isLoggedIn" class="login-container">
 					<tm-sheet
 						:round="12"
@@ -30,17 +39,6 @@
 						</view>
 
 						<view class="user-actions">
-							<tm-button
-								v-if="user_store.isAdmin"
-								type="warning"
-								block
-								:margin="[30, 0, 0, 0]"
-								:round="8"
-								:height="88"
-								:font-size="32"
-								label="管理员后台"
-								@tap="goToAdmin"
-							></tm-button>
 							<tm-button
 								type="primary"
 								block
@@ -125,31 +123,31 @@
 						<!-- 登录表单 -->
 						<view v-if="currentTab === 'login'" class="form-content">
 							<view class="input-wrapper">
-								<tm-input
-									v-model="loginIdentifier"
-									@input="loginError = ''"
-									placeholder="请输入邮箱或用户名"
-									prefix="account"
-									clearable
-									:border="1"
-									:round="8"
+							<tm-input
+								v-model="loginIdentifier"
+								placeholder="请输入邮箱或用户名"
+								prefix="account"
+								clearable
+								:border="1"
+								:round="8"
 									:padding="[20, 20]"
 									class="login-input"
+									@input="loginError = ''"
 								></tm-input>
 							</view>
 							
 							<view class="input-wrapper">
-								<tm-input
-									v-model="loginPassword"
-									@input="loginError = ''"
-									type="password"
-									placeholder="请输入密码"
-									prefix="lock"
-									clearable
+							<tm-input
+								v-model="loginPassword"
+								type="password"
+								placeholder="请输入密码"
+								prefix="lock"
+								clearable
 									:border="1"
 									:round="8"
 									:padding="[20, 20]"
 									class="login-input"
+									@input="loginError = ''"
 								></tm-input>
 							</view>
 
@@ -193,7 +191,6 @@
 							<view class="input-wrapper">
 								<tm-input
 									v-model="registerUsername"
-									@input="registerError = ''"
 									placeholder="设置用户名（2-20个字符）"
 									prefix="account"
 									clearable
@@ -201,13 +198,13 @@
 									:round="8"
 									:padding="[20, 20]"
 									class="login-input"
+									@input="registerError = ''"
 								></tm-input>
 							</view>
 
 							<view class="input-wrapper">
 								<tm-input
 									v-model="registerEmail"
-									@input="registerError = ''"
 									placeholder="请输入常用邮箱"
 									prefix="mail"
 									clearable
@@ -215,16 +212,16 @@
 									:round="8"
 									:padding="[20, 20]"
 									class="login-input"
+									@input="registerError = ''"
 								></tm-input>
 							</view>
 							
-							<!-- 验证码输入区�?-->
+							<!-- 验证码输入区域 -->
 							<view class="input-wrapper">
 								<view class="verification-code-container">
 									<view class="code-input-wrapper">
 										<tm-input
 											v-model="registerVerificationCode"
-											@input="registerError = ''"
 											placeholder="请输入邮箱验证码"
 											prefix="key"
 											type="number"
@@ -233,6 +230,7 @@
 											:round="8"
 											:padding="[20, 20]"
 											class="login-input"
+											@input="registerError = ''"
 										></tm-input>
 									</view>
 									<tm-button
@@ -243,8 +241,8 @@
 										:font-size="26"
 										type="primary"
 										:label="codeCountdown > 0 ? `${codeCountdown}秒` : '发送验证码'"
-										@tap="sendVerificationCode"
 										class="code-button"
+										@tap="sendVerificationCode"
 									></tm-button>
 								</view>
 							</view>
@@ -252,7 +250,6 @@
 							<view class="input-wrapper">
 								<tm-input
 									v-model="registerPassword"
-									@input="registerError = ''"
 									type="password"
 									placeholder="设置密码（不少于6位）"
 									prefix="lock"
@@ -261,13 +258,13 @@
 									:round="8"
 									:padding="[20, 20]"
 									class="login-input"
+									@input="registerError = ''"
 								></tm-input>
 							</view>
 
 							<view class="input-wrapper">
 								<tm-input
 									v-model="registerPasswordConfirm"
-									@input="registerError = ''"
 									type="password"
 									placeholder="请再次输入密码确认"
 									prefix="lock"
@@ -276,6 +273,7 @@
 									:round="8"
 									:padding="[20, 20]"
 									class="login-input"
+									@input="registerError = ''"
 								></tm-input>
 							</view>
 
@@ -350,18 +348,27 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useUserStore } from '@/store/user';
-import { API_BASE_URL } from '@/config/config';
+import { request } from '@/services/api/index';
 import { sendEmailVerificationCode, verifyEmailCode } from '@/config/emailVerification';
 import { getDeviceId } from '@/utils/device';
 import { sanitizeInput } from '@/utils/sanitize';
-
-
+import { getSystemInfo } from '@/utils/platform';
 
 const user_store = useUserStore();
 
+// 获取系统信息用于适配顶部安全区
+const sysInfo = getSystemInfo();
+const statusBarHeight = sysInfo.statusBarHeight || 20;
+
+function goHome() {
+	uni.reLaunch({
+		url: '/pages/index/index'
+	});
+}
+
 const isLoggedIn = computed(() => user_store.isLoggedIn);
 
-// 标签页切�?
+// 标签页切换
 const currentTab = ref<'login' | 'register'>('login');
 
 // 登录表单（支持邮箱或用户名）
@@ -381,7 +388,7 @@ const registerPasswordConfirm = ref('');
 const registerLoading = ref(false);
 const registerError = ref('');
 
-// 验证码相�?
+// 验证码相关
 const sendCodeLoading = ref(false);
 const codeCountdown = ref(0);
 let countdownTimer: any = null;
@@ -392,7 +399,7 @@ onMounted(() => {
 	// 如果已经登录了管理员账号，直接跳转到后台
 	if (user_store.isAdmin) {
 		uni.reLaunch({
-			url: '/pages/admin/dashboard'
+			url: '/pages/index/index'
 		});
 		return;
 	}
@@ -407,7 +414,7 @@ function openProtocol(type: 'user' | 'privacy') {
 	});
 }
 
-function submitLogin() {
+async function submitLogin() {
 	if (!loginIdentifier.value || !loginPassword.value) {
 		loginError.value = '请输入账号和密码';
 		return;
@@ -420,60 +427,52 @@ function submitLogin() {
 	const safeIdentifier = sanitizeInput(loginIdentifier.value, 255);
 	const safePassword = sanitizeInput(loginPassword.value, 128);
 
-	uni.request({
-		url: API_BASE_URL + '/api/auth/login',
-		method: 'POST',
-		data: {
-			identifier: safeIdentifier,
-			password: safePassword,
-			device_id: deviceId
-		},
-		header: {
-			'X-Device-Id': deviceId
-		},
-		// H5 需要 withCredentials 来接收 cookie
-		// #ifdef H5
-		withCredentials: true,
-		// #endif
-		success(res: any) {
-			if (res.statusCode >= 200 && res.statusCode < 300 && res.data?.access_token) {
-				const user = res.data.user;
-				user_store.setAuth({
-					username: user?.username || null,
-					email: user?.email,
-					access_token: res.data.access_token,
-					refresh_token: res.data.refresh_token,
-					role: user?.role || 'user'
-				});
-				
-				uni.showToast({
-					title: '登录成功',
-					icon: 'success',
-					duration: 1500
-				});
-				setTimeout(() => {
-					// 如果是管理员，跳转到管理员后台；否则跳转到主页
-					if (user?.role === 'admin') {
-						uni.reLaunch({
-							url: '/pages/admin/dashboard'
-						});
-					} else {
-						uni.reLaunch({
-							url: '/pages/index/index'
-						});
-					}
-				}, 600);
-			} else {
-				loginError.value = res.data?.error || '登录失败，请稍后重试';
-			}
-		},
-		fail() {
-			loginError.value = '网络错误，请检查后端是否已启动';
-		},
-		complete() {
-			loginLoading.value = false;
+	try {
+		const res = await request('/api/auth/login', {
+			method: 'POST',
+			data: {
+				identifier: safeIdentifier,
+				password: safePassword,
+				device_id: deviceId
+			},
+			sanitizeData: false
+		});
+
+		if (!res.success) {
+			loginError.value = res.message || res.error || '登录失败，请稍后重试';
+			return;
 		}
-	});
+
+		const payload: any = res.data || {};
+		if (!payload.access_token) {
+			loginError.value = res.message || '登录失败，请稍后重试';
+			return;
+		}
+
+		const user = payload.user || {};
+		user_store.setAuth({
+			username: user?.username || null,
+			email: user?.email,
+			access_token: payload.access_token,
+			refresh_token: payload.refresh_token,
+			role: user?.role || 'user'
+		});
+
+		uni.showToast({
+			title: '登录成功',
+			icon: 'success',
+			duration: 1500
+		});
+		setTimeout(() => {
+			uni.reLaunch({
+				url: '/pages/index/index'
+			});
+		}, 600);
+	} catch (err: any) {
+		loginError.value = err?.message || '网络错误，请检查后端是否已启动';
+	} finally {
+		loginLoading.value = false;
+	}
 }
 
 // 发送验证码
@@ -528,8 +527,9 @@ async function sendVerificationCode() {
 async function submitRegister() {
 	const safeUsername = sanitizeInput(registerUsername.value, 50);
 	const safeEmail = sanitizeInput(registerEmail.value, 255);
-	const safePassword = sanitizeInput(registerPassword.value, 128);
-	const safePasswordConfirm = sanitizeInput(registerPasswordConfirm.value, 128);
+	// 密码不应进行字符清理，只做长度截取
+	const safePassword = registerPassword.value.slice(0, 128);
+	const safePasswordConfirm = registerPasswordConfirm.value.slice(0, 128);
 	const safeCode = sanitizeInput(registerVerificationCode.value, 10);
 
 	if (!safeUsername || !safeEmail || !safePassword) {
@@ -560,7 +560,7 @@ async function submitRegister() {
 	try {
 		const verifyResult = await verifyEmailCode(safeEmail, safeCode, 'register');
 		if (!verifyResult.success) {
-			registerError.value = verifyResult.message || '验证码验证失败';
+		registerError.value = verifyResult.message || '验证码验证失败';
 			registerLoading.value = false;
 			return;
 		}
@@ -577,74 +577,59 @@ async function submitRegister() {
 	
 	// 验证码验证成功，继续注册流程
 	const deviceId = getDeviceId();
-	uni.request({
-		url: API_BASE_URL + '/api/register',
-		method: 'POST',
-		data: {
-			username: safeUsername,
-			email: safeEmail,
-			password: safePassword,
-			device_id: deviceId
-		},
-		header: {
-			'X-Device-Id': deviceId
-		},
-		// H5 需要 withCredentials 来接收 cookie
-		// #ifdef H5
-		withCredentials: true,
-		// #endif
-		success(res: any) {
-			if (res.statusCode >= 200 && res.statusCode < 300 && res.data?.access_token) {
-				const user = res.data.user;
-				const deviceId = getDeviceId();
-				
-				user_store.setAuth({
-					username: user?.username || registerUsername.value,
-					email: user?.email || registerEmail.value,
-					access_token: res.data.access_token,
-					refresh_token: res.data.refresh_token,
-					role: user?.role || 'user'
-				});
-				uni.showToast({
-					title: '注册并登录成功',
-					icon: 'success',
-					duration: 1500
-				});
-				setTimeout(() => {
-					// 注册成功后自动跳转回主页
-					uni.reLaunch({
-						url: '/pages/index/index'
-					});
-				}, 600);
-			} else {
-				registerError.value = res.data?.error || '注册失败，请稍后重试';
-			}
-		},
-		fail() {
-			registerError.value = '网络错误，请检查后端是否已启动';
-		},
-		complete() {
-			registerLoading.value = false;
+	try {
+		const res = await request('/api/auth/register', {
+			method: 'POST',
+			data: {
+				username: safeUsername,
+				email: safeEmail,
+				password: safePassword,
+				device_id: deviceId
+			},
+			sanitizeData: false
+		});
+
+		if (!res.success) {
+			registerError.value = res.message || res.error || '注册失败，请稍后重试';
+			return;
 		}
-	});
+
+		const payload: any = res.data || {};
+		if (!payload.access_token) {
+			registerError.value = res.message || '注册失败，请稍后重试';
+			return;
+		}
+
+		const user = payload.user || {};
+		user_store.setAuth({
+			username: user?.username || registerUsername.value,
+			email: user?.email || registerEmail.value,
+			access_token: payload.access_token,
+			refresh_token: payload.refresh_token,
+			role: user?.role || 'user'
+		});
+		uni.showToast({
+			title: '注册并登录成功',
+			icon: 'success',
+			duration: 1500
+		});
+		setTimeout(() => {
+			uni.reLaunch({
+				url: '/pages/index/index'
+			});
+		}, 600);
+	} catch (err: any) {
+		registerError.value = err?.message || '网络错误，请检查后端是否已启动';
+	} finally {
+		registerLoading.value = false;
+	}
 }
 
 function goBack() {
 	uni.navigateBack();
 }
 
-function goToAdmin() {
-	if (isLoggedIn.value && user_store.isAdmin) {
-		uni.navigateTo({
-			url: '/pages/admin/dashboard'
-		});
-	} else {
-		// 跳转到登录页�?
-		uni.navigateTo({
-			url: '/pages/auth/auth'
-		});
-	}
-}
+
 
 async function logout() {
 	await user_store.logout();
@@ -670,10 +655,45 @@ onUnmounted(() => {
 	position: relative;
 }
 
+.top-status-bar {
+	width: 100%;
+}
+
+.top-nav-bar {
+	width: 100%;
+	height: 44px;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	padding: 0 24rpx;
+}
+
+.nav-back-btn {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	opacity: 0.9;
+	padding: 10rpx;
+}
+
+.nav-back-btn:active {
+	opacity: 0.7;
+}
+
 .page-content-scale {
-	padding: 60rpx 40rpx;
+	padding: 40rpx 24rpx;
 	position: relative;
 	z-index: 1;
+}
+
+@media (min-width: 900px) {
+	.page-content-scale {
+		padding: 60rpx 40rpx;
+	}
+}
+
+:global(.layout-wide) .page-content-scale {
+	padding: 60rpx 40rpx;
 }
 
 .login-container {
@@ -876,4 +896,10 @@ onUnmounted(() => {
 	background: rgba(0, 0, 0, 0.02);
 }
 </style>
+
+
+
+
+
+
 

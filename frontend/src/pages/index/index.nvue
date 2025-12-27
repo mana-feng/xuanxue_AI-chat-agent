@@ -1,288 +1,220 @@
 <template>
 	<tm-app>
-		<view class="app-shell">
-			<yx-nav-header ref="headerRef"></yx-nav-header>
-			<view class="app-main" :style="pageWrapperStyle">
-				<view class="page-shell">
-					<view class="page-card">
-            <!-- 页面标题 -->
-            <view class="page-title-wrapper">
-              <view class="form-header-text">
-                <h1 class="page-title">排盘信息</h1>
-                <p class="page-subtitle">请填写以下信息进行八字排盘</p>
-              </view>
-            </view>
-						
-						<!-- 基本信息区块 -->
-						<view class="section">
-							<header class="section__header">
-								<tm-icon name="tmicon-md-person" :font-size="28" color="#667eea"></tm-icon>
-								<h2 class="section__title">基本信息</h2>
-							</header>
-							<view class="section__body">
-								<tm-input
-									v-model="realname"
-									:margin="[0, 0, 24, 0]"
-									placeholder="请输入姓名（可选）"
-									prefix="tmicon-md-person"
-									:round="12"
-									:border="1"
-									:padding="[24, 20]"
-							></tm-input>
+		<PageScaffold class="page-bazi-input" title="排盘信息" subtitle="请填写以下信息进行八字排盘">
+			<SectionBlock icon="tmicon-md-person" title="基本信息">
+				<view class="card-stack">
+					<tm-input
+						v-model="realname"
+						placeholder="请输入姓名（可选）"
+						prefix="tmicon-md-person"
+						:round="12"
+						:border="1"
+						:padding="[24, 20]"
+					></tm-input>
 
-							<view class="form-group-single">
-									<view class="form-label">
-										<tm-icon name="tmicon-md-people" :font-size="24" color="#718096" :margin="[0, 6, 0, 0]"></tm-icon>
-										<tm-text
-											:font-size="26"
-											color="#718096"
-											label="性别"
-										></tm-text>
-									</view>
-									<view class="form-control">
-										<tm-radio-group v-model="gender">
-											<tm-radio label="男" :value="0" :margin="[0, 16, 0, 0]"></tm-radio>
-											<tm-radio label="女" :value="1"></tm-radio>
-										</tm-radio-group>
-									</view>
-								</view>
-							</view>
+					<view class="form-group-single">
+						<view class="form-label">
+							<tm-icon name="tmicon-md-people" :font-size="24" color="#718096" :margin="[0, 6, 0, 0]"></tm-icon>
+							<tm-text :font-size="26" color="#718096" label="性别"></tm-text>
 						</view>
-
-						<!-- 出生时间区块 -->
-						<view class="section">
-							<header class="section__header">
-								<tm-icon name="tmicon-time" :font-size="28" color="#667eea"></tm-icon>
-								<h2 class="section__title">出生时间</h2>
-							</header>
-							<view class="section__body">
-								<!-- 日历类型选择 -->
-								<view class="form-group-single calendar-type-selector">
-									<view class="form-label">
-										<tm-icon name="tmicon-calendar-alt" :font-size="24" color="#718096" :margin="[0, 6, 0, 0]"></tm-icon>
-										<tm-text
-											:font-size="26"
-											color="#718096"
-											label="日历类型"
-										></tm-text>
-									</view>
-									<view class="form-control segtab-wrapper">
-										<tm-segtab
-											v-model="model"
-											:default-value="0"
-											:list="[{ text: '阳历' }, { text: '阴历' }]"
-											:margin="[0, 0]"
-											:width="300"
-										></tm-segtab>
-									</view>
-								</view>
-								
-								<!-- 日期时间选择 -->
-								<tm-input
-									:placeholder="model === 0 ? '请选择阳历出生日期和时间（精确到分钟）' : '请选择阴历出生日期和时间（精确到分钟）'"
-									prefix="tmicon-calendar-alt"
-									suffix="tmicon-angle-right"
-									v-model="datetime_label"
-									:margin="[0, 0, 20, 0]"
-									:round="12"
-									:border="1"
-									:padding="[24, 20]"
-									@tap="SelectTime"
-								></tm-input>
-
-								<!-- 显示信息卡片组 -->
-								<view v-if="lunar_label || bazi_label" class="info-cards">
-									<view v-if="lunar_label" class="info-card">
-										<view class="info-card-header">
-											<tm-icon name="tmicon-integral" :font-size="32" color="#48bb78"></tm-icon>
-											<tm-text
-												:font-size="24"
-												color="#718096"
-												:label="model === 0 ? '对应阴历' : '对应阳历'"
-												:margin="[0, 0, 0, 12]"
-											></tm-text>
-										</view>
-										<tm-text
-											:font-size="28"
-											color="#2d3748"
-											:bold="true"
-											:label="lunar_label"
-										></tm-text>
-									</view>
-									
-									<view v-if="bazi_label" class="info-card">
-										<view class="info-card-header">
-											<tm-icon name="tmicon-calendar" :font-size="32" color="#667eea"></tm-icon>
-											<tm-text
-												:font-size="24"
-												color="#718096"
-												label="四柱八字"
-												:margin="[0, 0, 0, 12]"
-											></tm-text>
-										</view>
-										<view class="bazi-display">
-											<tm-tag
-												v-for="(item, index) in bazi_label.split(' ')"
-												:key="index"
-												:label="item"
-												type="primary"
-												:round="8"
-												:margin="[0, 8, 0, 0]"
-												:font-size="26"
-												:bold="true"
-											></tm-tag>
-										</view>
-									</view>
-								</view>
-							</view>
-						</view>
-
-						<!-- 提交按钮 -->
-						<view class="page-card__footer">
-							<tm-button 
-								:class="['primary-btn', { disabled: !canSubmit }]"
-								:label="'开始排盘'"
-								:type="canSubmit ? 'primary' : 'grey'"
-								:round="999"
-								:bold="true"
-								:linear="canSubmit ? 'right' : ''"
-								:linearDeep="'accent'"
-								:shadow="canSubmit ? 10 : 0"
-								:disabled="!canSubmit"
-								icon="tmicon-calendar-alt"
-								@tap="Sumbit"
-								block
-							></tm-button>
+						<view class="form-control">
+							<tm-radio-group v-model="gender">
+								<tm-radio label="男" :value="0" :margin="[0, 16, 0, 0]"></tm-radio>
+								<tm-radio label="女" :value="1"></tm-radio>
+							</tm-radio-group>
 						</view>
 					</view>
 				</view>
+			</SectionBlock>
 
-				<tm-time-picker
-					v-model:show="solar_select_show"
-					:round="6"
-					:default-value="solar_default_value"
-					:start="time_pick.start"
-					:end="time_pick.end"
-					:format="time_pick.format"
-					:showDetail="time_pick.detail"
-					:showSuffix="time_suffix.solar"
-					@confirm="SolarConfirm"
-				></tm-time-picker>
-				<tm-time-picker
-					v-model:show="lunar_select_show"
-					:round="6"
-					:default-value="lunar_default_value"
-					:start="time_pick.start"
-					:end="time_pick.end"
-					:format="time_pick.format"
-					:showDetail="time_pick.detail"
-					:showSuffix="time_suffix.lunar"
-					@confirm="LunarConfirm"
-				></tm-time-picker>
+			<SectionBlock icon="tmicon-time" title="出生时间" subtitle="支持阳历/阴历，精确到分钟">
+				<view class="card-stack">
+					<view class="form-group-single calendar-type-selector">
+						<view class="form-label">
+							<tm-icon name="tmicon-calendar-alt" :font-size="24" color="#718096" :margin="[0, 6, 0, 0]"></tm-icon>
+							<tm-text :font-size="26" color="#718096" label="日历类型"></tm-text>
+						</view>
+						<view class="form-control segtab-wrapper">
+							<tm-segtab
+								v-model="model"
+								:default-value="0"
+								:list="[{ text: '阳历' }, { text: '阴历' }]"
+								:margin="[0, 0]"
+								:width="300"
+							></tm-segtab>
+						</view>
+					</view>
 
-				<!-- 公告弹窗 -->
-				<tm-overlay v-model:show="showAnnouncementModal" :opacity="0.4" :duration="200">
-					<tm-sheet
-						:round="18"
-						:padding="[24, 24]"
-						:margin="[40, 32]"
-						:shadow="2"
-						:width="600"
-						class="announcement-modal"
-					>
-						<view class="modal-header">
-							<tm-text :font-size="30" label="公告" bold></tm-text>
-							<tm-button size="small" type="grey" :round="12" @tap="closeAnnouncements">关闭</tm-button>
-						</view>
-						<view v-if="annLoading" class="py-10">
-							<tm-text label="加载中..." color="#999"></tm-text>
-						</view>
-						<view v-else-if="announcementList.length === 0" class="py-10">
-							<tm-text label="暂无公告" color="#999"></tm-text>
-						</view>
-						<view v-else class="announcement-list">
-							<tm-sheet
-								v-for="item in announcementList"
-								:key="item.id"
-								:round="12"
-								:padding="[18, 16]"
-								:margin="[0, 0, 16, 0]"
-								:shadow="1"
-							>
-								<tm-text :font-size="28" bold :label="item.title"></tm-text>
+					<tm-button
+						type="grey"
+						:block="true"
+						:round="12"
+						:padding="[18, 20]"
+						icon="tmicon-calendar-alt"
+						icon-pos="left"
+						class="birth-time-btn"
+						:label="datetime_label || (model === 0 ? '请选择阳历出生日期和时间（精确到分钟）' : '请选择阴历出生日期和时间（精确到分钟）')"
+						@tap="SelectTime"
+					></tm-button>
+
+					<view v-if="lunar_label || bazi_label" class="info-grid info-cards">
+						<view v-if="lunar_label" class="info-card">
+							<view class="info-card-header">
+								<tm-icon name="tmicon-integral" :font-size="32" color="#48bb78"></tm-icon>
 								<tm-text
-									v-if="item.expiresAt"
-									:font-size="22"
-									color="#999"
-									:label="`有效期至：${item.expiresAt}`"
-									class="mt-4"
+									:font-size="24"
+									color="#718096"
+									:label="model === 0 ? '对应阴历' : '对应阳历'"
+									:margin="[0, 0, 0, 12]"
 								></tm-text>
-								<tm-text :font-size="24" color="#444" class="mt-6" :label="item.content"></tm-text>
-							</tm-sheet>
+							</view>
+							<tm-text :font-size="28" color="#2d3748" :bold="true" :label="lunar_label"></tm-text>
 						</view>
-						<view v-if="annError" class="mt-6">
-							<tm-text :label="annError" color="red"></tm-text>
+
+						<view v-if="bazi_label" class="info-card">
+							<view class="info-card-header">
+								<tm-icon name="tmicon-calendar" :font-size="32" color="#667eea"></tm-icon>
+								<tm-text :font-size="24" color="#718096" label="四柱八字" :margin="[0, 0, 0, 12]"></tm-text>
+							</view>
+							<view class="bazi-display">
+								<tm-tag
+									v-for="(item, index) in bazi_label.split(' ')"
+									:key="index"
+									:label="item"
+									type="primary"
+									:round="8"
+									:margin="[0, 8, 0, 0]"
+									:font-size="26"
+									:bold="true"
+								></tm-tag>
+							</view>
 						</view>
+					</view>
+				</view>
+			</SectionBlock>
+
+			<template #footer>
+				<tm-button
+					:class="['primary-btn', { disabled: !canSubmit }]"
+					:label="'开始排盘'"
+					:type="canSubmit ? 'primary' : 'grey'"
+					:round="999"
+					:bold="true"
+					:linear="canSubmit ? 'right' : ''"
+					:linear-deep="'accent'"
+					:shadow="canSubmit ? 10 : 0"
+					:disabled="!canSubmit"
+					icon="tmicon-calendar-alt"
+					block
+					@tap="Sumbit"
+				></tm-button>
+			</template>
+		</PageScaffold>
+
+		<tm-time-picker
+			v-model:show="solar_select_show"
+			:round="6"
+			:default-value="solar_default_value"
+			:start="time_pick.start"
+			:end="time_pick.end"
+			:format="time_pick.format"
+			:show-detail="time_pick.detail"
+			:show-suffix="time_suffix.solar"
+			@confirm="SolarConfirm"
+		></tm-time-picker>
+		<tm-time-picker
+			v-model:show="lunar_select_show"
+			:round="6"
+			:default-value="lunar_default_value"
+			:start="time_pick.start"
+			:end="time_pick.end"
+			:format="time_pick.format"
+			:show-detail="time_pick.detail"
+			:show-suffix="time_suffix.lunar"
+			@confirm="LunarConfirm"
+		></tm-time-picker>
+
+		<tm-overlay v-model:show="showAnnouncementModal" :opacity="0.4" :duration="200">
+			<tm-sheet
+				:round="18"
+				:padding="[24, 24]"
+				:margin="[40, 32]"
+				:shadow="2"
+				:width="600"
+				class="announcement-modal"
+			>
+				<view class="modal-header">
+					<tm-text :font-size="30" label="公告" bold></tm-text>
+					<tm-button size="small" type="grey" :round="12" @tap="closeAnnouncements">关闭</tm-button>
+				</view>
+				<view v-if="annLoading" class="py-10">
+					<tm-text label="加载中.." color="#999"></tm-text>
+				</view>
+				<view v-else-if="announcementList.length === 0" class="py-10">
+					<tm-text label="暂无公告" color="#999"></tm-text>
+				</view>
+				<view v-else class="announcement-list">
+					<tm-sheet
+						v-for="item in announcementList"
+						:key="item.id"
+						:round="12"
+						:padding="[18, 16]"
+						:margin="[0, 0, 16, 0]"
+						:shadow="1"
+					>
+						<tm-text :font-size="28" bold :label="item.title"></tm-text>
+						<tm-text
+							v-if="item.expiresAt"
+							:font-size="22"
+							color="#999"
+							:label="`有效期至：${item.expiresAt}`"
+							class="mt-4"
+						></tm-text>
+						<tm-text :font-size="24" color="#444" class="mt-6" :label="item.content"></tm-text>
 					</tm-sheet>
-				</tm-overlay>
-			</view>
-		</view>
+				</view>
+				<view v-if="annError" class="mt-6">
+					<tm-text :label="annError" color="red"></tm-text>
+				</view>
+			</tm-sheet>
+		</tm-overlay>
 	</tm-app>
 </template>
 
+
 <script lang="ts" setup>
-import { ref, computed, watch, onMounted, nextTick } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import { onLoad, onShow } from '@dcloudio/uni-app';
 import { Solar } from 'lunar-javascript';
-import {useUserStore} from '@/store/user'
-import {useBaziStore} from '@/store/bazi'
+import PageScaffold from '@/components/layout/PageScaffold.vue';
+import SectionBlock from '@/components/layout/SectionBlock.vue';
+import { useUserStore } from '@/store/user';
+import { useBaziStore } from '@/store/bazi';
 import utils from '@/libs/utils/utils';
 import { fetchAnnouncementMeta, fetchAnnouncements, type Announcement, type AnnouncementMeta } from '@/services/api/announcement';
 
-let realname = ref('');
-let gender = ref(0);
-let model = ref(0);
-let timestamp = ref(null);
-let datetime_label = ref('');
-let lunar_label = ref(null);
-let bazi_label = ref('');
+const realname = ref('');
+const gender = ref(0);
+const model = ref(0);
+const timestamp = ref<number | null>(null);
+const datetime_label = ref('');
+const lunar_label = ref<string | null>(null);
+const bazi_label = ref('');
 
 const user_store = useUserStore();
 const bazi_store = useBaziStore();
 
-const isLoggedIn = computed(() => user_store.isLoggedIn);
 const canSubmit = computed(() => timestamp.value !== null);
 
-// Header组件引用
-const headerRef = ref(null);
+const solar_select_show = ref(false);
+const lunar_select_show = ref(false);
 
-// 动态计算页面容器的padding-top，确保内容不被sticky的header遮挡
-const pageWrapperStyle = computed(() => {
-	// 由于header使用sticky定位，不需要额外的padding-top
-	// app-main 已经有 padding-block 控制上下留白
-	return {};
-});
-
-// 动态计算内容区域的样式，确保与header贴合
-const pageContentStyle = computed(() => {
-	// 确保内容区域与header联动，不设置额外的margin或padding
-	return {
-		marginTop: '0',
-		paddingTop: '0',
-		width: '100%'
-	};
-});
-
-let solar_select_show = ref(false);
-let lunar_select_show = ref(false);
-
-let solar_default_value = ref("")
-let lunar_default_value = ref("");
+const solar_default_value = ref('');
+const lunar_default_value = ref('');
 
 const time_pick = {
 	start: '1900/01/01 00:00',
 	end: '2099/12/30 00:00',
-	// 使用24小时制与分钟，避免月份/分钟混淆
 	format: 'YYYY/MM/DD HH:mm',
 	detail: {
 		year: true,
@@ -290,88 +222,59 @@ const time_pick = {
 		day: true,
 		hour: true,
 		minute: true,
-		second: false
-	}
+		second: false,
+	},
 };
 
 const time_suffix = {
-	solar: {
-		year: '年',
-		month: '月',
-		day: '日',
-		hour: '时',
-		minute: '分',
-		second: '秒'
-	},
-	lunar: {
-		year: '年',
-		month: '月',
-		day: '日',
-		hour: '时辰',
-		minute: '分',
-		second: '秒'
-	}
+	solar: { year: '年', month: '月', day: '日', hour: '时', minute: '分', second: '秒' },
+	lunar: { year: '年', month: '月', day: '日', hour: '时辰', minute: '分', second: '秒' },
 };
 
-// 公告相关状态
 const ANN_CACHE_KEY = 'announcements_cache_v1';
 const showAnnouncementModal = ref(false);
 const announcementList = ref<Announcement[]>([]);
 const annLoading = ref(false);
 const annError = ref('');
 
-watch(model, () => PullDatatimeLabel());
-watch(timestamp, () => PullDatatimeLabel());
+watch(model, PullDatatimeLabel);
+watch(timestamp, PullDatatimeLabel);
 
-// 监听header高度变化，实时更新页面布局
-watch(() => headerRef.value?.totalHeaderHeight, () => {
-	// header高度变化时，pageWrapperStyle会自动重新计算
-	// 这里可以添加额外的处理逻辑
-}, { immediate: true });
-
-// 初始化时间选择为当前时间
 function initCurrentTime() {
 	timestamp.value = new Date().getTime();
 	PullDatatimeLabel();
 }
 
-// 标记是否已处理编辑数据，避免 onShow 重复处理
 let editDataProcessed = false;
 
-onLoad((options: any) =>{
-	// 恢复登录状态
+onLoad((options: any) => {
 	user_store.restoreAuth();
 
-	// 检查是否有编辑数据
 	const editDataStr = uni.getStorageSync('edit_bazi_data');
-	
+
 	if (editDataStr) {
 		try {
 			const editData = JSON.parse(editDataStr);
-			
+
 			if (editData.isEdit && editData.timestamp) {
-			// 回填编辑数据
-			realname.value = editData.realname || '';
-			gender.value = editData.gender !== undefined && editData.gender !== null ? editData.gender : 0;
+				realname.value = editData.realname || '';
+				gender.value = editData.gender !== undefined && editData.gender !== null ? editData.gender : 0;
 				timestamp.value = editData.timestamp;
-				// 恢复记录ID（如果存在）
+
 				if (editData.recordId) {
 					user_store.recordId = editData.recordId;
 				}
-				
-				// 标记已处理
+
 				editDataProcessed = true;
-				
-				// 清除编辑标记
+
 				uni.removeStorageSync('edit_bazi_data');
-				
-				// 更新显示
+
 				nextTick(() => {
 					PullDatatimeLabel();
 					uni.showToast({
 						title: '已加载数据，可进行编辑',
 						icon: 'success',
-						duration: 2000
+						duration: 2000,
 					});
 				});
 				return;
@@ -382,42 +285,33 @@ onLoad((options: any) =>{
 		}
 	}
 
-	// 清除所有缓存信息，不恢复任何表单数据
-	// 每次进入页面都使用默认值：空姓名、默认性别、当前时间
 	realname.value = '';
 	gender.value = 0;
-	user_store.recordId = null; // 清除记录ID
-	
-	// 始终初始化为当前时间
+	user_store.recordId = null;
+
 	initCurrentTime();
 
-	// 如果需要显示公告，延迟一点点打开弹窗，确保页面已渲染
 	if (options && options.showAnnouncements === '1') {
 		setTimeout(() => {
 			openAnnouncements();
 		}, 200);
 	}
-})
+});
 
-// 每次页面显示时，检查是否有编辑数据（如果 onLoad 未处理）
 onShow(() => {
-	// 如果 onLoad 已经处理了编辑数据，不再处理
 	if (editDataProcessed) {
-		editDataProcessed = false; // 重置标记
+		editDataProcessed = false;
 		return;
 	}
-	
-	// 检查是否有编辑数据（可能是从其他页面返回时）
+
 	const editDataStr = uni.getStorageSync('edit_bazi_data');
 	if (editDataStr) {
 		try {
 			const editData = JSON.parse(editDataStr);
 			if (editData.isEdit && editData.timestamp) {
-		// 有编辑数据，回填并清除标记
-		realname.value = editData.realname || '';
-		gender.value = editData.gender !== undefined && editData.gender !== null ? editData.gender : 0;
+				realname.value = editData.realname || '';
+				gender.value = editData.gender !== undefined && editData.gender !== null ? editData.gender : 0;
 				timestamp.value = editData.timestamp;
-				// 恢复记录ID（如果存在）
 				if (editData.recordId) {
 					user_store.recordId = editData.recordId;
 				}
@@ -432,76 +326,69 @@ onShow(() => {
 			uni.removeStorageSync('edit_bazi_data');
 		}
 	}
-	
-	// 没有编辑数据，且不是从编辑返回，清除所有表单数据并重置为当前时间
-	// 注意：这里不清除，因为用户可能正在填写表单
-	// 只在明确需要重置时才清除（比如从其他页面返回）
-	// 清除记录ID（新排盘时）
+
 	if (!editDataStr) {
 		user_store.recordId = null;
 	}
-})
+});
 
-function SelectTime  ()  {
+function SelectTime() {
 	uni.hideKeyboard();
-	// 在打开时间选择器前，更新默认值为当前 timestamp（如果已选择）或当前系统时间
 	const timeToUse = timestamp.value || new Date().getTime();
 	const timeStr = utils.HideSecond(timeToUse);
 	solar_default_value.value = timeStr;
 	lunar_default_value.value = timeStr;
-	
-	setTimeout(()=>{
+
+	setTimeout(() => {
 		if (model.value === 0) {
 			solar_select_show.value = true;
 		} else {
 			lunar_select_show.value = true;
 		}
-	},400)
+	}, 400);
+}
+
+const SolarConfirm = (time: string) => {
+	timestamp.value = new Date(time).getTime();
+};
+const LunarConfirm = (time: string) => {
+	timestamp.value = new Date(time).getTime();
 };
 
-const SolarConfirm = time => timestamp.value = new Date(time).getTime();
-const LunarConfirm = time => timestamp.value = new Date(time).getTime();
-
-function PullDatatimeLabel  ()  {
+function PullDatatimeLabel() {
 	const time = timestamp.value;
 	if (time === null) return;
 	const index = model.value;
 	const solar = Solar.fromDate(new Date(time));
 	const lunar = solar.getLunar();
-	
-	// 计算四柱
+
 	const bazi = lunar.getEightChar();
 	const baziList = [bazi.getYear(), bazi.getMonth(), bazi.getDay(), bazi.getTime()];
 	bazi_label.value = baziList.join(' ');
-	
+
 	if (index === 0) {
-		// 阳历模式：显示阳历日期时间
-		let date = utils.HideSecond(time);
+		const date = utils.HideSecond(time);
 		datetime_label.value = date;
 		solar_default_value.value = date;
 		lunar_default_value.value = date;
-		// 显示对应的阴历信息
 		lunar_label.value = `${lunar.toString()} ${lunar.getTimeZhi()}时`;
 	} else {
-		// 阴历模式：显示阴历日期时间
 		const lunarStr = `${lunar.toString()} ${lunar.getTimeZhi()}时`;
 		datetime_label.value = lunarStr;
-		// 设置默认值为对应的阳历时间（用于时间选择器）
-		let date = utils.HideSecond(time);
+		const date = utils.HideSecond(time);
 		solar_default_value.value = date;
 		lunar_default_value.value = date;
-		// 显示对应的阳历信息
 		lunar_label.value = date;
 	}
-};
+}
 
-function Sumbit ()  {
+function Sumbit() {
 	const datetime = timestamp.value;
-	if(datetime === null){
+	if (datetime === null) {
 		uni.showToast({
-			title: "请先选择出生日期和时间",
-			icon: "none",
-			duration: 2000
+			title: '请先选择出生日期和时间',
+			icon: 'none',
+			duration: 2000,
 		});
 		SelectTime();
 		return;
@@ -510,72 +397,59 @@ function Sumbit ()  {
 	const params = {
 		realname: (realname.value || '').trim() || '佚名',
 		timestamp: datetime,
-		gender: Number(gender.value) // 统一标准：0=男，1=女，确保是数字类型
-	}
+		gender: Number(gender.value),
+	};
 	uni.showLoading({
-		title:"排盘中，请稍后！"
-	})
-	
+		title: '排盘中，请稍后！',
+	});
+
 	try {
 		uni.setStorageSync('info', JSON.stringify(params));
-		// 保存当前的 recordId（如果是编辑模式）
 		const currentRecordId = user_store.recordId;
 		user_store.set(params);
-		// 如果是编辑模式（有 recordId），恢复它
 		if (currentRecordId) {
 			user_store.recordId = currentRecordId;
 		} else {
-			// 新排盘，清除记录ID
 			user_store.recordId = null;
 		}
-		
-		// 执行排盘计算
+
 		bazi_store.pull(params);
-		
-		// 延迟跳转，确保排盘计算完成并验证结果
+
 		setTimeout(() => {
 			uni.hideLoading();
-			
-			// 验证排盘结果是否完整
+
 			if (!bazi_store.solar || !bazi_store.solar.year) {
 				uni.showToast({
 					title: '排盘数据不完整，请重试',
 					icon: 'none',
-					duration: 2000
+					duration: 2000,
 				});
 				return;
 			}
-			
-			// 跳转到详情页
+
 			uni.navigateTo({
 				url: '/pages/index/detail',
-				success: () => {
-					// 跳转成功
-				},
 				fail: (err) => {
 					console.error('跳转失败:', err);
 					uni.showToast({
 						title: '跳转失败，请重试',
 						icon: 'none',
-						duration: 2000
+						duration: 2000,
 					});
-				}
+				},
 			});
-		}, 200); // 增加延迟到 200ms，确保计算完成
+		}, 200);
 	} catch (error: any) {
 		uni.hideLoading();
 		console.error('排盘失败:', error);
 		uni.showToast({
 			title: '排盘计算失败：' + (error?.message || '未知错误'),
 			icon: 'none',
-			duration: 2000
+			duration: 2000,
 		});
 	}
-};
+}
 
-/**
- * 公告缓存与拉取
- */
 function loadAnnouncementCache() {
 	try {
 		const cacheStr = uni.getStorageSync(ANN_CACHE_KEY);
@@ -603,7 +477,7 @@ async function refreshAnnouncements() {
 	annLoading.value = true;
 	try {
 		const metaRes = await fetchAnnouncementMeta();
-		const metaList = ((metaRes as any)?.meta || []) as AnnouncementMeta[];
+		const metaList = (metaRes.data?.meta || []) as AnnouncementMeta[];
 		const newSig = buildSignature(metaList);
 		const cache = loadAnnouncementCache();
 		if (cache && cache.signature === newSig) {
@@ -611,7 +485,7 @@ async function refreshAnnouncements() {
 			return;
 		}
 		const fullRes = await fetchAnnouncements();
-		const list = ((fullRes as any)?.list || []) as Announcement[];
+		const list = (fullRes.data?.list || []) as Announcement[];
 		announcementList.value = list;
 		saveAnnouncementCache({ signature: newSig, list });
 	} catch (e: any) {
@@ -639,37 +513,38 @@ function closeAnnouncements() {
 }
 </script>
 
+
 <style scoped>
 /* 页面样式已在 app-shell.css 中定义 */
 /* 这里只添加页面特定的样式 */
 
-.app-main {
+.page-bazi-input .app-main {
 	background: radial-gradient(circle at 20% 20%, rgba(102, 126, 234, 0.08), transparent 40%),
 		radial-gradient(circle at 80% 10%, rgba(118, 75, 162, 0.08), transparent 38%),
 		#f6f8fc;
 }
 
-.page-shell {
+.page-bazi-input .page-shell {
 	width: 100%;
 	display: flex;
 	justify-content: center;
-	padding: 28px 16px 56px;
+	padding: var(--page-pad-y) var(--page-pad-x);
 	box-sizing: border-box;
 }
 
-.page-card {
+.page-bazi-input .page-card {
 	width: 100%;
-	max-width: 1180px;
+	max-width: var(--page-max);
 	background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
 	border: 1px solid #e5e9f2;
-	border-radius: 20px;
-	box-shadow: 0 18px 60px rgba(31, 41, 55, 0.12);
-	padding: 28px 26px;
+	border-radius: 16px;
+	box-shadow: 0 12px 32px rgba(31, 41, 55, 0.1);
+	padding: 18px 16px;
 	position: relative;
 	overflow: hidden;
 }
 
-.page-card::before {
+.page-bazi-input .page-card::before {
 	content: '';
 	position: absolute;
 	inset: 0;
@@ -678,40 +553,40 @@ function closeAnnouncements() {
 	pointer-events: none;
 }
 
-.page-title-wrapper {
+.page-bazi-input .page-title-wrapper {
 	display: flex;
 	align-items: flex-start;
-	gap: 10px;
-	margin-bottom: 16px;
+	gap: 12px;
+	margin-bottom: 12px;
 	position: relative;
 	z-index: 1;
 }
 
-.page-title {
+.page-bazi-input .page-title {
 	margin: 0;
-	font-size: 28px;
-	color: #1f2a44;
+	font-size: 22px;
+	color: #1f2937;
 	letter-spacing: 0.2px;
 }
 
-.page-subtitle {
+.page-bazi-input .page-subtitle {
 	margin: 4px 0 0;
-	font-size: 16px;
+	font-size: 13px;
 	color: #6b7280;
 }
 
-.section {
+.page-bazi-input .section {
 	background: #ffffff;
 	border-radius: 14px;
 	border: 1px solid #e2e8f0;
-	padding: 20px 18px 18px;
-	margin-bottom: 18px;
-	box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+	padding: 14px 12px 12px;
+	margin-bottom: 14px;
+	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
 	position: relative;
 	z-index: 1;
 }
 
-.section__header {
+.page-bazi-input .section__header {
 	display: flex;
 	align-items: center;
 	gap: 12px;
@@ -720,43 +595,68 @@ function closeAnnouncements() {
 	padding-bottom: 12px;
 }
 
-.section__title {
-	font-size: 22px;
+.page-bazi-input .section__title {
+	font-size: 18px;
 	color: #2d3748;
 }
 
-.section__body {
+.page-bazi-input .section__body {
 	display: flex;
 	flex-direction: column;
-	gap: 14px;
+	gap: 12px;
 }
 
-.page-card__footer {
+.page-bazi-input .page-card__footer {
 	margin-top: 14px;
 	padding-top: 10px;
 	border-top: 1px solid #eef2f7;
 	display: flex;
-	justify-content: flex-end;
+	justify-content: center;
 	position: relative;
 	z-index: 1;
+	padding-bottom: calc(var(--safe-bottom) + var(--bottom-nav-height));
 }
 
-@media (max-width: 768px) {
-	.page-card {
-		padding: 20px 18px;
-		border-radius: 16px;
+.birth-time-btn {
+	width: 100%;
+	text-align: left;
+}
+
+@media (min-width: 900px) {
+	.page-bazi-input .page-shell {
+		padding: var(--page-pad-y) var(--page-pad-x);
 	}
-	.section {
-		padding: 16px 14px;
+	.page-bazi-input .page-card {
+		max-width: var(--page-max);
+		padding: 28px 26px;
+		border-radius: 20px;
+		box-shadow: 0 18px 60px rgba(31, 41, 55, 0.12);
 	}
-	.page-card__footer {
-		justify-content: center;
+	.page-bazi-input .section {
+		padding: 20px 18px 18px;
+		margin-bottom: 18px;
 	}
+}
+
+.layout-wide .page-bazi-input .page-shell {
+	padding: var(--page-pad-y) var(--page-pad-x);
+}
+
+.layout-wide .page-bazi-input .page-card {
+	max-width: var(--page-max);
+	padding: 28px 26px;
+	border-radius: 20px;
+	box-shadow: 0 18px 60px rgba(31, 41, 55, 0.12);
+}
+
+.layout-wide .page-bazi-input .section {
+	padding: 20px 18px 18px;
+	margin-bottom: 18px;
 }
 
 
 /* 未登录状态样式 */
-.auth-not-logged-in {
+.page-bazi-input .auth-not-logged-in {
 	display: flex;
 	flex-direction: column;
 	gap: 20rpx;
@@ -764,7 +664,7 @@ function closeAnnouncements() {
 }
 
 /* 登录/注册表单样式 */
-.auth-form-container {
+.page-bazi-input .auth-form-container {
 	margin-top: 24rpx;
 	padding-top: 24rpx;
 	border-top: 1rpx solid #e2e8f0;
@@ -775,7 +675,7 @@ function closeAnnouncements() {
 	padding: 24rpx;
 }
 
-.auth-tabs {
+.page-bazi-input .auth-tabs {
 	display: flex;
 	flex-direction: row;
 	border-bottom: 2rpx solid #e2e8f0;
@@ -783,7 +683,7 @@ function closeAnnouncements() {
 	width: 100%;
 }
 
-.auth-tab {
+.page-bazi-input .auth-tab {
 	flex: 1;
 	display: flex;
 	justify-content: center;
@@ -794,16 +694,16 @@ function closeAnnouncements() {
 	min-width: 0;
 }
 
-.auth-tab.active {
+.page-bazi-input .auth-tab.active {
 	border-bottom-color: #667eea;
 }
 
-.auth-form-fields {
+.page-bazi-input .auth-form-fields {
 	margin-bottom: 20rpx;
 	width: 100%;
 }
 
-.auth-form-hint {
+.page-bazi-input .auth-form-hint {
 	display: flex;
 	flex-direction: row;
 	justify-content: space-between;
@@ -813,16 +713,16 @@ function closeAnnouncements() {
 	flex-wrap: wrap;
 }
 
-.auth-form-hint > view {
+.page-bazi-input .auth-form-hint > view {
 	margin-right: 8rpx;
 	margin-bottom: 8rpx;
 }
 
-.auth-form-hint > view:last-child {
+.page-bazi-input .auth-form-hint > view:last-child {
 	margin-right: 0;
 }
 
-.auth-error {
+.page-bazi-input .auth-error {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
@@ -834,133 +734,201 @@ function closeAnnouncements() {
 	width: 100%;
 }
 
-.auth-form-actions {
+.page-bazi-input .auth-form-actions {
 	display: flex;
 	flex-direction: column;
 	width: 100%;
 }
 
 /* 表单卡片样式 - 使用响应式类 */
-.form-card {
+.page-bazi-input .form-card {
   /* 已在 responsive-card 中定义 */
 }
 
-.form-header-text {
+.page-bazi-input .form-header-text {
   flex: 1;
   display: flex;
   flex-direction: column;
 }
 
-.form-header-text > view {
+.page-bazi-input .form-header-text > view {
 	margin-bottom: 6px;
 }
 
-.form-header-text > view:last-child {
+.page-bazi-input .form-header-text > view:last-child {
 	margin-bottom: 0;
 }
 
-.form-section-card {
+.page-bazi-input .form-section-card {
 	background: linear-gradient(180deg, #fbfdff 0%, #ffffff 100%);
 	border-radius: 12px;
 	padding: 24px 22px;
 	border: 1px solid #e2e8f0;
 }
 
-.form-submit {
+.page-bazi-input .form-submit {
 	width: 100%;
 	margin-top: 28px;
 	display: flex;
 	justify-content: center;
 }
 
-.form-row {
+.page-bazi-input .form-row {
 	display: flex;
-	flex-direction: row;
+	flex-direction: column;
 	width: 100%;
-	flex-wrap: wrap;
+	gap: 16rpx;
 }
 
-.form-row > view {
+.page-bazi-input .form-row > view {
+	margin-right: 0;
+	margin-bottom: 0;
+}
+
+.page-bazi-input .form-row > view:last-child {
+	margin-right: 0;
+}
+
+@media (min-width: 720px) {
+	.page-bazi-input .form-row {
+		flex-direction: row;
+		flex-wrap: wrap;
+		gap: 0;
+	}
+
+	.page-bazi-input .form-row > view {
+		margin-right: 24rpx;
+		margin-bottom: 24rpx;
+	}
+
+	.page-bazi-input .form-row > view:last-child {
+		margin-right: 0;
+	}
+}
+
+.layout-medium .page-bazi-input .form-row,
+.layout-wide .page-bazi-input .form-row {
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 0;
+}
+
+.layout-medium .page-bazi-input .form-row > view,
+.layout-wide .page-bazi-input .form-row > view {
 	margin-right: 24rpx;
 	margin-bottom: 24rpx;
 }
 
-.form-row > view:last-child {
+.layout-medium .page-bazi-input .form-row > view:last-child,
+.layout-wide .page-bazi-input .form-row > view:last-child {
 	margin-right: 0;
 }
 
-.form-group {
+.page-bazi-input .form-group {
 	flex: 1;
 	width: 240rpx;
 	display: flex;
 	flex-direction: column;
 }
 
-.form-group > view {
+.page-bazi-input .form-group > view {
 	margin-bottom: 12rpx;
 }
 
-.form-group > view:last-child {
+.page-bazi-input .form-group > view:last-child {
 	margin-bottom: 0;
 }
 
-.form-group-single {
+.page-bazi-input .form-group-single {
 	width: 100%;
 	display: flex;
 	flex-direction: column;
 }
 
-.form-group-single > view {
+.page-bazi-input .form-group-single > view {
 	margin-bottom: 10px;
 }
 
-.form-group-single > view:last-child {
+.page-bazi-input .form-group-single > view:last-child {
 	margin-bottom: 0;
 }
 
-.form-group-single.calendar-type-selector {
+.page-bazi-input .form-group-single.calendar-type-selector {
 	margin-bottom: 24rpx;
 }
 
-.form-label {
+.page-bazi-input .form-label {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
 }
 
-.form-control {
+.page-bazi-input .form-control {
 	width: 100%;
 }
 
-.segtab-wrapper {
+.page-bazi-input .segtab-wrapper {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
 	overflow: hidden;
 }
 
-.segtab-wrapper :deep(.tm-segtab) {
+.page-bazi-input .segtab-wrapper :deep(.tm-segtab) {
 	width: 100%;
 }
 
-.info-cards {
+.page-bazi-input .info-cards {
 	display: flex;
-	flex-direction: row;
-	flex-wrap: wrap;
+	flex-direction: column;
 	margin-top: 8rpx;
+	gap: 12rpx;
 }
 
-.info-cards > view {
+.page-bazi-input .info-cards > view {
+	width: 100%;
+	margin-right: 0;
+	margin-bottom: 0;
+}
+
+@media (min-width: 720px) {
+	.page-bazi-input .info-cards {
+		flex-direction: row;
+		flex-wrap: wrap;
+		gap: 0;
+	}
+
+	.page-bazi-input .info-cards > view {
+		width: calc(50% - 8rpx);
+		margin-right: 16rpx;
+		margin-bottom: 16rpx;
+	}
+
+	.page-bazi-input .info-cards > view:nth-child(2n) {
+		margin-right: 0;
+	}
+}
+
+.layout-medium .page-bazi-input .info-cards,
+.layout-wide .page-bazi-input .info-cards {
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 0;
+}
+
+.layout-medium .page-bazi-input .info-cards > view,
+.layout-wide .page-bazi-input .info-cards > view {
 	width: calc(50% - 8rpx);
 	margin-right: 16rpx;
 	margin-bottom: 16rpx;
 }
 
-.info-cards > view:nth-child(2n) {
+.layout-medium .page-bazi-input .info-cards > view:nth-child(2n),
+.layout-wide .page-bazi-input .info-cards > view:nth-child(2n) {
 	margin-right: 0;
 }
 
-.info-card {
+.page-bazi-input .info-card {
 	background: transparent;
 	border-radius: 14rpx;
 	padding: 20rpx 24rpx;
@@ -968,58 +936,58 @@ function closeAnnouncements() {
 	box-shadow: none;
 }
 
-.info-card-header {
+.page-bazi-input .info-card-header {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
 	margin-bottom: 12rpx;
 }
 
-.bazi-display {
+.page-bazi-input .bazi-display {
 	display: flex;
 	flex-direction: row;
 	flex-wrap: wrap;
 	align-items: center;
 }
 
-.bazi-display > view {
+.page-bazi-input .bazi-display > view {
 	margin-right: 8rpx;
 	margin-bottom: 8rpx;
 }
 
-.bazi-display > view:last-child {
+.page-bazi-input .bazi-display > view:last-child {
 	margin-right: 0;
 }
 
 /* 按钮样式已在 app-shell.css 中定义 */
 
-.submit-button-wrapper {
+.page-bazi-input .submit-button-wrapper {
 	position: relative;
 	width: 100%;
 }
 
-.submit-button {
+.page-bazi-input .submit-button {
 	position: relative;
 	z-index: 2;
 }
 
-.submit-button :deep(.tm-button) {
+.page-bazi-input .submit-button :deep(.tm-button) {
 	background: linear-gradient(135deg, #4c51bf 0%, #2a3fb8 100%) !important;
 	color: #ffffff !important;
 	box-shadow: 0 14rpx 28rpx rgba(44, 64, 180, 0.28) !important;
 }
 
-.submit-button-wrapper.disabled .submit-button :deep(.tm-button) {
+.page-bazi-input .submit-button-wrapper.disabled .submit-button :deep(.tm-button) {
 	background: #d2d6dc !important;
 	color: #a0aec0 !important;
 	box-shadow: none !important;
 }
 
-.submit-button:active {
+.page-bazi-input .submit-button:active {
 	transform: scale(0.98);
 }
 
-.submit-button-glow {
+.page-bazi-input .submit-button-glow {
 	position: absolute;
 	top: 50%;
 	left: 50%;
@@ -1032,11 +1000,11 @@ function closeAnnouncements() {
 	opacity: 0.6;
 }
 
-.submit-button-wrapper.disabled .submit-button-glow {
+.page-bazi-input .submit-button-wrapper.disabled .submit-button-glow {
 	opacity: 0.15;
 }
 
-.error-container {
+.page-bazi-input .error-container {
 	padding: 16rpx 20rpx;
 	background: rgba(245, 101, 101, 0.1);
 	border-radius: 12rpx;
@@ -1044,19 +1012,18 @@ function closeAnnouncements() {
 	width: 100%;
 }
 
-.announcement-list {
+.page-bazi-input .announcement-list {
 	max-height: 60vh;
 	overflow-y: auto;
 }
 
-.announcement-modal .tm-text {
+.page-bazi-input .announcement-modal .tm-text {
 	word-break: break-word;
 }
 
-.modal-header {
+.page-bazi-input .modal-header {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
 	margin-bottom: 12px;
-}
-</style>
+}</style>

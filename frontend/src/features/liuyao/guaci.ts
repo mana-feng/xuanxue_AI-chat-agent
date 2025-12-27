@@ -1,5 +1,5 @@
 import rawGuaci from './data/guaci.json';
-declare const require: any;
+import { TRIGRAM_LABEL } from './najiaConst';
 
 type GuaciEntry = {
 	name?: string;
@@ -40,48 +40,46 @@ if (Array.isArray(rawGuaci)) {
 		guaciByName[nameKey] = enriched;
 		// if entry contains a code array like [1,1,1,0,1,0] or a string code '111010', map it by mark
 		if (Array.isArray((entry as any).code) && (entry as any).code.length === 6) {
-			const mark = (entry as any).code.map((n: any) => String(n)).join('');
+			const mark = (entry as any).code.slice().reverse().map((n: any) => String(n)).join('');
 			if (mark && !guaciByMark[mark]) {
 				guaciByMark[mark] = enriched;
 			}
 		} else if (typeof (entry as any).code === 'string' && (entry as any).code.length === 6) {
-			const mark = (entry as any).code;
+			const mark = (entry as any).code.split('').reverse().join('');
 			if (!guaciByMark[mark]) {
 				guaciByMark[mark] = enriched;
 			}
 		}
 	});
+
 	// lazy-load mapping by mark using trigram labels if available
-	try {
-		// import TRIGRAM_LABEL dynamically to avoid circular import issues
-		const mod = require('./najiaConst') || {};
-		const TRIGRAM_LABEL = mod.TRIGRAM_LABEL;
-		if (TRIGRAM_LABEL && typeof TRIGRAM_LABEL === 'object') {
-			const trigramCodes = Object.keys(TRIGRAM_LABEL);
-			const arr = rawGuaci as GuaciEntry[];
-			trigramCodes.forEach((upper) => {
-				trigramCodes.forEach((lower) => {
-					const mark = `${upper}${lower}`;
-					// try to find entry whose zhuguaName includes both trigram names or exact match
-					const upperName = TRIGRAM_LABEL[upper]?.name || '';
-					const lowerName = TRIGRAM_LABEL[lower]?.name || '';
-					const found = arr.find((e: any) => {
-						const n = (e?.zhuguaName || e?.name || '').replace(/\s+/g, '');
-						return upperName && lowerName && n.indexOf(upperName) !== -1 && n.indexOf(lowerName) !== -1;
-					});
-					if (found) {
-						const foundNameKey = (found.zhuguaName || found.name);
-						if (foundNameKey) {
-							guaciByMark[mark] = guaciByName[foundNameKey] || found;
-						} else {
-							guaciByMark[mark] = found;
-						}
-					}
+	if (TRIGRAM_LABEL && typeof TRIGRAM_LABEL === 'object') {
+		const trigramCodes = Object.keys(TRIGRAM_LABEL);
+		const arr = rawGuaci as GuaciEntry[];
+		trigramCodes.forEach((upper) => {
+			trigramCodes.forEach((lower) => {
+				// mark 采用下卦在前、上卦在后
+				const mark = `${lower}${upper}`;
+				const altMark = `${upper}${lower}`;
+				// try to find entry whose zhuguaName includes both trigram names or exact match
+				const upperName = TRIGRAM_LABEL[upper]?.name || '';
+				const lowerName = TRIGRAM_LABEL[lower]?.name || '';
+				const found = arr.find((e: any) => {
+					const n = (e?.zhuguaName || e?.name || '').replace(/\s+/g, '');
+					return upperName && lowerName && n.indexOf(upperName) !== -1 && n.indexOf(lowerName) !== -1;
 				});
+				if (found) {
+					const foundNameKey = (found.zhuguaName || found.name);
+					if (foundNameKey) {
+						guaciByMark[mark] = guaciByName[foundNameKey] || found;
+						guaciByMark[altMark] = guaciByName[foundNameKey] || found; // 兼容上卦在前的标记
+					} else {
+						guaciByMark[mark] = found;
+						guaciByMark[altMark] = found;
+					}
+				}
 			});
-		}
-	} catch (err) {
-		// ignore if najiaConst cannot be required (edge cases)
+		});
 	}
 } else {
 	// object format keyed by mark

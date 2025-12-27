@@ -1,0 +1,942 @@
+<template>
+	<tm-app>
+		<view class="app-shell page-bazi-detail">
+			<yx-nav-header></yx-nav-header>
+			<view class="app-main">
+				<view class="page-shell">
+					<view class="page-card detail-card">
+            <view class="page-title-wrapper">
+              <view class="form-header-text">
+                <h1 class="page-title">排盘结果</h1>
+                <p class="page-subtitle">查看、保存或导出您的排盘信息</p>
+              </view>
+            </view>
+
+						<view class="section info-summary">
+							<header class="section__header">
+								<tm-icon name="tmicon-md-person" :font-size="26" color="#667eea"></tm-icon>
+								<h2 class="section__title">基本信息</h2>
+							</header>
+							<view class="section__body info-grid">
+								<view class="info-tile">
+									<tm-text :font-size="24" color="#718096" label="姓名"></tm-text>
+									<tm-text :font-size="30" :bold="true" color="#2d3748" :label="user_store.realname || '佚名'"></tm-text>
+								</view>
+								<view class="info-tile">
+									<tm-text :font-size="24" color="#718096" label="生肖"></tm-text>
+									<tm-text :font-size="30" :bold="true" color="#2d3748" :label="GetChineseZodiac(bazi_store.solar.year)"></tm-text>
+								</view>
+								<view class="info-tile">
+									<tm-text :font-size="24" color="#718096" label="性别"></tm-text>
+									<tm-text :font-size="30" :bold="true" color="#2d3748" :label="getGenderLabel()"></tm-text>
+								</view>
+								<view class="info-tile">
+									<tm-text :font-size="24" color="#718096" label="阴历"></tm-text>
+									<tm-text :font-size="30" :bold="true" color="#2d3748" :label="bazi_store.yinli"></tm-text>
+								</view>
+								<view class="info-tile">
+									<tm-text :font-size="24" color="#718096" label="阳历"></tm-text>
+									<tm-text :font-size="30" :bold="true" color="#2d3748" :label="utils.HideSecond(user_store.timestamp)"></tm-text>
+								</view>
+								<view class="info-tile">
+									<tm-text :font-size="24" color="#718096" label="星座"></tm-text>
+									<tm-text :font-size="30" :bold="true" color="#2d3748" :label="bazi_store.xinzuo + '座'"></tm-text>
+							</view>
+						</view>
+							<view class="actions-row">
+								<tm-button
+									type="primary"
+									:loading="saving"
+									:disabled="saving"
+									:round="12"
+									:padding="[24, 20]"
+									:bold="true"
+									label="保存到账号"
+									@tap="saveToAccount"
+								></tm-button>
+                <tm-button
+                  type="grey"
+                  :round="12"
+                  :padding="[24, 20]"
+                  label="导出为 JSON"
+                  @tap="exportJson"
+                ></tm-button>
+                <tm-button
+                  type="primary"
+                  :round="12"
+                  :padding="[24, 20]"
+                  label="AI 解答"
+                  @tap="goToChat"
+                ></tm-button>
+                <tm-button
+                  type="primary"
+                  :round="12"
+                  :padding="[24, 20]"
+                  icon="tmicon-md-create"
+                  label="编辑"
+                  @tap="editBazi"
+                ></tm-button>
+							</view>
+							<view v-if="saveError" class="mt-12 error-message">
+								<tm-text :label="saveError" color="#f56565" :font-size="24"></tm-text>
+							</view>
+							<view v-if="exportError" class="mt-12 error-message">
+								<tm-text :label="exportError" color="#f56565" :font-size="24"></tm-text>
+							</view>
+						</view>
+
+						<view class="section table-section">
+							<header class="section__header">
+								<tm-icon name="tmicon-md-grid" :font-size="26" color="#667eea"></tm-icon>
+								<h2 class="section__title">排盘详情</h2>
+							</header>
+							<view class="section__body">
+								<view class="table-wrapper draggable-scroll" ref="tableWrapperRef">
+									<yx-detail-table></yx-detail-table>
+								</view>
+								<view class="start-yun">
+									<view class="info-item">
+										<tm-text :font-size="24" color="#718096" label="起运"></tm-text>
+										<tm-text :font-size="28" :bold="true" color="#2d3748" :label="GetStartYunLabel()"></tm-text>
+									</view>
+									<view class="info-item">
+										<tm-text :font-size="24" color="#718096" label="起运公历"></tm-text>
+										<tm-text :font-size="28" :bold="true" color="#2d3748" :label="bazi_store.start_yun.solar"></tm-text>
+									</view>
+								</view>
+							</view>
+						</view>
+
+						<view v-if="bazi_store.enhanced" class="section analysis-card">
+							<header class="section__header">
+								<tm-icon name="tmicon-md-stats" :font-size="26" color="#667eea"></tm-icon>
+								<h2 class="section__title">增强分析</h2>
+							</header>
+							<view class="section__body analysis-grid">
+								<view class="analysis-block">
+									<tm-text :font-size="24" color="#718096" label="格局"></tm-text>
+									<tm-text :label="bazi_store.enhanced.geju.type" :font-size="28" color="#2d3748" :bold="true"></tm-text>
+									<tm-text v-if="bazi_store.enhanced.geju.description" :label="bazi_store.enhanced.geju.description" :font-size="24" color="#718096" class="mt-4"></tm-text>
+								</view>
+								<view class="analysis-block">
+									<tm-text :font-size="24" color="#718096" label="日主强弱"></tm-text>
+									<tm-text :label="bazi_store.enhanced.rizhuQiangruo.level" :font-size="28" color="#2d3748" :bold="true"></tm-text>
+									<tm-text v-if="bazi_store.enhanced.rizhuQiangruo.description" :label="bazi_store.enhanced.rizhuQiangruo.description" :font-size="24" color="#718096" class="mt-4"></tm-text>
+								</view>
+								<view class="analysis-block">
+									<tm-text label="五行旺衰" :font-size="24" color="#718096"></tm-text>
+									<view class="wuxing-tags">
+										<view 
+											v-for="(value, key) in bazi_store.enhanced.wuxingWangshuai" 
+											:key="key"
+											class="wuxing-tag"
+										>
+											<tm-text 
+												:label="key + '：' + value" 
+												:font-size="24" 
+												color="#2d3748" 
+												:bold="true"
+											></tm-text>
+										</view>
+									</view>
+								</view>
+							</view>
+						</view>
+
+						
+
+						<view class="section flow-section">
+							<header class="section__header">
+								<tm-icon name="tmicon-md-time" :font-size="26" color="#667eea"></tm-icon>
+								<h2 class="section__title">流运流年</h2>
+							</header>
+							<view class="section__body flow-section__body draggable-scroll" ref="flowWrapperRef">
+								<yx-yun-scroll-list></yx-yun-scroll-list>
+							</view>
+						</view>
+					</view>
+				</view>
+			</view>
+		</view>
+	</tm-app>
+</template>
+
+<script lang="ts" setup>
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { useBaziStore } from '@/store/bazi';
+import { useYunStore } from '@/store/yun';
+import { useUserStore } from '@/store/user';
+import { calculateGanZhiRelationsForList, buildGanZhiDiagram } from '@/libs/utils/bazi-enhanced';
+import utils from '@/libs/utils/utils';
+import { API_BASE_URL } from '@/config/config';
+import { request } from '@/services/api/index';
+
+const bazi_store = useBaziStore();
+const yun_store = useYunStore();
+const user_store = useUserStore();
+const tableWrapperRef = ref<any>(null);
+const flowWrapperRef = ref<any>(null);
+
+const combinedGanZhiRelations = computed(() => {
+	const list: string[] = [];
+	if (bazi_store.sizhu?.year) list.push(bazi_store.sizhu.year);
+	if (bazi_store.sizhu?.month) list.push(bazi_store.sizhu.month);
+	if (bazi_store.sizhu?.day) list.push(bazi_store.sizhu.day);
+	if (bazi_store.sizhu?.time) list.push(bazi_store.sizhu.time);
+
+	const dayun = yun_store.dayun_list?.[yun_store.current_index]?.ganzhi;
+	const liunian = yun_store.year_list?.[yun_store.year_index]?.ganzhi;
+	if (dayun) list.push(dayun);
+	if (liunian) list.push(liunian);
+
+	if (list.length < 2) return null;
+	return calculateGanZhiRelationsForList(list);
+});
+
+const baziRelationData = computed(() => {
+	const pillarsOrder: { key: 'liunian' | 'dayun' | 'year' | 'month' | 'day' | 'hour'; title: string }[] = [
+		{ key: 'liunian', title: '流年' },
+		{ key: 'dayun', title: '大运' },
+		{ key: 'year', title: '年柱' },
+		{ key: 'month', title: '月柱' },
+		{ key: 'day', title: '日柱' },
+		{ key: 'hour', title: '时柱' }
+	];
+
+	const liunianGz = yun_store.year_list?.[yun_store.year_index]?.ganzhi || '';
+	const dayunGz = yun_store.dayun_list?.[yun_store.current_index]?.ganzhi || '';
+
+	const pillars = pillarsOrder
+		.map(p => {
+			if (p.key === 'liunian') {
+				return {
+					key: p.key,
+					title: p.title,
+					stem: liunianGz ? liunianGz[0] : '',
+					branch: liunianGz ? liunianGz[1] : ''
+				};
+			}
+			if (p.key === 'dayun') {
+				return {
+					key: p.key,
+					title: p.title,
+					stem: dayunGz ? dayunGz[0] : '',
+					branch: dayunGz ? dayunGz[1] : ''
+				};
+			}
+			const stem = (bazi_store.tiangan as any)?.[p.key === 'hour' ? 'time' : p.key] || '';
+			const branch = (bazi_store.dizhi as any)?.[p.key === 'hour' ? 'time' : p.key] || '';
+			return {
+				key: p.key,
+				title: p.title,
+				stem: stem || '',
+				branch: branch || ''
+			};
+		})
+		.filter(p => p.stem && p.branch);
+
+	if (pillars.length < 2) return { pillars: [], relations: [] };
+
+	const gzList = pillars.map(p => `${p.stem}${p.branch}`);
+	const labels = pillars.map(p => p.title);
+	const diagram = buildGanZhiDiagram(gzList, labels);
+
+	type RelationType =
+		| 'ke'
+		| 'he'
+		| 'hua'
+		| 'sanhe'
+		| 'sanmeeting'
+		| 'xing'
+		| 'po'
+		| 'hai'
+		| 'chong'
+		| 'banhe'
+		| 'anhe'
+		| 'gonghe';
+
+	const mapType = (edgeType: string): RelationType => {
+		if (edgeType === 'ganHe' || edgeType === 'zhiHe') return 'he';
+		if (edgeType === 'ganKe' || edgeType === 'zhiKe') return 'ke';
+		if (edgeType === 'sanHe') return 'sanhe';
+		if (edgeType === 'sanHui') return 'sanmeeting';
+		if (edgeType === 'banHe') return 'banhe';
+		if (edgeType === 'anHe') return 'anhe';
+		if (edgeType === 'chong') return 'chong';
+		if (edgeType === 'xing') return 'xing';
+		if (edgeType === 'hai') return 'hai';
+		return 'he';
+	};
+
+	const relations: any[] = [];
+	diagram.ganEdges.forEach((edge, idx) => {
+		const fromPillar = pillars[edge.from];
+		const toPillar = pillars[edge.to];
+		if (!fromPillar || !toPillar) return;
+		relations.push({
+			id: `gan-${idx}`,
+			type: mapType(edge.type),
+			label: edge.label,
+			from: { pillarKey: fromPillar.key, level: 'stem', char: fromPillar.stem },
+			to: { pillarKey: toPillar.key, level: 'stem', char: toPillar.stem }
+		});
+	});
+
+	diagram.zhiEdges.forEach((edge, idx) => {
+		const fromPillar = pillars[edge.from];
+		const toPillar = pillars[edge.to];
+		if (!fromPillar || !toPillar) return;
+		relations.push({
+			id: `zhi-${idx}`,
+			type: mapType(edge.type),
+			label: edge.label,
+			from: { pillarKey: fromPillar.key, level: 'branch', char: fromPillar.branch },
+			to: { pillarKey: toPillar.key, level: 'branch', char: toPillar.branch }
+		});
+	});
+
+	return { pillars, relations };
+});
+
+const saving = ref(false);
+const saveError = ref('');
+const exportError = ref('');
+const LOCAL_CACHE_KEY = 'local_saved_bazi';
+const LOCAL_CACHE_TTL = 15 * 24 * 60 * 60 * 1000; // 15天
+const LOCAL_BIRTH_KEY = 'local_birth_payload'; // 可选：缓存当前八字原始数据
+
+import { getPersistentItem, setPersistentItem } from '@/utils/persistentStorage';
+import { buildBaziExportPayload } from '@/utils/baziExport';
+
+function readLocalCache(): Array<{ name: string; birthDatetime: number | null }> {
+	try {
+		const cache = getPersistentItem<Array<{ name: string; birthDatetime: number | null }>>(LOCAL_CACHE_KEY);
+		if (cache && Array.isArray(cache)) return cache;
+	} catch (e) {
+		console.warn('读取本地缓存失败', e);
+	}
+	return [];
+}
+
+function writeLocalCache(entry: { name: string; birthDatetime: number | null }) {
+	try {
+		const cache = readLocalCache();
+		cache.unshift(entry);
+		// 限制长度，避免无限增长
+		const limited = cache.slice(0, 200);
+		setPersistentItem(LOCAL_CACHE_KEY, limited, LOCAL_CACHE_TTL);
+	} catch (e) {
+		console.warn('写入本地缓存失败', e);
+	}
+}
+
+function isLocalDuplicate(entry: { name: string | null; birthDatetime: number | null }) {
+	const cache = readLocalCache();
+	const normalizedName = (entry.name || '').trim();
+	return cache.some((item) => {
+		const itemName = (item.name || '').trim();
+		return item.birthDatetime === entry.birthDatetime && itemName === normalizedName;
+	});
+}
+
+if (user_store.timestamp === null) {
+	uni.redirectTo({
+		url: '/pages/index/index'
+	});
+}
+
+function getGenderLabel() {
+	// 统一标准：0=男，1=女
+	// 需要严格比较，因为可能是数字或字符串
+	const gender = user_store.gender;
+	if (gender === 0 || gender === '0') {
+		return '男';
+	} else if (gender === 1 || gender === '1') {
+		return '女';
+	} else {
+		// 默认返回男
+		console.warn('[WARN] 未知的 gender 值:', gender);
+		return '男';
+	}
+}
+
+function saveToAccount() {
+	if (!user_store.isLoggedIn) {
+		uni.showToast({
+			title: '请先登录账号后再保存',
+			icon: 'none',
+			duration: 2000
+		});
+		return;
+	}
+
+	if (!user_store.timestamp) {
+		uni.showToast({
+			title: '缺少出生时间，无法保存',
+			icon: 'none',
+			duration: 2000
+		});
+		return;
+	}
+
+	saving.value = true;
+	saveError.value = '';
+
+	// 注意：排盘计算完全在前端完成，后端只存储必要数据
+	// rawPayload 是可选的，主要用于前端恢复数据，不包含敏感信息
+	let rawPayload = null;
+	try {
+		// 只保存必要的数据，不保存完整的计算状态
+		// 增强分析数据可以在前端重新计算，不需要存储
+		rawPayload = {
+			user: {
+				realname: user_store.realname,
+				gender: user_store.gender,
+				timestamp: user_store.timestamp
+			},
+			bazi: {
+				solar: bazi_store.solar,
+				lunar: bazi_store.lunar,
+				sizhu: bazi_store.sizhu,
+				tiangan: bazi_store.tiangan,
+				dizhi: bazi_store.dizhi
+				// 注意：不保存增强分析数据（enhanced），这些可以在前端重新计算
+			}
+		};
+	} catch (e) {
+		// 如果序列化失败，使用最小数据集
+		rawPayload = {
+			user: {
+				realname: user_store.realname,
+				gender: user_store.gender,
+				timestamp: user_store.timestamp
+			},
+			bazi: {
+				solar: bazi_store.solar,
+				lunar: bazi_store.lunar,
+				sizhu: bazi_store.sizhu
+			}
+		};
+	}
+
+	const requestData = {
+		name: user_store.realname || '佚名',
+		gender: user_store.gender !== undefined && user_store.gender !== null ? String(user_store.gender) : null,
+		birthDatetime: user_store.timestamp !== undefined && user_store.timestamp !== null ? Number(user_store.timestamp) : null,
+		calendarType: 'solar',
+		rawPayload: rawPayload
+	};
+
+	// 验证数据格式
+	try {
+		JSON.stringify(requestData);
+	} catch (e: any) {
+			saveError.value = '数据格式错误，无法保存: ' + e.message;
+		saving.value = false;
+		return;
+	}
+
+	// 根据是否有 recordId 决定是更新还是新建
+	const recordId = user_store.recordId;
+	const isUpdate = !!recordId;
+	const apiUrl = isUpdate ? `/api/bazi/${recordId}` : '/api/bazi';
+	const method = isUpdate ? 'PUT' : 'POST';
+
+	request(apiUrl, {
+		method: method,
+		needAuth: true,
+		data: requestData,
+	}).then((res: any) => {
+		if (res?.success === false) {
+			if (res.error === '登录已失效，请重新登录') {
+				uni.showToast({
+					title: '登录已失效，请重新登录',
+					icon: 'none',
+					duration: 2000,
+				});
+				saveError.value = '';
+				return;
+			}
+			const errorMsg = res.error || '保存失败';
+			saveError.value = errorMsg;
+			uni.showToast({
+				title: errorMsg,
+				icon: 'none',
+				duration: 2000,
+			});
+			return;
+		}
+
+		// 检查是否是更新操作
+		// 后端返回格式：{success: true, data: {id, updated: true/false}}
+		// 或者直接返回：{id, updated: true/false}
+		const responseData = res?.data || res;
+		const recordId = responseData?.id;
+		const isUpdate = responseData?.updated === true || !!user_store.recordId;
+		
+		// 保存记录ID到store
+		if (recordId) {
+			user_store.recordId = recordId;
+		}
+		
+		const successMsg = isUpdate ? '记录已更新' : '已保存到账号';
+		
+		uni.showToast({
+			title: successMsg,
+			icon: 'success',
+			duration: 1500,
+		});
+		saveError.value = '';
+		writeLocalCache({
+			name: requestData.name,
+			birthDatetime: requestData.birthDatetime,
+		});
+	}).catch((err: any) => {
+		// 处理409错误（记录已存在，但后端可能未自动更新）
+		if (err?.error?.includes('已存在') || err?.error?.includes('重复')) {
+			// 如果后端返回了已存在记录的 ID，保存到 store
+			if (err?.id) {
+				user_store.recordId = err.id;
+			}
+			uni.showToast({
+				title: '记录已存在，已自动更新',
+				icon: 'success',
+				duration: 1500,
+			});
+			saveError.value = '';
+			writeLocalCache({
+				name: requestData.name,
+				birthDatetime: requestData.birthDatetime,
+			});
+			return;
+		}
+		
+		// 如果是更新操作失败，清除 recordId，下次保存时重新创建
+		if (isUpdate) {
+			user_store.recordId = null;
+		}
+		
+		const msg = err?.error || err?.message || '网络错误，请检查后端是否已启动';
+		saveError.value = msg;
+		uni.showToast({
+			title: msg,
+			icon: 'none',
+			duration: 2000,
+		});
+	}).finally(() => {
+		saving.value = false;
+	});
+}
+
+function buildExportPayload() {
+	return buildBaziExportPayload(user_store, bazi_store, yun_store);
+}
+
+function exportJson() {
+	exportError.value = '';
+	if (!user_store.timestamp) {
+		uni.showToast({
+			title: '缺少出生时间，无法导出',
+			icon: 'none',
+			duration: 2000
+		});
+		return;
+	}
+
+	let payload;
+	try {
+		payload = buildExportPayload();
+	} catch (e: any) {
+		exportError.value = '生成导出数据失败：' + (e?.message || e);
+		return;
+	}
+
+	let jsonStr = '';
+	try {
+		jsonStr = JSON.stringify(payload, null, 2);
+	} catch (e: any) {
+		exportError.value = 'JSON 序列化失败：' + (e?.message || e);
+		return;
+	}
+
+	const filename = `bazi-${(utils.HideSecond(user_store.timestamp) || '').replace(/[^0-9]/g, '') || 'export'}.json`;
+
+	// #ifdef H5
+	try {
+		const blob = new Blob([jsonStr], { type: 'application/json' });
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement('a');
+		link.href = url;
+		link.download = filename;
+		link.click();
+		URL.revokeObjectURL(url);
+		uni.showToast({
+			title: '已下载 JSON 文件',
+			icon: 'none',
+			duration: 2000
+		});
+		return;
+	} catch (e) {
+		// fallback to clipboard
+	}
+	// #endif
+
+	uni.setClipboardData({
+		data: jsonStr,
+		success() {
+			uni.showToast({
+				title: 'JSON 已复制，可粘贴保存',
+				icon: 'none',
+				duration: 2000
+			});
+		},
+		fail(err) {
+			exportError.value = '导出失败：' + (err?.errMsg || '剪贴板不可用');
+		}
+	});
+}
+
+function goToChat() {
+	uni.navigateTo({
+		url: '/pages/chat/index'
+	});
+}
+
+function goToHome() {
+	uni.reLaunch({
+		url: '/pages/index/index'
+	});
+}
+
+function editBazi() {
+	// 将当前数据保存到缓存，供主页读取
+	// 统一标准：0=男，1=女（数字）
+	// user_store.gender 和表单 gender 都使用统一标准，无需转换
+	const formGender = user_store.gender !== undefined && user_store.gender !== null 
+		? user_store.gender 
+		: 0;
+	
+	const editData = {
+		realname: user_store.realname || '',
+		gender: formGender,
+		timestamp: user_store.timestamp,
+		recordId: user_store.recordId, // 传递记录ID
+		// 标记为编辑模式
+		isEdit: true
+	};
+	
+	try {
+		// 保存编辑数据到缓存
+		uni.setStorageSync('edit_bazi_data', JSON.stringify(editData));
+		
+		// 验证保存是否成功
+		const saved = uni.getStorageSync('edit_bazi_data');
+		
+		if (!saved) {
+			throw new Error('数据保存失败');
+		}
+		
+		// 显示提示
+		uni.showToast({
+			title: '正在加载数据...',
+			icon: 'loading',
+			duration: 1000
+		});
+		
+		// 延迟跳转，确保数据保存完成
+		setTimeout(() => {
+			// 跳转到主页
+			uni.reLaunch({
+				url: '/pages/index/index'
+			});
+		}, 500);
+	} catch (err) {
+		console.error('保存编辑数据失败:', err);
+		uni.showToast({
+			title: '加载数据失败，请重试',
+			icon: 'none',
+			duration: 2000
+		});
+	}
+}
+
+function GetStartYunLabel() {
+	let str = '出生后';
+	const { start_yun } = bazi_store;
+	if (start_yun.year) str += start_yun.year + '年';
+	if (start_yun.month) str += start_yun.month + '月';
+	if (start_yun.day) str += start_yun.day + '日';
+	if (start_yun.hour) str += start_yun.hour + '时';
+	str += '后起运';
+	return str;
+}
+
+const GetChineseZodiac = year => utils.GetChineseZodiac(year);
+</script>
+
+<style scoped>
+.page-bazi-detail .detail-card {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 16px 14px;
+}
+
+.page-bazi-detail .detail-card .page-title-wrapper {
+	margin-bottom: 8px;
+	padding-bottom: 8px;
+	gap: 8px;
+}
+
+.page-bazi-detail .detail-card .page-title {
+	margin: 0;
+}
+
+.page-bazi-detail .detail-card :deep(.section) {
+	padding: 10px 12px;
+	gap: 8px;
+}
+
+.page-bazi-detail .detail-card :deep(.section__header) {
+	margin-bottom: 6px;
+	padding-bottom: 6px;
+}
+
+.page-bazi-detail .detail-card :deep(.section__body) {
+	gap: 8px;
+}
+
+.page-bazi-detail .info-summary .info-grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 10px;
+}
+
+@media (min-width: 720px) {
+	.page-bazi-detail .info-summary .info-grid {
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	}
+}
+
+.page-bazi-detail .info-tile {
+	padding: 10px 12px;
+	border: 1px solid #e5e7eb;
+	border-radius: 12px;
+	background: #f9fafb;
+}
+
+.page-bazi-detail .actions-row {
+	display: flex;
+	gap: 10px;
+	flex-direction: column;
+	align-items: stretch;
+	margin-top: 12px;
+}
+
+.page-bazi-detail .actions-row :deep(.tm-button) {
+	width: 100% !important;
+	min-width: 0 !important;
+	flex: 1 1 auto;
+}
+
+.page-bazi-detail .actions-row :deep(.tm-button__body) {
+	width: 100% !important;
+}
+
+@media (min-width: 720px) {
+	.page-bazi-detail .actions-row {
+		flex-direction: row;
+		flex-wrap: wrap;
+		align-items: center;
+	}
+
+	.page-bazi-detail .actions-row :deep(.tm-button) {
+		width: auto !important;
+		flex: 0 0 auto;
+	}
+
+	.page-bazi-detail .actions-row :deep(.tm-button__body) {
+		width: auto !important;
+	}
+}
+
+.page-bazi-detail .table-section .start-yun {
+	margin-top: 16px;
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 12px;
+	padding-top: 12px;
+	border-top: 1px solid #e2e8f0;
+}
+
+.page-bazi-detail .table-wrapper {
+	width: 100%;
+	overflow-x: auto;
+	box-sizing: border-box;
+	scrollbar-width: thin;
+}
+
+.page-bazi-detail .table-wrapper :deep(.tm-table) {
+	max-width: 100%;
+	box-sizing: border-box;
+}
+
+.page-bazi-detail .table-wrapper::-webkit-scrollbar {
+	height: 8px;
+	display: block;
+}
+
+.page-bazi-detail .table-wrapper::-webkit-scrollbar-track {
+	background: #f1f1f1;
+	border-radius: 4px;
+}
+
+.page-bazi-detail .table-wrapper::-webkit-scrollbar-thumb {
+	background: #cbd5e0;
+	border-radius: 4px;
+}
+
+.page-bazi-detail .analysis-card .analysis-grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 14px;
+}
+
+@media (min-width: 720px) {
+	.page-bazi-detail .table-section .start-yun {
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	}
+
+	.page-bazi-detail .analysis-card .analysis-grid {
+		grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	}
+}
+
+.layout-medium .page-bazi-detail .info-summary .info-grid,
+.layout-wide .page-bazi-detail .info-summary .info-grid {
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.layout-medium .page-bazi-detail .actions-row,
+.layout-wide .page-bazi-detail .actions-row {
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+.layout-medium .page-bazi-detail .actions-row :deep(.tm-button),
+.layout-wide .page-bazi-detail .actions-row :deep(.tm-button) {
+	width: auto !important;
+	flex: 0 0 auto;
+}
+
+.layout-medium .page-bazi-detail .actions-row :deep(.tm-button__body),
+.layout-wide .page-bazi-detail .actions-row :deep(.tm-button__body) {
+	width: auto !important;
+}
+
+.layout-medium .page-bazi-detail .table-section .start-yun,
+.layout-wide .page-bazi-detail .table-section .start-yun {
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.layout-medium .page-bazi-detail .analysis-card .analysis-grid,
+.layout-wide .page-bazi-detail .analysis-card .analysis-grid {
+	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.page-bazi-detail .chart-section :deep(.bazi-chart) {
+	min-height: 260px;
+}
+
+.page-bazi-detail .analysis-block {
+	padding: 10px 12px;
+	border: 1px solid #e5e7eb;
+	border-radius: 12px;
+	background: #f9fafb;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	line-height: 1.3;
+}
+
+.page-bazi-detail .analysis-block :deep(uni-text) {
+	line-height: 1.2;
+}
+
+.page-bazi-detail .wuxing-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 2px;
+}
+
+.page-bazi-detail .wuxing-tag {
+	padding: 2px 4px;
+	border-radius: 4px;
+	background: #eef2ff;
+	border: 1px solid #d9e2ec;
+}
+
+.page-bazi-detail .relation-item {
+	margin-top: 0;
+}
+
+
+.page-bazi-detail .error-message {
+	padding: 8px 10px;
+	background: rgba(245, 101, 101, 0.08);
+	border-radius: 10px;
+	border-left: 3px solid #f56565;
+}
+
+.page-bazi-detail .flow-section__body {
+	padding: 0;
+	overflow-x: auto;
+	scrollbar-width: thin;
+}
+
+.page-bazi-detail .flow-section :deep(.yun-sheet) {
+	margin: 0 !important;
+	width: 100% !important;
+	box-sizing: border-box;
+}
+
+.page-bazi-detail .flow-section :deep(.scroll-container) {
+	width: 100%;
+	max-width: 100%;
+	overflow: hidden;
+}
+
+.page-bazi-detail .flow-section :deep(.scroll-view) {
+	max-width: 100%;
+	overflow-x: auto;
+	padding-right: 6px;
+	scrollbar-width: thin;
+}
+
+.page-bazi-detail .flow-section :deep(.scroll-view::-webkit-scrollbar),
+.page-bazi-detail .flow-section__body::-webkit-scrollbar {
+	height: 8px;
+	display: block;
+}
+
+.page-bazi-detail .flow-section :deep(.scroll-view::-webkit-scrollbar-track),
+.page-bazi-detail .flow-section__body::-webkit-scrollbar-track {
+	background: #f1f1f1;
+	border-radius: 4px;
+}
+
+.page-bazi-detail .flow-section :deep(.scroll-view::-webkit-scrollbar-thumb),
+.page-bazi-detail .flow-section__body::-webkit-scrollbar-thumb {
+	background: #cbd5e0;
+	border-radius: 4px;
+}
+
+.page-bazi-detail .draggable-scroll {
+	cursor: grab;
+}
+
+.page-bazi-detail .draggable-scroll.dragging {
+	cursor: grabbing;
+	user-select: none;
+}</style>

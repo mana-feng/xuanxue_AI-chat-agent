@@ -1,6 +1,6 @@
 <template>
 	<tm-app>
-		<view class="app-shell">
+		<view class="app-shell page-bazi-detail">
 			<yx-nav-header></yx-nav-header>
 			<view class="app-main">
 				<view class="page-shell">
@@ -36,7 +36,7 @@
 								</view>
 								<view class="info-tile">
 									<tm-text :font-size="24" color="#718096" label="阳历"></tm-text>
-									<tm-text :font-size="30" :bold="true" color="#2d3748" :label="utils.HideSecond(user_store.timestamp)"></tm-text>
+									<tm-text :font-size="30" :bold="true" color="#2d3748" :label="bazi_store.yangli || utils.HideSecond(user_store.timestamp)"></tm-text>
 								</view>
 								<view class="info-tile">
 									<tm-text :font-size="24" color="#718096" label="星座"></tm-text>
@@ -91,7 +91,7 @@
 								<h2 class="section__title">排盘详情</h2>
 							</header>
 							<view class="section__body">
-								<view class="table-wrapper draggable-scroll" ref="tableWrapperRef">
+								<view ref="tableWrapperRef" class="table-wrapper draggable-scroll">
 									<yx-detail-table></yx-detail-table>
 								</view>
 								<view class="start-yun">
@@ -150,7 +150,7 @@
 								<tm-icon name="tmicon-md-time" :font-size="26" color="#667eea"></tm-icon>
 								<h2 class="section__title">流运流年</h2>
 							</header>
-							<view class="section__body flow-section__body draggable-scroll" ref="flowWrapperRef">
+							<view ref="flowWrapperRef" class="section__body flow-section__body draggable-scroll">
 								<yx-yun-scroll-list></yx-yun-scroll-list>
 							</view>
 						</view>
@@ -305,12 +305,12 @@ const LOCAL_CACHE_KEY = 'local_saved_bazi';
 const LOCAL_CACHE_TTL = 15 * 24 * 60 * 60 * 1000; // 15天
 const LOCAL_BIRTH_KEY = 'local_birth_payload'; // 可选：缓存当前八字原始数据
 
-import { getSecureItem, setSecureItem } from '@/utils/secureStorage';
+import { getPersistentItem, setPersistentItem } from '@/utils/persistentStorage';
 import { buildBaziExportPayload } from '@/utils/baziExport';
 
 function readLocalCache(): Array<{ name: string; birthDatetime: number | null }> {
 	try {
-		const cache = getSecureItem<Array<{ name: string; birthDatetime: number | null }>>(LOCAL_CACHE_KEY);
+		const cache = getPersistentItem<Array<{ name: string; birthDatetime: number | null }>>(LOCAL_CACHE_KEY);
 		if (cache && Array.isArray(cache)) return cache;
 	} catch (e) {
 		console.warn('读取本地缓存失败', e);
@@ -324,7 +324,7 @@ function writeLocalCache(entry: { name: string; birthDatetime: number | null }) 
 		cache.unshift(entry);
 		// 限制长度，避免无限增长
 		const limited = cache.slice(0, 200);
-		setSecureItem(LOCAL_CACHE_KEY, limited, LOCAL_CACHE_TTL);
+		setPersistentItem(LOCAL_CACHE_KEY, limited, LOCAL_CACHE_TTL);
 	} catch (e) {
 		console.warn('写入本地缓存失败', e);
 	}
@@ -386,24 +386,18 @@ function saveToAccount() {
 	// rawPayload 是可选的，主要用于前端恢复数据，不包含敏感信息
 	let rawPayload = null;
 	try {
-		// 只保存必要的数据，不保存完整的计算状态
-		// 增强分析数据可以在前端重新计算，不需要存储
+		// Lite mode: 只保存用于重新计算的必要信息
+		// 前端根据 timestamp 和 gender 即可完全恢复 bazi_store 的状态
 		rawPayload = {
+			lite: true,
 			user: {
 				realname: user_store.realname,
 				gender: user_store.gender,
 				timestamp: user_store.timestamp
-			},
-			bazi: {
-				solar: bazi_store.solar,
-				lunar: bazi_store.lunar,
-				sizhu: bazi_store.sizhu,
-				tiangan: bazi_store.tiangan,
-				dizhi: bazi_store.dizhi
-				// 注意：不保存增强分析数据（enhanced），这些可以在前端重新计算
 			}
 		};
 	} catch (e) {
+		console.warn('构造精简数据失败，降级为完整数据', e);
 		// 如果序列化失败，使用最小数据集
 		rawPayload = {
 			user: {
@@ -675,116 +669,181 @@ const GetChineseZodiac = year => utils.GetChineseZodiac(year);
 </script>
 
 <style scoped>
-.detail-card {
+.page-bazi-detail .detail-card {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
-	padding: 12px;
+	padding: 16px 14px;
 }
 
-.detail-card .page-title-wrapper {
+.page-bazi-detail .detail-card .page-title-wrapper {
 	margin-bottom: 8px;
 	padding-bottom: 8px;
 	gap: 8px;
 }
 
-.detail-card .page-title {
+.page-bazi-detail .detail-card .page-title {
 	margin: 0;
 }
 
-.detail-card :deep(.section) {
+.page-bazi-detail .detail-card :deep(.section) {
 	padding: 10px 12px;
 	gap: 8px;
 }
 
-.detail-card :deep(.section__header) {
+.page-bazi-detail .detail-card :deep(.section__header) {
 	margin-bottom: 6px;
 	padding-bottom: 6px;
 }
 
-.detail-card :deep(.section__body) {
+.page-bazi-detail .detail-card :deep(.section__body) {
 	gap: 8px;
 }
 
-.info-summary .info-grid {
+.page-bazi-detail .info-summary .info-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	grid-template-columns: 1fr;
 	gap: 10px;
 }
 
-.info-tile {
+@media (min-width: 720px) {
+	.page-bazi-detail .info-summary .info-grid {
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	}
+}
+
+.page-bazi-detail .info-tile {
 	padding: 10px 12px;
 	border: 1px solid #e5e7eb;
 	border-radius: 12px;
 	background: #f9fafb;
 }
 
-.actions-row {
+.page-bazi-detail .actions-row {
 	display: flex;
 	gap: 10px;
-	flex-wrap: wrap;
+	flex-direction: column;
+	align-items: stretch;
 	margin-top: 12px;
-	align-items: center;
-	flex-direction: row;
 }
 
-.actions-row :deep(.tm-button) {
-	width: auto !important;
+.page-bazi-detail .actions-row :deep(.tm-button) {
+	width: 100% !important;
 	min-width: 0 !important;
-	flex: 0 0 auto;
+	flex: 1 1 auto;
 }
 
-.actions-row :deep(.tm-button__body) {
-	width: auto !important;
+.page-bazi-detail .actions-row :deep(.tm-button__body) {
+	width: 100% !important;
 }
 
-.table-section .start-yun {
+@media (min-width: 720px) {
+	.page-bazi-detail .actions-row {
+		flex-direction: row;
+		flex-wrap: wrap;
+		align-items: center;
+	}
+
+	.page-bazi-detail .actions-row :deep(.tm-button) {
+		width: auto !important;
+		flex: 0 0 auto;
+	}
+
+	.page-bazi-detail .actions-row :deep(.tm-button__body) {
+		width: auto !important;
+	}
+}
+
+.page-bazi-detail .table-section .start-yun {
 	margin-top: 16px;
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	grid-template-columns: 1fr;
 	gap: 12px;
 	padding-top: 12px;
 	border-top: 1px solid #e2e8f0;
 }
 
-.table-wrapper {
+.page-bazi-detail .table-wrapper {
 	width: 100%;
 	overflow-x: auto;
 	box-sizing: border-box;
 	scrollbar-width: thin;
 }
 
-.table-wrapper :deep(.tm-table) {
+.page-bazi-detail .table-wrapper :deep(.tm-table) {
 	max-width: 100%;
 	box-sizing: border-box;
 }
 
-.table-wrapper::-webkit-scrollbar {
+.page-bazi-detail .table-wrapper::-webkit-scrollbar {
 	height: 8px;
 	display: block;
 }
 
-.table-wrapper::-webkit-scrollbar-track {
+.page-bazi-detail .table-wrapper::-webkit-scrollbar-track {
 	background: #f1f1f1;
 	border-radius: 4px;
 }
 
-.table-wrapper::-webkit-scrollbar-thumb {
+.page-bazi-detail .table-wrapper::-webkit-scrollbar-thumb {
 	background: #cbd5e0;
 	border-radius: 4px;
 }
 
-.analysis-card .analysis-grid {
+.page-bazi-detail .analysis-card .analysis-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	grid-template-columns: 1fr;
 	gap: 14px;
 }
 
-.chart-section :deep(.bazi-chart) {
+@media (min-width: 720px) {
+	.page-bazi-detail .table-section .start-yun {
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	}
+
+	.page-bazi-detail .analysis-card .analysis-grid {
+		grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	}
+}
+
+.layout-medium .page-bazi-detail .info-summary .info-grid,
+.layout-wide .page-bazi-detail .info-summary .info-grid {
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.layout-medium .page-bazi-detail .actions-row,
+.layout-wide .page-bazi-detail .actions-row {
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+.layout-medium .page-bazi-detail .actions-row :deep(.tm-button),
+.layout-wide .page-bazi-detail .actions-row :deep(.tm-button) {
+	width: auto !important;
+	flex: 0 0 auto;
+}
+
+.layout-medium .page-bazi-detail .actions-row :deep(.tm-button__body),
+.layout-wide .page-bazi-detail .actions-row :deep(.tm-button__body) {
+	width: auto !important;
+}
+
+.layout-medium .page-bazi-detail .table-section .start-yun,
+.layout-wide .page-bazi-detail .table-section .start-yun {
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.layout-medium .page-bazi-detail .analysis-card .analysis-grid,
+.layout-wide .page-bazi-detail .analysis-card .analysis-grid {
+	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.page-bazi-detail .chart-section :deep(.bazi-chart) {
 	min-height: 260px;
 }
 
-.analysis-block {
+.page-bazi-detail .analysis-block {
 	padding: 10px 12px;
 	border: 1px solid #e5e7eb;
 	border-radius: 12px;
@@ -795,84 +854,83 @@ const GetChineseZodiac = year => utils.GetChineseZodiac(year);
 	line-height: 1.3;
 }
 
-.analysis-block :deep(uni-text) {
+.page-bazi-detail .analysis-block :deep(uni-text) {
 	line-height: 1.2;
 }
 
-.wuxing-tags {
+.page-bazi-detail .wuxing-tags {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 2px;
 }
 
-.wuxing-tag {
+.page-bazi-detail .wuxing-tag {
 	padding: 2px 4px;
 	border-radius: 4px;
 	background: #eef2ff;
 	border: 1px solid #d9e2ec;
 }
 
-.relation-item {
+.page-bazi-detail .relation-item {
 	margin-top: 0;
 }
 
 
-.error-message {
+.page-bazi-detail .error-message {
 	padding: 8px 10px;
 	background: rgba(245, 101, 101, 0.08);
 	border-radius: 10px;
 	border-left: 3px solid #f56565;
 }
 
-.flow-section__body {
+.page-bazi-detail .flow-section__body {
 	padding: 0;
 	overflow-x: auto;
 	scrollbar-width: thin;
 }
 
-.flow-section :deep(.yun-sheet) {
+.page-bazi-detail .flow-section :deep(.yun-sheet) {
 	margin: 0 !important;
 	width: 100% !important;
 	box-sizing: border-box;
 }
 
-.flow-section :deep(.scroll-container) {
+.page-bazi-detail .flow-section :deep(.scroll-container) {
 	width: 100%;
 	max-width: 100%;
 	overflow: hidden;
 }
 
-.flow-section :deep(.scroll-view) {
+.page-bazi-detail .flow-section :deep(.scroll-view) {
 	max-width: 100%;
 	overflow-x: auto;
 	padding-right: 6px;
 	scrollbar-width: thin;
 }
 
-.flow-section :deep(.scroll-view::-webkit-scrollbar),
-.flow-section__body::-webkit-scrollbar {
+.page-bazi-detail .flow-section :deep(.scroll-view::-webkit-scrollbar),
+.page-bazi-detail .flow-section__body::-webkit-scrollbar {
 	height: 8px;
 	display: block;
 }
 
-.flow-section :deep(.scroll-view::-webkit-scrollbar-track),
-.flow-section__body::-webkit-scrollbar-track {
+.page-bazi-detail .flow-section :deep(.scroll-view::-webkit-scrollbar-track),
+.page-bazi-detail .flow-section__body::-webkit-scrollbar-track {
 	background: #f1f1f1;
 	border-radius: 4px;
 }
 
-.flow-section :deep(.scroll-view::-webkit-scrollbar-thumb),
-.flow-section__body::-webkit-scrollbar-thumb {
+.page-bazi-detail .flow-section :deep(.scroll-view::-webkit-scrollbar-thumb),
+.page-bazi-detail .flow-section__body::-webkit-scrollbar-thumb {
 	background: #cbd5e0;
 	border-radius: 4px;
 }
 
-.draggable-scroll {
+.page-bazi-detail .draggable-scroll {
 	cursor: grab;
 }
 
-.draggable-scroll.dragging {
+.page-bazi-detail .draggable-scroll.dragging {
 	cursor: grabbing;
 	user-select: none;
-}
-</style>
+}</style>

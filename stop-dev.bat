@@ -2,7 +2,7 @@
 setlocal EnableDelayedExpansion
 
 rem Ports to check/kill
-set "PORTS=3001 3000 24678"
+set "PORTS=3000 3001 3002 24678"
 
 echo.
 echo [INFO] Trying to kill processes listening on ports: %PORTS%

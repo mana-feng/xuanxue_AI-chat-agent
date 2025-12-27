@@ -1,11 +1,11 @@
 {
-    "name" : "mana玄学AI",
+    "name" : "mana-AI",
     "appid" : "__UNI__G9DE1127",
     "description" : "",
     "versionName" : "1.0.0",
     "versionCode" : 1,
     "transformPx" : false,
-    "_comment_5p" : "5+App特有相关",
+    "_comment_5p" : "5+App specific settings",
     "app-plus" : {
         "usingComponents" : true,
         "nvueStyleCompiler" : "uni-app",
@@ -17,9 +17,9 @@
             "delay" : 0
         },
         "modules" : {},
-        "_comment_distribute" : "应用发布信息",
+        "_comment_distribute" : "Distribution settings",
         "distribute" : {
-            "_comment_android" : "android打包配置",
+            "_comment_android" : "Android packaging",
             "android" : {
                 "permissions" : [
                     "<uses-permission android:name=\"android.permission.INTERNET\"/>",
@@ -41,7 +41,7 @@
                 ]
             },
             "ios" : {},
-            "_comment_sdk" : "SDK配置",
+            "_comment_sdk" : "SDK settings",
             "sdkConfigs" : {},
             "icons" : {
                 "android" : {
@@ -77,9 +77,7 @@
             }
         }
     },
-    "_comment_quickapp" : "快应用特有相�?,
-    "quickapp" : {},
-    "_comment_mp" : "小程序特有相�?,
+    "_comment_mp" : "Mini program specific",
     "mp-weixin" : {
         "appid" : "wx359a9552c91dfe2b",
         "setting" : {
@@ -102,18 +100,6 @@
             "subPackages" : true
         },
         "lazyCodeLoading" : "requiredComponents"
-    },
-    "mp-alipay" : {
-        "appid" : "__FILL_APPID_FOR_ALIPAY_MINIPROGRAM__",
-        "usingComponents" : true
-    },
-    "mp-baidu" : {
-        "appid" : "__FILL_APPID_FOR_BAIDU_MINIPROGRAM__",
-        "usingComponents" : true
-    },
-    "mp-toutiao" : {
-        "appid" : "__FILL_APPID_FOR_TOUTIAO_MINIPROGRAM__",
-        "usingComponents" : true
     },
     "uniStatistics" : {
         "enable" : false

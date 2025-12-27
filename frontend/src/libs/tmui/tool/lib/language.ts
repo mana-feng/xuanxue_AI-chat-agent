@@ -8,7 +8,7 @@ export const language= function(key:string){
 		en,
 		'zh-Hans':zhHans
 	}
-	let i18nConfig:I18nOptions | undefined = {
+	const i18nConfig:I18nOptions | undefined = {
 	  locale: uni.getLocale(),// 获取已设置的语言
 	  messages
 	}
@@ -28,7 +28,7 @@ export const languageByGlobal= function(){
 		en,
 		'zh-Hans':zhHans
 	}
-	let i18nConfig = {
+	const i18nConfig = {
 	  locale: uni.getLocale(),// 获取已设置的语言
 	  messages
 	}

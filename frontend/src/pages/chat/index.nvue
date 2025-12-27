@@ -1,7 +1,7 @@
 <template>
 	<view class="chat-page-shell">
 		<yx-nav-header></yx-nav-header>
-		<chat-panel class="chat-panel-wrapper" @send="handleSend" ref="panelRef" />
+		<chat-panel ref="panelRef" class="chat-panel-wrapper" @send="handleSend" />
 	</view>
 </template>
 
@@ -61,12 +61,7 @@ function handleSend(text: string) {
 	sendToLLM(text);
 }
 
-// 不再需要加载配置，后端已统一处理
-// 使用默认值即可，后端会根据配置自动选择合适的 provider
-async function loadConfig() {
-	// 静默处理，不调用管理员接口
-	// 后端已经统一了响应格式，前端不需要知道具体的 provider
-}
+// Removed unused loadConfig function
 
 function buildMessages(text: string) {
 	const panel = panelRef.value;
@@ -436,6 +431,7 @@ async function sendWithWS(messages: Array<{ role: string; content: string }>, to
 						}
 					}
 				} catch (e) {
+					console.error('Failed to parse message:', e);
 				}
 			}
 			// 将流式状态改为完成

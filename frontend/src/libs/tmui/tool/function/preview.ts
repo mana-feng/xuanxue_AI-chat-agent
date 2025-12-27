@@ -23,7 +23,7 @@
 		
 		if(typeof list[0] === 'object' && typeof list[0] !== 'undefined'){
 			
-			let urls:Array<string> = [];
+			const urls:Array<string> = [];
 			list.forEach((item:any)=>{
 				urls.push(item[rangKey]);
 			})

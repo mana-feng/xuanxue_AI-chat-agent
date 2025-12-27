@@ -179,8 +179,6 @@ function initWebSocketServer(server) {
 							if (cfg.provider === 'anthropic') {
 								if (json.delta && json.delta.text) {
 									text = json.delta.text;
-								} else if (json.type === 'content_block_delta' && json.delta && json.delta.text) {
-									text = json.delta.text;
 								}
 							} else {
 								// OpenAI/DeepSeek/Qwen 流式响应
@@ -209,9 +207,10 @@ function initWebSocketServer(server) {
 
 				llmRes.body.on('end', async () => {
 					const tail = decoder.end();
-					if (tail) {
+					// 即使 tail 为空，也需要处理 buffer 或 jsonBuffer 中剩余的内容
+					if (tail || buffer || jsonBuffer) {
 						if (cfg.provider === 'gemini') {
-							jsonBuffer += tail;
+							jsonBuffer += (tail || '');
 							let startIdx = 0;
 							while (startIdx < jsonBuffer.length) {
 								const braceStart = jsonBuffer.indexOf('{', startIdx);
@@ -249,7 +248,7 @@ function initWebSocketServer(server) {
 								startIdx = 0;
 							}
 						} else {
-							buffer += tail;
+							buffer += (tail || '');
 							if (buffer.trim()) {
 								try {
 									let jsonStr = buffer;

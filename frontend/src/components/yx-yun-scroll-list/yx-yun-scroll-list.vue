@@ -1,5 +1,5 @@
 <template>
-	<view>
+	<view class="yx-yun-scroll-list">
 		<!-- 大运 -->
 		<tm-sheet
 			v-if="(yun_store as any)[map_list[0].list].length"
@@ -19,9 +19,9 @@
 					:enable-flex="true"
 				>
 					<view
-						class="scroll-view-item"
 						v-for="(ditem, dindex) in (yun_store as any)[map_list[0].list]"
 						:key="dindex"
+						class="scroll-view-item"
 					>
 						<view
 							class="scroll-view-item-default"
@@ -31,10 +31,10 @@
 							}"
 							@click="ScrollItemClick(0, dindex)"
 						>
-							<view><tm-text :label="ditem.start_year"></tm-text></view>
-							<view><tm-text :label="ditem.ganzhi"></tm-text></view>
-							<view><tm-text :label="ditem.start_age + '岁'"></tm-text></view>
-							<view><tm-text :label="ditem.shishen"></tm-text></view>
+							<view><tm-text class="yun-text" :label="ditem.start_year"></tm-text></view>
+							<view><tm-text class="yun-text" :label="ditem.ganzhi"></tm-text></view>
+							<view><tm-text class="yun-text" :label="ditem.start_age + '岁'"></tm-text></view>
+							<view><tm-text class="yun-text" :label="ditem.shishen"></tm-text></view>
 						</view>
 					</view>
 				</scroll-view>
@@ -108,9 +108,9 @@
 					:enable-flex="true"
 				>
 					<view
-						class="scroll-view-item"
 						v-for="(ditem, dindex) in (yun_store as any)[map_list[1].list]"
 						:key="dindex"
+						class="scroll-view-item"
 					>
 						<view
 							class="scroll-view-item-default"
@@ -120,10 +120,10 @@
 							}"
 							@click="ScrollItemClick(1, dindex)"
 						>
-							<view><tm-text :label="ditem.year"></tm-text></view>
-							<view><tm-text :label="ditem.ganzhi"></tm-text></view>
-							<view><tm-text :label="ditem.age + '岁'"></tm-text></view>
-							<view><tm-text :label="ditem.shishen"></tm-text></view>
+							<view><tm-text class="yun-text" :label="ditem.year"></tm-text></view>
+							<view><tm-text class="yun-text" :label="ditem.ganzhi"></tm-text></view>
+							<view><tm-text class="yun-text" :label="ditem.age + '岁'"></tm-text></view>
+							<view><tm-text class="yun-text" :label="ditem.shishen"></tm-text></view>
 						</view>
 					</view>
 				</scroll-view>
@@ -182,9 +182,9 @@
 					:enable-flex="true"
 				>
 					<view
-						class="scroll-view-item"
 						v-for="(ditem, dindex) in (yun_store as any)[map_list[2].list]"
 						:key="dindex"
+						class="scroll-view-item"
 					>
 						<view
 							class="scroll-view-item-default"
@@ -194,10 +194,10 @@
 							}"
 							@click="ScrollItemClick(2, dindex)"
 						>
-							<view><tm-text :label="ditem.jieqi"></tm-text></view>
-							<view><tm-text :label="ditem.date"></tm-text></view>
-							<view><tm-text :label="ditem.ganzhi"></tm-text></view>
-							<view><tm-text :label="ditem.shishen"></tm-text></view>
+							<view><tm-text class="yun-text" :label="ditem.jieqi"></tm-text></view>
+							<view><tm-text class="yun-text" :label="ditem.date"></tm-text></view>
+							<view><tm-text class="yun-text" :label="ditem.ganzhi"></tm-text></view>
+							<view><tm-text class="yun-text" :label="ditem.shishen"></tm-text></view>
 						</view>
 					</view>
 				</scroll-view>
@@ -256,9 +256,9 @@
 					:enable-flex="true"
 				>
 					<view
-						class="scroll-view-item"
 						v-for="(ditem, dindex) in limitedDayList"
 						:key="dindex"
+						class="scroll-view-item"
 					>
 						<view
 							class="scroll-view-item-default"
@@ -268,10 +268,10 @@
 							}"
 							@click="ScrollItemClick(3, getOriginalDayIndex(dindex))"
 						>
-							<view><tm-text :label="formatSolarDate(ditem.date)"></tm-text></view>
-							<view><tm-text :label="ditem.nongli"></tm-text></view>
-							<view><tm-text :label="ditem.ganzhi"></tm-text></view>
-							<view><tm-text :label="ditem.shishen"></tm-text></view>
+							<view><tm-text class="yun-text" :label="formatSolarDate(ditem.date)"></tm-text></view>
+							<view><tm-text class="yun-text" :label="ditem.nongli"></tm-text></view>
+							<view><tm-text class="yun-text" :label="ditem.ganzhi"></tm-text></view>
+							<view><tm-text class="yun-text" :label="ditem.shishen"></tm-text></view>
 						</view>
 					</view>
 				</scroll-view>
@@ -314,7 +314,7 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, watch, nextTick, computed, ref, onUnmounted } from 'vue';
+import { onMounted, watch, nextTick, computed, onUnmounted } from 'vue';
 import { useYunStore } from '@/store/yun';
 import { useBaziStore } from '@/store/bazi';
 import { calculateShenShaForGanZhi, calculateGanZhiRelations } from '@/libs/utils/bazi-enhanced';
@@ -355,10 +355,10 @@ const limitedDayList = computed(() => {
 	// 特殊处理：小寒流月（索引为11）应该是下一年的1月6号到2月3号
 	let startYear, startMonth, startDay, endYear, endMonth, endDay;
 	if (monthIndex === 11) {
-		// 小寒流月：起始日期为下一年的1月6号，结束日期为下一年的2月3号（包含）
+		// 小寒流月：起始日期为下一年的1月5号，结束日期为下一年的2月3号（包含）
 		startYear = currentYear + 1;
 		startMonth = 1;
-		startDay = 6;
+		startDay = 5;
 		endYear = currentYear + 1;
 		endMonth = 2;
 		endDay = 3;
@@ -420,6 +420,7 @@ const limitedDayList = computed(() => {
 });
 
 // 获取流日列表的起始索引偏移量（用于索引映射）
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const dayListStartOffset = computed(() => {
 	const dayList = yun_store.day_list || [];
 	const limitedList = limitedDayList.value;
@@ -569,16 +570,17 @@ function getCachedRelationArray(
 	return relations?.[key] || [];
 }
 
-function ScrollItemClick(e: number, index: number) {
+function ScrollItemClick(e: number, index: number | string) {
+	const idx = Number(index);
 	if (e > 3) return;
 	const key_list = ['current_index', 'year_index', 'month_index', 'day_index'];
 	const methods_list = ['resolveLiuYear', 'resolveLiuMonth', 'resolveLiuDay'];
 	
 	// 检查索引是否真的改变了，避免重复计算
 	const currentIndex = (yun_store as any)[key_list[e]];
-	if (currentIndex === index) return;
+	if (currentIndex === idx) return;
 	
-	(yun_store as any)[key_list[e]] = index;
+	(yun_store as any)[key_list[e]] = idx;
 	if (e < 3) {
 		(yun_store as any)[key_list[e + 1]] = 0;
 	}
@@ -656,38 +658,6 @@ function getSelectedRelations(indexKey: string, listKey: string) {
 	}
 
 	return calculateGanZhiRelations(ganzhi, originalGanZhi);
-}
-
-function hasRelations(indexKey: string, listKey: string): boolean {
-	const relations = getSelectedRelations(indexKey, listKey);
-	if (!relations) return false;
-	return !!(
-		relations.ganHe ||
-		relations.zhiLiuHe ||
-		relations.zhiSanHe ||
-		relations.zhiSanHui ||
-		(relations.zhiLiuChong && relations.zhiLiuChong.length > 0) ||
-		(relations.zhiXing && relations.zhiXing.length > 0) ||
-		(relations.zhiHai && relations.zhiHai.length > 0)
-	);
-}
-
-function getRelationValue(
-	indexKey: string,
-	listKey: string,
-	key: 'ganHe' | 'zhiLiuHe' | 'zhiSanHe' | 'zhiSanHui'
-): string {
-	const relations = getSelectedRelations(indexKey, listKey);
-	return relations?.[key] || '';
-}
-
-function getRelationArray(
-	indexKey: string,
-	listKey: string,
-	key: 'zhiLiuChong' | 'zhiXing' | 'zhiHai'
-): string[] {
-	const relations = getSelectedRelations(indexKey, listKey);
-	return relations?.[key] || [];
 }
 
 // 自动定位到当前系统时间（只在初始加载时执行）
@@ -1003,9 +973,6 @@ onUnmounted(() => {
 		&-active {
 			background-color: #6768ab;
 			border-radius: 12rpx;
-			:deep(uni-text) {
-				color: #f8f8f8 !important;
-			}
 		}
 	}
 }
@@ -1026,12 +993,6 @@ onUnmounted(() => {
 	-ms-user-select: none;
 }
 
-:deep(.yun-sheet) {
-	width: 100%;
-	box-sizing: border-box;
-	margin: 0 !important;
-}
-
 .selected-info {
 	border-top: 1px solid #e0e0e0;
 	margin-top: 10rpx;
@@ -1042,5 +1003,17 @@ onUnmounted(() => {
 	width: 100%;
 	background-color: #e5e7eb;
 	margin: 12rpx 0;
+}
+</style>
+
+<style lang="scss">
+.yx-yun-scroll-list .scroll-view-item-active .yun-text {
+	color: #f8f8f8 !important;
+}
+
+.yx-yun-scroll-list .yun-sheet {
+	width: 100%;
+	box-sizing: border-box;
+	margin: 0 !important;
 }
 </style>

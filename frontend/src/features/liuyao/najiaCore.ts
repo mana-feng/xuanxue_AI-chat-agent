@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 // 六爻排盘核心逻辑（完整实现，移植自 najia-master）
 import {
@@ -12,24 +13,12 @@ import {
 	GANS,
 	ZHIS,
 	ZHI5,
-	CHONG,
 	LIUHE,
 	SYMBOL,
 	KONG
 } from './najiaConst';
 import { computeDaily } from './dateNajia';
-import { getGuaci, getGuaName, getGuaciEntry } from './guaci';
-
-const TRIGRAM_MAP: Record<string, string> = {
-	'111': '乾',
-	'110': '巽',
-	'101': '离',
-	'100': '艮',
-	'011': '兑',
-	'010': '坎',
-	'001': '震',
-	'000': '坤'
-};
+import { getGuaName, getGuaciEntry } from './guaci';
 
 /**
  * 干支五行
@@ -78,6 +67,10 @@ export function buildDisplayData(compiled: any) {
 	}
 
 	const rows: any = { ...compiled };
+	// Prevent mutation of original compiled data
+	if (rows.bian) rows.bian = { ...rows.bian };
+	if (rows.hide) rows.hide = { ...rows.hide };
+
 	const symbol = SYMBOL;
 	const empty = '\u3000'.repeat(6);
 
@@ -234,25 +227,7 @@ export function compileNajia(params: number[], options: any = {}) {
 	// 卦类型
 	const type = getType(mark);
 
-	let guaciEntry = null;
-	if (guaci) {
-		try {
-			if (typeof getGuaciEntry !== 'undefined') {
-				guaciEntry = getGuaciEntry(name) || getGuaciEntry(mark) || null;
-			}
-		} catch (err) {
-			// ignore runtime lookup errors
-		}
-		// fallback to plain string lookup if entry not available
-		if (!guaciEntry) {
-			try {
-				const text = (typeof getGuaci !== 'undefined') ? (getGuaci(name) || getGuaci(mark) || '') : '';
-				guaciEntry = { guaci: text, text: text };
-			} catch (err) {
-				guaciEntry = { guaci: '', text: '' };
-			}
-		}
-	}
+	const guaciEntry = guaci ? getGuaciEntry(name) || getGuaciEntry(mark) : null;
 
 	return {
 		params,
@@ -508,8 +483,8 @@ export function getNaja(symbol: string): string[] {
 		wgz.push(ganWai + waiNajiaStr[i]);
 	}
 
-	// 自下而上：内卦 + 外卦（外卦倒序）
-	return [...ngz, ...wgz.reverse()];
+	// 自下而上：内卦 + 外卦
+	return [...ngz, ...wgz];
 }
 
 /**

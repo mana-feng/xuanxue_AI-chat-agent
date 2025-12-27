@@ -22,7 +22,7 @@ import { PropType } from 'vue';
 
 type BtnSize = 'mini' | 'small' | 'normal' | 'middle' | 'large' | 'block';
 
-const props = defineProps({
+defineProps({
 	size: {
 		type: String as PropType<BtnSize>,
 		default: 'small'

@@ -1,27 +1,32 @@
 <template>
-	<view :render-whole="true" class="flex flex-row flex-row-center-center" :style="[{
+	<view
+:render-whole="true" class="flex flex-row flex-row-center-center" :style="[{
 		marginRight: custom_space_size[0] + 'rpx',
 		marginBottom: custom_space_size[1] + 'rpx'
 	}]">
 		<!-- #ifndef APP-NVUE -->
-		<text @click="clickhandle" @longpress="emits('longpress', $event)"
-			:class="[spinComputed ? 'spin' : '', 'text-size-n d-inline-block', 'tmicon ', prefx, iconComputed, customClass]"
-			:style="[fontSizeComputed, { color: textColor }, customCSSStyle]" v-if="!isImg"></text>
+		<text
+v-if="!isImg" :class="[spinComputed ? 'spin' : '', 'text-size-n d-inline-block', 'tmicon ', prefx, iconComputed, customClass]"
+			:style="[fontSizeComputed, { color: textColor }, customCSSStyle]"
+			@click="clickhandle" @longpress="emits('longpress', $event)"></text>
 		<!-- #endif  -->
 		<!-- #ifdef APP-NVUE-->
-		<text :render-whole="true" ref="icon" @click="clickhandle" @longpress="emits('longpress', $event)"
-			:class="[spinComputed ? 'spin' : '', 'text-size-n d-inline-block ', 'tmicon', customClass]"
-			:style="[{ fontFamily: 'tmicon', color: textColor }, fontSizeComputed, customCSSStyle]" v-if="!isImg">
+		<text
+v-if="!isImg" ref="icon" :render-whole="true" :class="[spinComputed ? 'spin' : '', 'text-size-n d-inline-block ', 'tmicon', customClass]"
+			:style="[{ fontFamily: 'tmicon', color: textColor }, fontSizeComputed, customCSSStyle]"
+			@click="clickhandle" @longpress="emits('longpress', $event)">
 			{{ iconComputed }}
 		</text>
 		<!-- #endif  -->
-		<image :render-whole="true" @click="clickhandle" @longpress="emits('longpress', $event)" ref="icon" v-if="isImg"
-			:src="iconComputed" :class="[spinComputed ? 'spin' : '', customClass]"
-			:style="[{ width: (props.fontSize || 30) + props.unit, height: (props.fontSize || 30) + props.unit }, customCSSStyle]">
+		<image
+v-if="isImg" ref="icon" :render-whole="true" :src="iconComputed" :class="[spinComputed ? 'spin' : '', customClass]"
+			:style="[{ width: (scaledFontSize || 30) + props.unit, height: (scaledFontSize || 30) + props.unit }, customCSSStyle]" @click="clickhandle"
+			@longpress="emits('longpress', $event)">
 		</image>
 	</view>
 </template>
 <script lang="ts" setup>
+// @ts-nocheck
 /**
  * 图标
  * @description 图标，提供了一个spin功能用于自动旋转图标在Nvue中使用原生动画。
@@ -32,6 +37,7 @@ import theme from "../../tool/theme/theme";
 import { cssstyle, tmVuetify, colorThemeType } from '../../tool/lib/interface';
 import { custom_props, computedTheme, computedClass, computedStyle, computedDark } from '../../tool/lib/minxs';
 import { useTmpiniaStore } from '../../tool/lib/tmpinia';
+import { useUiScale } from '@/utils/viewport';
 // #ifdef APP-NVUE || APP-PLUS-NVUE
 import fontList from '../../tool/tmicon/iconfont.json';
 import { tmiconFont } from './tmicon';
@@ -85,6 +91,15 @@ const customClass = computed(() => computedClass(props));
 const isDark = computed(() => computedDark(props, tmcfg.value));
 //计算主题
 const tmcomputed = computed<cssstyle>(() => computedTheme(props, isDark.value,tmcfg.value));
+const uiScale = useUiScale();
+const scaleNumber = (value: number) => Math.round(value * uiScale.value * 100) / 100;
+const scaledFontSize = computed(() => scaleNumber(Number(props.fontSize || 30)));
+const scaledLineHeight = computed(() => {
+	if (props.lineHeight > -1) {
+		return scaleNumber(props.lineHeight);
+	}
+	return scaledFontSize.value;
+});
 // 点击文字事件。
 function clickhandle(e: Event): void {
 	emits('click', e);
@@ -107,13 +122,15 @@ const textColor = computed(() => {
 });
 //图标大小。
 const fontSizeComputed = computed(() => {
+	const size = scaledFontSize.value || 30;
+	const lineHeight = scaledLineHeight.value || size;
 	// #ifdef H5
-	if (props.fontSize < 24 && props.unit == 'rpx') return { 
-		transform: 'scale(0.8)', fontSize: (props.fontSize || 30) + props.unit ,
-		lineHeight:props.lineHeight>-1?props.lineHeight + props.unit:(props.fontSize || 30) + props.unit
+	if (size < 24 && props.unit == 'rpx') return {
+		transform: 'scale(0.8)', fontSize: size + props.unit,
+		lineHeight: lineHeight + props.unit
 		};
 	// #endif
-	return { fontSize: (props.fontSize || 30) + props.unit,lineHeight:props.lineHeight>-1?props.lineHeight + props.unit:(props.fontSize || 30) + props.unit };
+	return { fontSize: size + props.unit, lineHeight: lineHeight + props.unit };
 });
 //图标前缀
 const prefx = computed(() => {
@@ -155,8 +172,8 @@ const spinComputed = computed(() => props.spin);
 //间隙排列。
 const custom_space_size = inject('custom_space_size', [0, 0]);
 //图标的宽度和高度
-const iconWidth = computed(() => parseInt(props.fontSize || 34) + custom_space_size[0]);
-const iconHeight = computed(() => parseInt(props.fontSize || 34) + custom_space_size[1]);
+const iconWidth = computed(() => parseInt(String(scaledFontSize.value || 34)) + custom_space_size[0]);
+const iconHeight = computed(() => parseInt(String(scaledFontSize.value || 34)) + custom_space_size[1]);
 // nvue旋转动画的token
 const bindxToken = ref(null);
 function getEl(el) {

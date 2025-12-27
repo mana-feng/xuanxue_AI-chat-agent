@@ -52,6 +52,14 @@ export const API_SIGNATURE_SECRET =
 	getEnv('VUE_APP_API_SIGNATURE_SECRET') ??
 	'';
 
+// 开发环境检查：如果未配置签名密钥，提示开发者
+if (import.meta.env.DEV && !API_SIGNATURE_SECRET) {
+	console.info(
+		'[Config] 未配置 VITE_API_SIGNATURE_SECRET，将使用弱签名模式（仅防重放）。' +
+		'如需测试强签名，请在 .env 文件中配置。'
+	);
+}
+
 export { theme };
 
 // 导出十神映射表（向后兼容�?

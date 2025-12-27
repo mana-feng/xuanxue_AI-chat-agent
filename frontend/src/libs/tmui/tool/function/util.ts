@@ -1,4 +1,4 @@
-
+// @ts-nocheck
 // #ifdef H5
 // var clipboardJS = require( from ''./clipboardJS'');
 // import clipboardJS from './clipboardJS'
@@ -19,7 +19,7 @@ export default preview;
 * @return {Array}  arr - 分组后的新数组
 */
 export function splitData(oArr:Array<any> = [], length = 1) {
-	let arr:Array<any> = [];
+	const arr:Array<any> = [];
 	let minArr:Array<any> = [];
 	oArr.forEach(c => {
 		if (minArr.length === length) {
@@ -40,17 +40,17 @@ export function splitData(oArr:Array<any> = [], length = 1) {
 * @return {Object}  format - 格式后的天时分秒对象
 */
 export function timeMuch(t:number) {
-	let format:any = {
+	const format:any = {
 		d: '00',
 		h: '00',
 		m: '00',
 		s: '00'
 	};
 	if (t > 0) {
-		let d = Math.floor(t / 86400);
-		let h = Math.floor((t / 3600) % 24);
-		let m = Math.floor((t / 60) % 60);
-		let s = Math.floor(t % 60);
+		const d = Math.floor(t / 86400);
+		const h = Math.floor((t / 3600) % 24);
+		const m = Math.floor((t / 60) % 60);
+		const s = Math.floor(t % 60);
 		format.d = d < 10 ? '0' + d : d;
 		format.h = h < 10 ? '0' + h : h;
 		format.m = m < 10 ? '0' + m : m;
@@ -65,35 +65,35 @@ export function getDateToNewData(timestamp:number|string|Date = new Date().getTi
 	}
 	
 	 // 补全为13位
-	 var arrTimestamp:Array<string> = (timestamp + '').split('');
-	 for (var start = 0; start < 13; start++) {
+	 const arrTimestamp:Array<string> = (timestamp + '').split('');
+	 for (let start = 0; start < 13; start++) {
 		 if (!arrTimestamp[start]) {
 			 arrTimestamp[start] = '0';
 		 }
 	 }
 	 timestamp = Number(arrTimestamp.join(''))* 1;
  
-	 var minute = 1000 * 60;
-	 var hour = minute * 60;
-	 var day = hour * 24;
-	 var halfamonth = day * 15;
-	 var month = day * 30;
-	 var now = new Date().getTime();
-	 var diffValue = now - timestamp;
+	 const minute = 1000 * 60;
+	 const hour = minute * 60;
+	 const day = hour * 24;
+	 const halfamonth = day * 15;
+	 const month = day * 30;
+	 const now = new Date().getTime();
+	 const diffValue = now - timestamp;
  
 	 // 如果本地时间反而小于变量时间
 	 if (diffValue < 0) {
 		 return '不久前';
 	 }
 	 // 计算差异时间的量级
-	 var monthC = diffValue / month;
-	 var weekC = diffValue / (7 * day);
-	 var dayC = diffValue / day;
-	 var hourC = diffValue / hour;
-	 var minC = diffValue / minute;
+	 const monthC = diffValue / month;
+	 const weekC = diffValue / (7 * day);
+	 const dayC = diffValue / day;
+	 const hourC = diffValue / hour;
+	 const minC = diffValue / minute;
  
 	 // 数值补0方法
-	 var zero = function (value:number) {
+	 const zero = function (value:number) {
 		 if (value < 10) {
 			 return '0' + value;
 		 }
@@ -104,7 +104,7 @@ export function getDateToNewData(timestamp:number|string|Date = new Date().getTi
 	 if (monthC > 12) {
 		 // 超过1年，直接显示年月日
 		 return (function () {
-			 var date = new Date(timestamp);
+			 const date = new Date(timestamp);
 			 return date.getFullYear() + '年' + zero(date.getMonth() + 1) + '月' + zero(date.getDate()) + '日';
 		 })();
 	 } else if (monthC >= 1) {
@@ -127,7 +127,7 @@ export function getDateToNewData(timestamp:number|string|Date = new Date().getTi
 * @return {Promise}
 */
 export function callPhone(phoneNumber = '') {
-	let num = phoneNumber.toString()
+	const num = phoneNumber.toString()
 	return new Promise((rs,rj)=>{
 		uni.makePhoneCall({
 			phoneNumber: num,
@@ -175,12 +175,12 @@ export function callPhone(phoneNumber = '') {
 	// #endif
 	// #ifdef H5
 	return new Promise((rs,rj)=>{
-		let btn = document.createElement('button');
+		const btn = document.createElement('button');
 		btn.style.display = 'none';
 		btn.className='hi-test-hi';
 		document.body.appendChild(btn);
 		clipboardJS = clipboardJS.bind(window);
-		let cb = new clipboardJS('.hi-test-hi', {
+		const cb = new clipboardJS('.hi-test-hi', {
 			text: () => data
 		})
 		
@@ -251,7 +251,7 @@ export function callPhone(phoneNumber = '') {
 	try {
 		const value = uni.getStorageSync(key);
 		try {
-			let val = JSON.parse(value)
+			const val = JSON.parse(value)
 			return val;
 		} catch (e) {
 			return value;
@@ -273,8 +273,8 @@ export function callPhone(phoneNumber = '') {
 	if (!value) {
 		return uri;
 	}
-	var re = new RegExp("([?&])" + key + "=.*?(&|$)", "i");
-	var separator = uri.indexOf("?") !== -1 ? "&" : "?";
+	const re = new RegExp("([?&])" + key + "=.*?(&|$)", "i");
+	const separator = uri.indexOf("?") !== -1 ? "&" : "?";
 	if (uri.match(re)) {
 		return uri.replace(re, "$1" + key + "=" + value + "$2");
 	} else {
@@ -288,10 +288,10 @@ export function callPhone(phoneNumber = '') {
  * @returns string
  */
 export function getQueryString(url:string,key:string):string {
-  var query_string = url.substring(url.indexOf("?")); 
+  const query_string = url.substring(url.indexOf("?")); 
   if (!query_string) return "";
-  var re = /[?&]?([^=]+)=([^&]*)/g;
-  var tokens:any;
+  const re = /[?&]?([^=]+)=([^&]*)/g;
+  let tokens:any;
   while (tokens = re.exec(query_string)) {
     if (decodeURIComponent(tokens[1]) === key) {
       return decodeURIComponent(tokens[2]);
@@ -313,13 +313,13 @@ export function getUid (length=12){
 	@param {Number} wait 延迟的时间
 	@param{Boolean} immediate 是否要立即执行
 */
-var timeout= getUid(1)
+let timeout= getUid(1)
 export function debounce(func:Function, wait = 500, immediate = false) {
   // 清除定时器
   if (timeout !== null) clearTimeout(timeout);
   // 立即执行，此类情况一般用不到
   if (immediate) {
-    var callNow = !timeout;
+    const callNow = !timeout;
     timeout = setTimeout(() => {
       timeout = null;
     }, wait);
@@ -373,8 +373,8 @@ export function deepClone (obj:any) {
 		//原始类型直接返回
         return obj;
     }
-    var o:any = Array.isArray(obj) ? [] : {};
-    for(let i in obj) {
+    const o:any = Array.isArray(obj) ? [] : {};
+    for(const i in obj) {
         if(obj.hasOwnProperty(i)){
             o[i] = typeof obj[i] === "object" ? deepClone(obj[i]) : obj[i];
         }
@@ -411,8 +411,8 @@ export function quereyDom(t:ComponentInternalInstance,node:string){
  * @returns Boolean
  */
 export function isPhone(phone:string|number){
-	let val = String(phone);
-	let reg = /^(13[0-9]|14[01456879]|15[0-35-9]|16[2567]|17[0-8]|18[0-9]|19[0-35-9])\d{8}$/
+	const val = String(phone);
+	const reg = /^(13[0-9]|14[01456879]|15[0-35-9]|16[2567]|17[0-8]|18[0-9]|19[0-35-9])\d{8}$/
 	return !!val.match(reg);
 }
 
@@ -422,7 +422,7 @@ export function isPhone(phone:string|number){
  * @returns Boolean
  */
  export function isChina(s:string){
-	var patrn=/[\u4E00-\u9FA5]|[\uFE30-\uFFA0]/gi;
+	const patrn=/[\u4E00-\u9FA5]|[\uFE30-\uFFA0]/gi;
 	return !!patrn.exec(s);
 }
 
@@ -452,7 +452,7 @@ export function isEmpty(s:any){
  * @returns Boolean
  */
 export function isEmail(s:string){
-	let reg = /^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)+$/;
+	const reg = /^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)+$/;
 	return !!s.match(reg);
 }
 /**
@@ -463,14 +463,14 @@ export function isEmail(s:string){
  */
 export function isIdCard (val:string|number) {
 	val = String(val)
-    var p = /^[1-9]\d{5}(18|19|20)\d{2}((0[1-9])|(1[0-2]))(([0-2][1-9])|10|20|30|31)\d{3}[0-9Xx]$/;
-    var factor = [ 7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2 ];
-    var parity = [ 1, 0, 'X', 9, 8, 7, 6, 5, 4, 3, 2 ];
-    var code = val.substring(17);
+    const p = /^[1-9]\d{5}(18|19|20)\d{2}((0[1-9])|(1[0-2]))(([0-2][1-9])|10|20|30|31)\d{3}[0-9Xx]$/;
+    const factor = [ 7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2 ];
+    const parity = [ 1, 0, 'X', 9, 8, 7, 6, 5, 4, 3, 2 ];
+    const code = val.substring(17);
     if(p.test(val)) {
-        var sum:number = 0;
-        for(var i=0;i<17;i++) {
-			let id:number|string|any = val[i]
+        let sum:number = 0;
+        for(let i=0;i<17;i++) {
+			const id:number|string|any = val[i]
             sum += id*factor[i];
         }
         if(parity[sum % 11] == code.toUpperCase()) {
@@ -486,7 +486,7 @@ export function isIdCard (val:string|number) {
  * @returns Boolean
  */
 export function isIdCar(s:string){
-	let reg = /^[京|沪|津|渝|鲁|冀|晋|蒙|辽|吉|黑|苏|浙|皖|闽|赣|豫|湘|鄂|粤|桂|琼|川|贵|云|藏|陕|甘|青|宁|新|港|澳|台|新|使]{1}[A-Z]{1}[A-Z_0-9]{5,6}$/
+	const reg = /^[京|沪|津|渝|鲁|冀|晋|蒙|辽|吉|黑|苏|浙|皖|闽|赣|豫|湘|鄂|粤|桂|琼|川|贵|云|藏|陕|甘|青|宁|新|港|澳|台|新|使]{1}[A-Z]{1}[A-Z_0-9]{5,6}$/
 	return !!s.match(reg);
 }
 
@@ -499,7 +499,7 @@ export function isIdCar(s:string){
  */
 export function isPasswordOfNumber(s:number|string,len=6,maxLen=20){
 	s = String(s);
-	let reg = new RegExp(`^[0-9]{${len},${maxLen}}$`)
+	const reg = new RegExp(`^[0-9]{${len},${maxLen}}$`)
 	return !!s.match(reg)
 }
 
@@ -539,7 +539,7 @@ export function isDate(s:string|number|Date){
 		//兼容ios,mac
 		s = s.replace('-','/');
 	}
-	let d = new Date(s);
+	const d = new Date(s);
 	if(d.toString() == 'Invalid Date') return false;
 	return true;
 }
@@ -563,11 +563,11 @@ export function toast(word:string,mask:boolean=true,icon:any='none'){
  * @return {height,width}
  */
 export function getWindow(){
-	let appsys = uni.getWindowInfo();
+	const appsys = uni.getWindowInfo();
 	const sysinfo = uni.getSystemInfoSync();
 	let top =0;
 	let height = appsys.windowHeight;
-	let nowPage = getCurrentPages().pop()
+	const nowPage = getCurrentPages().pop()
 	let isCustomHeader = false;
 	for(let i=0;i<uni.$tm.pages.length;i++){
 		if(nowPage?.route==uni.$tm.pages[i].path&&uni.$tm.pages[i].custom=='custom'){
@@ -611,14 +611,14 @@ type openUrlType = "navigate"|"redirect"|"reLaunch"|"switchTab"|"navigateBack"
  */
 export function routerTo(url:string,type:openUrlType='navigate'){
 	type openUrlTypeFun = "navigateTo"|"redirectTo"|"reLaunch"|"switchTab"|"navigateBack"
-	let funType = {
+	const funType = {
 		navigate:"navigateTo",
 		redirect:"redirectTo",
 		switchTab:"switchTab",
 		reLaunch:"reLaunch",
 		navigateBack:"navigateBack",
 	}
-	let fun= <openUrlTypeFun>funType[type];
+	const fun= <openUrlTypeFun>funType[type];
 	uni[fun]({
 		url:url,
 		fail(result) {

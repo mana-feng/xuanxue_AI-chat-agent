@@ -4,7 +4,7 @@
  * 包含神煞、格局、用神、五行旺衰等分析
  */
 
-import { Solar, Lunar } from 'lunar-javascript';
+import { Solar } from 'lunar-javascript';
 import config from '@/config/config';
 
 // 神煞映射表
@@ -307,28 +307,7 @@ const SHEN_SHA = {
 };
 
 // 格局判断
-const GE_JU = {
-	// 正官格
-	zheng_guan: ['正官'],
-	// 偏官格（七杀格）
-	pian_guan: ['七杀'],
-	// 正财格
-	zheng_cai: ['正财'],
-	// 偏财格
-	pian_cai: ['偏财'],
-	// 正印格
-	zheng_yin: ['正印'],
-	// 偏印格
-	pian_yin: ['偏印'],
-	// 食神格
-	shi_shen: ['食神'],
-	// 伤官格
-	shang_guan: ['伤官'],
-	// 比肩格
-	bi_jian: ['比肩'],
-	// 劫财格
-	jie_cai: ['劫财']
-};
+// (Deleted GE_JU)
 
 // 五行旺衰表（简化版，实际需要根据月令、得地、得势综合判断）
 const WUXING_WANGSHUAI = {
@@ -1219,7 +1198,6 @@ function calculateGeJu(bazi: any, shishen: any): BaziEnhancedData['geju'] {
 
 	try {
 		// 获取月支和月干
-		const monthZhi = bazi.getMonthZhi() || '';
 		const monthGan = bazi.getMonthGan() || '';
 		const dayGan = bazi.getDayGan() || '';
 		
@@ -1413,7 +1391,7 @@ function calculateWuxingWangshuai(bazi: any, solar: Solar): BaziEnhancedData['wu
  * 4. 得生（印星）：四柱中是否有生助日主的五行（印星）
  * 5. 得助（通关）：是否有克制日主克星的五行
  */
-function calculateRizhuQiangruo(bazi: any, wuxingWangshuai: BaziEnhancedData['wuxingWangshuai']): BaziEnhancedData['rizhuQiangruo'] {
+function calculateRizhuQiangruo(bazi: any): BaziEnhancedData['rizhuQiangruo'] {
 	const dayGan = bazi.getDayGan();
 	const dayWuxing = getGanWuxing(dayGan);
 	
@@ -1618,7 +1596,7 @@ function calculateRizhuQiangruo(bazi: any, wuxingWangshuai: BaziEnhancedData['wu
 /**
  * 建议用神（简化版）
  */
-function calculateYongShen(rizhuQiangruo: BaziEnhancedData['rizhuQiangruo'], wuxingWangshuai: BaziEnhancedData['wuxingWangshuai']): BaziEnhancedData['yongshen'] {
+function calculateYongShen(rizhuQiangruo: BaziEnhancedData['rizhuQiangruo']): BaziEnhancedData['yongshen'] {
 	const yongshen: BaziEnhancedData['yongshen'] = {
 		suggested: [],
 		avoid: []
@@ -1661,8 +1639,8 @@ export function enhanceBaziAnalysis(bazi: any, solar: Solar, shishen: any): Bazi
 		yongshen: {}
 	};
 
-	result.rizhuQiangruo = calculateRizhuQiangruo(bazi, result.wuxingWangshuai);
-	result.yongshen = calculateYongShen(result.rizhuQiangruo, result.wuxingWangshuai);
+	result.rizhuQiangruo = calculateRizhuQiangruo(bazi);
+	result.yongshen = calculateYongShen(result.rizhuQiangruo);
 	result.ganzhiRelations = calculateOriginalGanZhiRelations(bazi);
 
 	return result;

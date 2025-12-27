@@ -1,7 +1,7 @@
 <template>
 	<tm-table
 		:width="tableWidth"
-		:cellHeight="cellHeight"
+		:cell-height="cellHeight"
 		:header="header"
 		:table-data="tableData"
 	></tm-table>
@@ -137,7 +137,6 @@ const tableWidth = computed(() => {
 function formatCellData(
 	value: CellValue,
 	isEvenRow: boolean,
-	isDayun: boolean = false,
 	isShensha: boolean = false
 ): FormattedCell {
 	// 如果是神煞行且值为数组，返回垂直文本格式
@@ -359,8 +358,8 @@ const tableData = computed(() => {
 					newData[key] = row.data[key];
 				} else {
 					// 如果是神煞行，确保传递正确的 isShensha 参数
-					const value = row.data[key];
-					newData[key] = formatCellData(value, isEvenRow, false, isShenshaRow);
+					const value = (row.data as any)[key];
+					newData[key] = formatCellData(value, isEvenRow, isShenshaRow);
 				}
 			});
 
@@ -396,8 +395,8 @@ const tableData = computed(() => {
 			if (key === 'name') {
 				newData[key] = row.data[key];
 			} else {
-				const value = row.data[key];
-				newData[key] = formatCellData(value, isEvenRow, false, isShenshaRow);
+				const value = (row.data as any)[key];
+				newData[key] = formatCellData(value, isEvenRow, isShenshaRow);
 			}
 		});
 
@@ -435,7 +434,7 @@ const tableData = computed(() => {
 					yearGan.value
 				);
 			}
-			newData.dayun = formatCellData(dayunValue, isEvenRow, true, row.data.name === '神煞');
+			newData.dayun = formatCellData(dayunValue, isEvenRow, row.data.name === '神煞');
 		}
 
 		if (selectedYear.value) {
@@ -471,7 +470,7 @@ const tableData = computed(() => {
 					yearGan.value
 				);
 			}
-			newData.year_yun = formatCellData(yearValue, isEvenRow, false, row.data.name === '神煞');
+			newData.year_yun = formatCellData(yearValue, isEvenRow, row.data.name === '神煞');
 		}
 
 		if (selectedMonth.value) {
@@ -507,7 +506,7 @@ const tableData = computed(() => {
 					yearGan.value
 				);
 			}
-			newData.month_yun = formatCellData(monthValue, isEvenRow, false, row.data.name === '神煞');
+			newData.month_yun = formatCellData(monthValue, isEvenRow, row.data.name === '神煞');
 		}
 
 		if (selectedDay.value) {
@@ -543,7 +542,7 @@ const tableData = computed(() => {
 					yearGan.value
 				);
 			}
-			newData.day_yun = formatCellData(dayValue, isEvenRow, false, row.data.name === '神煞');
+			newData.day_yun = formatCellData(dayValue, isEvenRow, row.data.name === '神煞');
 		}
 
 		newRow.data = newData;

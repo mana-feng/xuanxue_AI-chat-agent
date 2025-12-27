@@ -1,27 +1,26 @@
 <template>
 	<tm-overlay
-		:duration="25"
-		@open="OverLayOpen"
-		:zIndex="props.zIndex"
-		:transprent="!props.mask"
 		v-if="_show"
-		@click="clickClose"
-		:align="align_rp"
-		:overlayClick="false"
 		v-model:show="_show"
+		:duration="25"
+		:z-index="props.zIndex"
+		:transprent="!props.mask"
+		:align="align_rp"
+		:overlay-click="false"
+		@open="OverLayOpen"
+		@click="clickClose"
 	>
 		<tm-translate
-			@end="animationClose"
+			ref="drawerANI"
 			:reverse="reverse_rp"
 			:width="anwidth"
 			:height="anheight"
-			ref="drawerANI"
 			:auto-play="false"
 			:name="aniname"
 			:duration="props.duration"
+			@end="animationClose"
 		>
 			<view
-				@click.stop="$event.stopPropagation()"
 				:style="[
 					{ width: anwidth, height: anheight },
 					!props.transprent ? tmcomputed.borderCss : '',
@@ -30,25 +29,26 @@
 					customCSSStyle
 				]"
 				:class="[round_rp, 'flex flex-col overflow ', customClass]"
+				@click.stop="$event.stopPropagation()"
 			>
 				<view
 					v-if="!props.closeable && !props.hideHeader"
 					class="flex flex-row flex-row-center-center flex-between  px-24 "
 					style="height:44px"
 				>
-					<view class="flex-4 flex-shrink"><tm-text v-if="!props.hideCancel" @click="cancel" :label="props.cancelText"></tm-text></view>
+					<view class="flex-4 flex-shrink"><tm-text v-if="!props.hideCancel" :label="props.cancelText" @click="cancel"></tm-text></view>
 					<view class="flex-8 px-32 flex-center">
 						<slot name="title"><tm-text _class="text-overflow-1 opacity-7" :label="props.title"></tm-text></slot>
 					</view>
 					<view class="flex-4 flex-shrink flex-row flex-row-center-end">
-						<tm-text :color="okColor" @click="ok" v-if="!ok_loading" :dark="props.dark" :label="props.okText"></tm-text>
+						<tm-text v-if="!ok_loading" :color="okColor" :dark="props.dark" :label="props.okText" @click="ok"></tm-text>
 						<tm-icon
-							:color="okColor"
 							v-if="ok_loading"
-							:spin="ok_loading"
+							:color="okColor"
+							:spin="!!ok_loading"
 							:dark="isDark"
 							:_class="isDark !== true ? 'opacity-4' : ''"
-							:fontSize="34"
+							:font-size="34"
 							:name="ok_loading ? 'tmicon-jiazai_dan' : 'tmicon-times-circle-fill'"
 						></tm-icon>
 					</view>
@@ -63,11 +63,11 @@
 					</view>
 					<view class="flex-3 flex-shrink flex-row flex-row-center-end">
 						<tm-icon
-							@click="cancel"
 							:dark="props.dark"
 							:_class="isDark !== true ? 'opacity-3' : ''"
-							:fontSize="36"
+							:font-size="36"
 							name="tmicon-times-circle-fill"
+							@click="cancel"
 						></tm-icon>
 					</view>
 				</view>
@@ -82,6 +82,7 @@
  * 抽屉
  * @description 别名poup弹层，提供，左，右，上，下，中弹出内容。
  */
+/// <reference types="@dcloudio/types" />
 import tmTranslate from "../tm-translate/tm-translate.vue";
 import tmText from "../tm-text/tm-text.vue";
 import tmIcon from "../tm-icon/tm-icon.vue";
@@ -90,6 +91,7 @@ import { getCurrentInstance, computed, ref, provide, inject, onMounted, onUnmoun
 import { cssstyle, tmVuetify, colorThemeType } from '../../tool/lib/interface';
 import { custom_props, computedTheme, computedClass, computedStyle, computedDark } from '../../tool/lib/minxs';
 import { useTmpiniaStore } from '../../tool/lib/tmpinia';
+import { getSystemInfo } from '@/utils/platform';
 const drawerANI = ref<InstanceType<typeof tmTranslate> | null>(null)
 const store = useTmpiniaStore();
 const props = defineProps({
@@ -184,7 +186,8 @@ const props = defineProps({
 	}
 });
 const emits = defineEmits(['click', 'open', 'close', 'update:show', 'ok', 'cancel']);
-const { proxy } = getCurrentInstance();
+const instance = getCurrentInstance();
+const proxy = instance?.proxy ?? null;
 // 设置响应式全局组件库配置表。
 const tmcfg = computed<tmVuetify>(() => store.tmStore);
 //自定义样式：
@@ -200,9 +203,9 @@ const sysheight = ref(0);
 const reverse = ref(true);
 const aniEnd = ref(false);
 const flag = ref(false);
-const timeid = ref(0);
-let timerId = NaN;
-let timerIdth = NaN
+const timeid = ref<any>(0);
+let timerId: any = NaN;
+let timerIdth: any = NaN
 let timerIdth_flas = false
 let _show = ref(props.show);
 function debounce(func: Function, wait = 500, immediate = false) {
@@ -249,11 +252,11 @@ function throttle(func: Function, wait = 500, immediate = true) {
 
 	}
 };
-let { windowWidth, windowHeight, windowTop, safeArea, statusBarHeight, titleBarHeight } = uni.getSystemInfoSync();
+let { windowWidth, windowHeight, windowTop, safeArea, statusBarHeight, titleBarHeight } = getSystemInfo();
 syswidth.value = windowWidth;
 sysheight.value = windowHeight;
 // #ifdef APP || MP
-sysheight.value = safeArea.height;
+if(safeArea) sysheight.value = safeArea.height;
 // #endif
 // #ifdef H5
 sysheight.value = windowHeight;

@@ -4,11 +4,11 @@
   "description": "八字排盘系统 - 前后端分离项目",
   "private": true,
   "scripts": {
-    "dev": "echo Please run 'cd frontend && npm run dev:h5' for frontend or 'cd backend && npm start' for backend",
+    "dev": "echo Please run 'cd frontend && npm run dev:mp-weixin' for frontend or 'cd backend && npm start' for backend",
     "install:all": "npm run install:frontend && npm run install:backend",
     "install:frontend": "cd frontend && npm install",
     "install:backend": "cd backend && npm install",
-    "start:frontend": "cd frontend && npm run dev:h5",
+    "start:frontend": "cd frontend && npm run dev:mp-weixin",
     "start:backend": "cd backend && npm start"
   },
   "keywords": [

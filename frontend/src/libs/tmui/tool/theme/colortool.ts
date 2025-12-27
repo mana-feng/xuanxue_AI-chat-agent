@@ -11,11 +11,11 @@ export var colortool = {
         r = r / 255;
         g = g / 255;
         b = b / 255;
-        var min = Math.min(r, g, b);
-        var max = Math.max(r, g, b);
-        var l = (min + max) / 2;
-        var difference = max - min;
-        var h: number = 0, s: number = 0;
+        const min = Math.min(r, g, b);
+        const max = Math.max(r, g, b);
+        let l = (min + max) / 2;
+        const difference = max - min;
+        let h: number = 0, s: number = 0;
         if (max == min) {
             h = 0;
             s = 0;
@@ -37,18 +37,18 @@ export var colortool = {
         h = h / 360;
         s = s / 100;
         l = l / 100;
-        var rgb = [];
+        let rgb = [];
 
         if (s == 0) {
             rgb = [Math.round(l * 255), Math.round(l * 255), Math.round(l * 255)];
         } else {
-            var q = l >= 0.5 ? (l + s - l * s) : (l * (1 + s));
-            var p = 2 * l - q;
-            var tr = rgb[0] = h + 1 / 3;
-            var tg = rgb[1] = h;
-            var tb = rgb[2] = h - 1 / 3;
-            for (var i = 0; i < rgb.length; i++) {
-                var tc: number = rgb[i];
+            const q = l >= 0.5 ? (l + s - l * s) : (l * (1 + s));
+            const p = 2 * l - q;
+            const tr = rgb[0] = h + 1 / 3;
+            const tg = rgb[1] = h;
+            const tb = rgb[2] = h - 1 / 3;
+            for (let i = 0; i < rgb.length; i++) {
+                let tc: number = rgb[i];
                 if (tc < 0) {
                     tc = tc + 1;
                 } else if (tc > 1) {
@@ -78,7 +78,7 @@ export var colortool = {
         if (!sColor) {
             return { r: 0, g: 0, b: 0, a: 0 }
         }
-        let reg = /^#([0-9a-fA-f]{3}|[0-9a-fA-f]{6})$/;
+        const reg = /^#([0-9a-fA-f]{3}|[0-9a-fA-f]{6})$/;
         sColor = sColor.toLowerCase();
         if (sColor && reg.test(sColor)) {
             if (sColor.length === 4) {
@@ -89,7 +89,7 @@ export var colortool = {
                 sColor = sColorNew;
             }
             //处理六位的颜色值
-            let sColorChange = [];
+            const sColorChange = [];
             for (let i = 1; i < 7; i += 2) {
                 sColorChange.push(parseInt("0x" + sColor.slice(i, i + 2)));
             }
@@ -100,8 +100,8 @@ export var colortool = {
                 a: 1
             }
         } else if (/^(rgb|RGB|rgba|RGBA)/.test(sColor)) {
-            let arr = sColor.replace(/(?:\(|\)|rgb|RGB|RGBA|rgba)*/g, "").split(",")
-            let p = arr.map(val => Number(val));
+            const arr = sColor.replace(/(?:\(|\)|rgb|RGB|RGBA|rgba)*/g, "").split(",")
+            const p = arr.map(val => Number(val));
             if (p.length < 3) {
                 return {
                     r: 0,
@@ -163,15 +163,15 @@ export var colortool = {
         };
     },
     hsvaToRgba: function (sColor: hsva): rgba {
-        var { h, s, v, a } = sColor;
-        var r: number = 0;
-        var g: number = 0;
-        var b: number = 0;
-        var i;
-        var f;
-        var p;
-        var q;
-        var t;
+        const { h, s, v, a } = sColor;
+        let r: number = 0;
+        let g: number = 0;
+        let b: number = 0;
+        let i;
+        let f;
+        let p;
+        let q;
+        let t;
         i = Math.floor(h * 6);
         f = h * 6 - i;
         p = v * (1 - s);

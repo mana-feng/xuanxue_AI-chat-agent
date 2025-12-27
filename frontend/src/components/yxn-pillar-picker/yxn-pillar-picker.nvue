@@ -1,53 +1,53 @@
 <template>
 	<tm-drawer
-		hideHeader
 		ref="drawer"
-		placement="bottom"
 		v-model:show="_show"
+		placement="bottom"
+		hide-header
 		ok-text="选择"
 		:round="6"
 		:height="628"
 		@close="DrawerClose"
 		@update:show="_show = $event"
 	>
-		<solt name="title">
-			<tm-text class="pt-30 pb-20" align="center" :label="is_pillar ? '请选择四柱进行检�? : '选择时间进行排盘'"></tm-text>
-		</solt>
+		<template #title>
+			<tm-text class="pt-30 pb-20" align="center" :label="is_pillar ? '请选择四柱进行检索' : '选择时间进行排盘'"></tm-text>
+		</template>
 
 		<view v-if="is_pillar" id="pillar_view">
 			<tm-tabs
+				v-model:active-name="tab_current"
 				swiper
 				class="mb-20 mx-30"
 				align="around"
 				:width="690"
 				:list="tabs_list"
-				v-model:active-name="tab_current"
 				@change="TabsChange"
 			></tm-tabs>
 
-			<tm-grid v-show="!is_pillar" :width="750" :col="4">
-				<tm-grid-item class="mb-20" v-for="(item, index) in list" :key="item + index" @click="PickerClick(index)">
-					<tm-avatar text :round="12" :label="item"></tm-avatar>
+			<tm-grid :width="750" :col="4">
+				<tm-grid-item v-for="(item, index) in list" :key="item + index" class="mb-20" @click="PickerClick(index)">
+					<tm-avatar text :round="12" :label="item" :color="picker_current === index ? 'primary' : 'white'"></tm-avatar>
 				</tm-grid-item>
 			</tm-grid>
 
-			<view class="px-30"><tm-button block label="检索四�? @tap="GetSiZhu"></tm-button></view>
+			<view class="px-30"><tm-button block label="检索四柱" @tap="GetSiZhu"></tm-button></view>
 		</view>
 
 		<view v-else>
-			<tm-picker-view :columns="select_list" v-model="select_index" :height="388"></tm-picker-view>
+			<tm-picker-view v-model="select_index" :columns="select_list" :height="388"></tm-picker-view>
 			<view class="px-30"><tm-button block label="确认选择" @tap="Confirm"></tm-button></view>
 		</view>
 	</tm-drawer>
 </template>
 
 <script lang="ts" setup>
-import { ref, watch, watchEffect,onMounted,getCurrentInstance } from 'vue';
+import { ref, watch, watchEffect, onMounted, getCurrentInstance } from 'vue';
 import { Solar } from 'lunar-javascript';
 
-const {proxy} = getCurrentInstance()
+const { proxy } = getCurrentInstance() as any;
 
-const emits = defineEmits(['update:show','Confirm']);
+const emits = defineEmits(['update:show', 'Confirm']);
 const props = defineProps({
 	show: {
 		type: Boolean,
@@ -68,13 +68,13 @@ const picker_current = ref(0);
 
 const is_pillar = ref(true)
 
-const list = ref(['�?, '�?, '�?, '�?, '�?, '�?, '�?, '�?]);
-const tabs_list = ref([]);
+const list = ref(['甲', '子', '甲', '子', '甲', '子', '甲', '子']);
+const tabs_list = ref<any[]>([]);
 const select_list = ref([]);
-const select_index = ref(0);
+const select_index = ref([0]);
 
 watchEffect(() => {
-  _show.value = props.show;
+	_show.value = props.show;
 })
 
 watch(
@@ -86,80 +86,57 @@ watch(
 	}
 );
 
-onMounted(()=>{
-	const tian = ['�?, '�?, '�?, '�?, '�?, '�?, '�?, '�?, '�?, '�?];
-	const di = ['�?, '�?, '�?, '�?, '�?, '�?, '�?, '�?, '�?, '�?, '�?, '�?];
-	const model = tab_current.value>3?di:tian;
-	const _list = [];
-	for (let i = 0; i < model.length; i++) {
-		const key = model[i];
-		_list.push({ key: key+i, title: key });
-	}
-	tabs_list.value = _list;
+onMounted(() => {
 	PullTabs(0);
-})
+});
 
-function PickerClick(i:number) {
-	picker_current.value = i;
-	PullTabs(i);
-}
+function PullTabs(index: number) {
+	picker_current.value = index;
+	const isGan = index % 2 === 0;
+	const tian = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+	const di = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+	const model = isGan ? tian : di;
 
-function TabsChange(e:number) {
-	tab_current.value = e;
-	const picker = picker_current.value;
-	if(tabs_list.value[e]?.title){
-		list.value[picker] = tabs_list.value[e].title;
-	}
-}
-
-function PullTabs(e:number) {
-	const tian = ['�?, '�?, '�?, '�?, '�?, '�?, '�?, '�?, '�?, '�?];
-	const di = ['�?, '�?, '�?, '�?, '�?, '�?, '�?, '�?, '�?, '�?, '�?, '�?];
 	const _list = [];
-	const model = e > 3 ? di : tian;
 	for (let i = 0; i < model.length; i++) {
 		const key = model[i];
 		_list.push({ key: i, title: key });
 	}
 	tabs_list.value = _list;
-	TabsChange(model.indexOf(list.value[e]));
+
+	const currentVal = list.value[index];
+	const foundIdx = model.indexOf(currentVal);
+	tab_current.value = foundIdx >= 0 ? foundIdx : 0;
 }
 
-function Confirm(){
-	const index = select_index.value
-		is_pillar.value = true
-		emits('Confirm',select_list.value[index]);
-    proxy.$refs.drawer.close();
+function TabsChange(e: any) {
+    // tm-tabs change event might not pass the key directly or might pass it.
+    // Assuming v-model:active-name="tab_current" is the source of truth.
+	const isGan = picker_current.value % 2 === 0;
+	const tian = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+	const di = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+	const model = isGan ? tian : di;
+
+	if (typeof tab_current.value === 'number' && model[tab_current.value]) {
+		list.value[picker_current.value] = model[tab_current.value];
+	}
 }
 
-function DrawerClose(){
-	is_pillar.value = true;
-	select_list.value = [];
-  emits("update:show", false)
+function PickerClick(index: number) {
+	PullTabs(index);
+}
+
+function DrawerClose() {
+	emits('update:show', false);
 }
 
 function GetSiZhu() {
-	const _list_ = list.value;
-	const year = _list_[0] + _list_[4];
-	const month = _list_[1] + _list_[5];
-	const day = _list_[2] + _list_[6];
-	const time = _list_[3] + _list_[7];
-	const result = Solar.fromBaZi(year, month, day, time, 2, 0);
-	if (result.length) {
-		const _list = [];
-		for (let i = 0; i < result.length; i++) {
-			const item = result[i];
-			const datetime = item.toYmdHms();
-			const timestamp = new Date(datetime.replace(/-/g, '/').replace(/T/g, ' ')).getTime();
-			_list.push({ text: datetime, value: timestamp });
-		}
-		select_list.value = _list;
-		is_pillar.value = false;
-	} else {
-		uni.showToast({
-			title:"四柱检索异常，请检查！",
-			icon:"none"
-		})
-	}
+	emits('Confirm', list.value.join(''));
+	DrawerClose();
+}
+
+function Confirm() {
+	emits('Confirm', list.value.join(''));
+	DrawerClose();
 }
 </script>

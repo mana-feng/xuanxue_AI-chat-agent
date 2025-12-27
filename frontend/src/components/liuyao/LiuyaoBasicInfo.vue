@@ -1,12 +1,7 @@
 <template>
-	<view class="section">
-		<header class="section__header">
-			<tm-icon name="tmicon-md-person" :font-size="26" color="#667eea"></tm-icon>
-			<h2 class="section__title">基础信息</h2>
-		</header>
-		<view class="section__body">
-			<tm-input
-				v-model="titleLocal"
+	<view>
+		<tm-input
+			v-model="titleLocal"
 				label="占卦相关信息"
 				placeholder="请输入占卦相关信息，如：求财/合作/考试等"
 				prefix="tmicon-md-bulb"
@@ -44,13 +39,12 @@
 			></tm-input>
 
 			<view class="time-row">
-				<TimeInput v-model="timeLabelLocal" @open="$emit('openTimePicker')" @useNow="$emit('useNowTime')" />
+				<TimeInput v-model="timeLabelLocal" @open="$emit('openTimePicker')" @use-now="$emit('useNowTime')" />
 			</view>
 
 			<view class="helper-row">
 				<tm-text :font-size="22" color="#94a3b8" label="默认填入当前时间，点击选择可使用滚动轮盘选择阳历日期与时间。"></tm-text>
 			</view>
-		</view>
 	</view>
 </template>
 

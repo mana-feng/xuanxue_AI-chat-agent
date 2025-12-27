@@ -1,35 +1,43 @@
 <template>
-    <view class="tm-segtab relative flex flex-col" ref="tm-segtab" :style="{ width: (props.width+props.gutter*2) + 'rpx' }">
+    <view ref="tm-segtab" class="tm-segtab relative flex flex-col" :style="{ width: (scaledWidth + scaledGutter * 2) + 'rpx' }">
         <tm-sheet
         :border="props.border"
         :linear="props.linear"
         :linear-deep="props.linearDeep"
-        :no-level="true" :round="2" :height="props.height" :color="props.bgColor" :width="props.width"
-            _class="flex-row relative" :padding="[props.gutter, props.gutter]" :margin="[0, 0]">
+        :no-level="true" :round="2" :height="scaledHeight" :color="props.bgColor" :width="scaledWidth"
+            _class="flex-row relative" :padding="[scaledGutter, scaledGutter]" :margin="[0, 0]">
             <!-- #ifdef APP-NVUE -->
             <view v-if="_cId!==''" ref="tmBgEl" class="relative flex flex-row " :style="[{ width: (leftWidth+1) + 'px' }]">
                 <!-- left:leftPos+'px',width:leftWidth+'px' -->
-                <tm-sheet :follow-dark="props.followDark" :round="2"  class="flex-1" _class="flex-1" :color="props.color" :margin="[0, 0]"
+                <tm-sheet
+:follow-dark="props.followDark" :round="2"  class="flex-1" _class="flex-1" :color="props.color" :margin="[0, 0]"
                     :padding="[0, 0]"></tm-sheet>
             </view>
             <!-- #endif -->
             <!-- #ifndef APP-NVUE -->
-            <view v-if="_cId!==''" class="relative flex flex-row  bgbtnpos"
+            <view
+v-if="_cId!==''" class="relative flex flex-row  bgbtnpos"
                 :style="[{ transform: 'translateX(' + leftPos + 'px)', width: (leftWidth+1) + 'px' }]">
                 <!-- left:leftPos+'px',width:leftWidth+'px' -->
-                <tm-sheet :follow-dark="props.followDark" :round="2" class="flex-1 flex flex-row" parenClass="flex-1" _class="flex-1 flex flex-row" :color="props.color" :margin="[0, 0]"
+                <tm-sheet
+:follow-dark="props.followDark" :round="2" class="flex-1 flex flex-row" paren-class="flex-1" _class="flex-1 flex flex-row" :color="props.color" :margin="[0, 0]"
                     :padding="[0, 0]"></tm-sheet>
             </view>
             <!-- #endif -->
-            <view class="absolute flex flex-row flex-row-center-start" :class="[`pa-${props.gutter}`,`l--${props.gutter/2}`]"
-                :style="[{ width: `${props.width}rpx`, height: `${props.height - props.gutter}rpx` }]">
-                <view @click="itemClick(index,item.id)" 
+            <view
+class="absolute flex flex-row flex-row-center-start"
+                :style="[
+                    { width: `${scaledWidth}rpx`, height: `${scaledHeight - scaledGutter}rpx` },
+                    { padding: `${scaledGutter}rpx`, left: `${-scaledGutter / 2}rpx` }
+                ]">
+                <view
+v-for="(item, index) in _list" 
 				:ref="'tab_'" 
+				:key="index"
 				:class="['tab' + index]"
-				:style="{height: `${props.height - props.gutter}rpx`}"
-                    class="flex-1 flex flex-row flex-row-center-center" 
-					v-for="(item, index) in _list" :key="index">
-                    <tm-text :color="item.id===_cId?props.activeColor:''" :font-size="props.fontSize" :userInteractionEnabled="false" :label="item.text"></tm-text>
+                    :style="{height: `${scaledHeight - scaledGutter}rpx`}" 
+					class="flex-1 flex flex-row flex-row-center-center" @click="itemClick(index,item.id)">
+                    <tm-text :color="item.id===_cId?props.activeColor:''" :font-size="props.fontSize" :user-interaction-enabled="false" :label="item.text"></tm-text>
                 </view>
             </view>
         </tm-sheet>
@@ -46,6 +54,7 @@ import tmSheet from '../tm-sheet/tm-sheet.vue';
 import tmText from '../tm-text/tm-text.vue';
 import {listitem} from './interface'
 import { custom_props } from '../../tool/lib/minxs';
+import { useUiScale } from '@/utils/viewport';
 // #ifdef APP-PLUS-NVUE
 const dom = uni.requireNativePlugin('dom')
 const animation = uni.requireNativePlugin('animation')
@@ -127,6 +136,12 @@ const _list = computed(()=>{
 	
     return templist;
 })
+const uiScale = useUiScale();
+const scaleNumber = (value: number) => Math.round(value * uiScale.value * 100) / 100;
+const scaleInt = (value: number) => Math.round(value * uiScale.value);
+const scaledWidth = computed(() => scaleNumber(props.width));
+const scaledHeight = computed(() => scaleNumber(props.height));
+const scaledGutter = computed(() => scaleInt(props.gutter));
 
 //当前值。
 const _cId:Ref<string|number> = ref(props.defaultValue ?? 0)
@@ -189,7 +204,7 @@ function getDomRectBound(idx: number) {
                     const { left, top, width } = res.size
                     let domx = getEl(proxy.$refs['tmBgEl']);
                     leftWidth.value = Math.floor((width ?? 0));
-                    leftPos.value = Math.floor((left ?? 0) - uni.upx2px(props.gutter)-parentleft);
+                    leftPos.value = Math.floor((left ?? 0) - uni.upx2px(scaledGutter.value)-parentleft);
                     animation.transition(proxy.$refs['tmBgEl'], {
                         styles: {
                             transform: 'translateX('+leftPos.value +'px)',
@@ -211,7 +226,7 @@ function getDomRectBound(idx: number) {
         let parentleft = (nodeParent?.left ?? 0);
         uni.createSelectorQuery().in(proxy).select('.tab' + idx).boundingClientRect((node) => {
             if(!node) return;
-            leftPos.value = (node?.left ?? 0) - uni.upx2px(props.gutter) - parentleft;
+            leftPos.value = (node?.left ?? 0) - uni.upx2px(scaledGutter.value) - parentleft;
             leftWidth.value = (node?.width ?? 0) - 0
         }).exec()
     }).exec()

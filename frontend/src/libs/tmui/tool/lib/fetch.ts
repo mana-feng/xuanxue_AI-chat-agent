@@ -60,8 +60,8 @@ function request(cog:fetchConfig = config,complete?:Function,beforeRequest?:Func
         })
     })
 }
-var beforeRequest:Function = (val:fetchConfig)=>val;
-var afterRequest:Function = (val:fetchConfig)=>val;
+let beforeRequest:Function = (val:fetchConfig)=>val;
+let afterRequest:Function = (val:fetchConfig)=>val;
 export class fetchNet {
 
     /**
@@ -80,11 +80,11 @@ export class fetchNet {
         }
     }
     static get(url:string,data:object={},opts:fetchConfig={}){
-        let cfg:fetchConfig =  {...config,...(opts||{}),url:url,method:"GET",data:data};
+        const cfg:fetchConfig =  {...config,...(opts||{}),url:url,method:"GET",data:data};
         return request(cfg)
     }
     static post(url:string,data:object={},opts:fetchConfig={}){
-        let cfg:fetchConfig =  {...config,...(opts||{}),url:url,method:"POST",data:data};
+        const cfg:fetchConfig =  {...config,...(opts||{}),url:url,method:"POST",data:data};
         return request(cfg)
     }
     /**
@@ -93,9 +93,9 @@ export class fetchNet {
      * @param complete 访问结束后执行的函数
      */
     static async request(cog:fetchConfig = config,beforeFun?:Function,afterFun?:Function,complete?:Function){
-        let newConfig = {...config,...cog}
+        const newConfig = {...config,...cog}
         if(typeof beforeFun == 'function'){
-            let testFun = await beforeFun();
+            const testFun = await beforeFun();
             if(!testFun) return;
         }
         return request(newConfig,complete,(beforeFun||beforeRequest),(afterFun||afterRequest));

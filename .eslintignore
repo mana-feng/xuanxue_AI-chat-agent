@@ -9,6 +9,6 @@ logs
 server/bazi.db
 
 analysis-results
-src/libs
-src/assets
+frontend/src/libs/tmui
+backend/admin-ui
 bazi-*.json

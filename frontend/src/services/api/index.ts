@@ -6,6 +6,7 @@
 
 import { API_BASE_URL } from '@/config/config';
 import { getDeviceId } from '@/utils/device';
+import { signRequest, sanitizeRequestData } from '@/utils/api-signature';
 import {
 	getAccessToken,
 	setAccessToken,
@@ -17,9 +18,50 @@ import {
 export interface ApiResponse<T = any> {
 	success: boolean;
 	data?: T;
-	error?: string;
+	code?: string;
 	message?: string;
+	error?: string;
 }
+
+const normalizeApiResponse = <T>(payload: any, statusCode: number): ApiResponse<T> => {
+	if (payload && typeof payload === 'object') {
+		if ('success' in payload) {
+			const message = payload.message || payload.error;
+			return {
+				success: Boolean(payload.success),
+				data: payload.data ?? null,
+				code: payload.code,
+				message,
+				error: payload.error || message,
+			};
+		}
+
+		if ('error' in payload) {
+			const message = payload.message || payload.error;
+			return {
+				success: false,
+				code: payload.code,
+				message,
+				error: message,
+				data: payload.data ?? null,
+			};
+		}
+	}
+
+	if (statusCode >= 200 && statusCode < 300) {
+		return {
+			success: true,
+			data: payload,
+			message: 'ok',
+		};
+	}
+
+	return {
+		success: false,
+		error: '请求失败',
+		message: '请求失败',
+	};
+};
 
 // Refresh 锁：防止并发请求时多次刷新
 let refreshingPromise: Promise<void> | null = null;
@@ -68,10 +110,16 @@ async function refreshAccessToken(): Promise<void> {
 				});
 			});
 
-			if (res.statusCode === 200 && res.data) {
-				const { access_token, refresh_token } = res.data as any;
+		if (res.statusCode === 200 && res.data) {
+			const payload = res.data as any;
+			if (payload?.success === false) {
+				throw new Error(payload?.message || payload?.error || '刷新 token 失败');
+			}
 
-				if (access_token) {
+			const tokenData = payload?.data ?? payload;
+			const { access_token, refresh_token } = tokenData as any;
+
+			if (access_token) {
 					setAccessToken(access_token);
 					// 更新 user store 的登录状态标志（确保响应式更新）
 					try {
@@ -81,15 +129,15 @@ async function refreshAccessToken(): Promise<void> {
 					} catch (e) {
 						// 忽略错误
 					}
-				}
-
-				// 如果返回了新的 refresh_token，更新它（非 H5 平台）
-				if (refresh_token) {
-					setRefreshToken(refresh_token);
-				}
-			} else {
-				throw new Error('刷新 token 失败');
 			}
+
+			// 如果返回了新的 refresh_token，更新它（非 H5 平台）
+			if (refresh_token) {
+				setRefreshToken(refresh_token);
+			}
+		} else {
+			throw new Error('刷新 token 失败');
+		}
 		} catch (error) {
 			// 刷新失败，清除所有 token 并更新状态
 			clearAllTokens();
@@ -121,9 +169,10 @@ export function request<T = any>(
 		data?: any;
 		header?: Record<string, string>;
 		needAuth?: boolean;
+		sanitizeData?: boolean;
 	} = {}
 ): Promise<ApiResponse<T>> {
-	const { method = 'GET', data, header = {}, needAuth = false } = options;
+	const { method = 'GET', data, header = {}, needAuth = false, sanitizeData = true } = options;
 
 	return new Promise((resolve, reject) => {
 		let retryCount = 0;
@@ -133,11 +182,9 @@ export function request<T = any>(
 			const deviceId = getDeviceId();
 			const accessToken = needAuth ? getAccessToken() : null;
 
-			// 导入签名工具（动态导入避免循环依赖）
-			const { signRequest, sanitizeRequestData } = await import('@/utils/api-signature');
-			
+			// 签名工具在模块顶层导入
 			// 清理敏感数据
-			const sanitizedData = sanitizeRequestData(data);
+			const sanitizedData = sanitizeData ? sanitizeRequestData(data) : data;
 			
 			// 添加签名信息
 			const requestHeaders: Record<string, string> = {
@@ -167,24 +214,20 @@ export function request<T = any>(
 				// #endif
 				success: async (res: any) => {
 					if (res.statusCode >= 200 && res.statusCode < 300) {
-						// 如果后端已经返回了 success 字段，直接返回
-						// 否则包装成统一格式
-						if (res.data && typeof res.data === 'object' && 'success' in res.data) {
-							resolve(res.data);
-						} else {
-							resolve({
-								success: true,
-								data: res.data,
-							});
-						}
+						const normalized = normalizeApiResponse<T>(res.data, res.statusCode);
+						resolve(normalized);
 					} else if (res.statusCode === 401 && needAuth) {
 						// 401 未授权：尝试刷新 token 后重试（最多 1 次）
 						if (retryCount >= 1) {
 							clearAllTokens();
-							return reject({
+							const err = {
 								success: false,
 								error: '登录已失效，请重新登录',
-							});
+								message: '登录已失效，请重新登录',
+								code: res.data?.code,
+							};
+							uni.showToast({ title: err.message, icon: 'none' });
+							return reject(err);
 						}
 						retryCount += 1;
 						try {
@@ -192,20 +235,27 @@ export function request<T = any>(
 							const newToken = getAccessToken();
 							if (!newToken) {
 								clearAllTokens();
-								return reject({
+								const err = {
 									success: false,
 									error: '登录已失效，请重新登录',
-								});
+									message: '登录已失效，请重新登录',
+									code: res.data?.code,
+								};
+								uni.showToast({ title: err.message, icon: 'none' });
+								return reject(err);
 							}
 							// 刷新成功，重试请求
 							return doRequest();
 						} catch (refreshError) {
 							// 刷新失败，清除登录信息并跳转登录页
 							clearAllTokens();
-							reject({
+							const err = {
 								success: false,
 								error: '登录已失效，请重新登录',
-							});
+								message: '登录已失效，请重新登录',
+								code: res.data?.code,
+							};
+							reject(err);
 
 							// 跳转到登录页
 							uni.reLaunch({
@@ -213,16 +263,26 @@ export function request<T = any>(
 							});
 						}
 					} else {
+						const message = res.data?.message || res.data?.error || `请求失败 (${res.statusCode})`;
+						// 对于 5xx 错误，自动提示
+						if (res.statusCode >= 500) {
+							uni.showToast({ title: '服务器错误，请稍后重试', icon: 'none' });
+						}
 						reject({
 							success: false,
-							error: res.data?.error || `请求失败 (${res.statusCode})`,
+							error: message,
+							message,
+							code: res.data?.code,
 						});
 					}
 				},
 				fail: (err: any) => {
+					const errorMsg = err?.errMsg || err?.message || '网络错误，请检查后端是否已启动';
+					uni.showToast({ title: '网络连接失败', icon: 'none' });
 					reject({
 						success: false,
-						error: err?.errMsg || err?.message || '网络错误，请检查后端是否已启动',
+						error: errorMsg,
+						message: errorMsg,
 					});
 				},
 			});

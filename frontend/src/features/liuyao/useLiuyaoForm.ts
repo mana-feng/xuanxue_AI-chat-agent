@@ -1,5 +1,6 @@
 import { computed, ref, watch } from 'vue';
 import { Solar } from 'lunar-javascript';
+import cnchar from 'cnchar';
 import { compileNajia, buildDisplayData } from '@/features/liuyao/najiaCore';
 import { GUA64 } from '@/features/liuyao/najiaConst';
 import { useLiuyaoStore } from '@/store/liuyao';
@@ -85,10 +86,10 @@ export function useLiuyaoForm() {
 
 	const yaoOptions = [
 		{ label: '请选择', value: '', symbol: '' },
-		{ label: '少阴 ━ ━', value: 0, symbol: '━ ━' },
-		{ label: '少阳 ━━━', value: 1, symbol: '━━━' },
-		{ label: '老阳 ━━━x', value: 3, symbol: '━━━x' },
-		{ label: '老阴 ━ ━o', value: 4, symbol: '━ ━o' }
+		{ label: '━　━', value: 0, symbol: '━　━' },
+		{ label: '━━━', value: 1, symbol: '━━━' },
+		{ label: '━━━○', value: 3, symbol: '━━━○' },
+		{ label: '━　━×', value: 4, symbol: '━　━×' }
 	];
 
 	const yaoLabels = ['初爻', '二爻', '三爻', '四爻', '五爻', '上爻'];
@@ -109,15 +110,6 @@ export function useLiuyaoForm() {
 		if (value === '' || value === null || value === undefined) return '请选择';
 		const option = yaoOptions.find(opt => String(opt.value) === String(value));
 		return option ? option.label : '请选择';
-	}
-
-	function onYaoChange(event: any, index: number) {
-		const selectedIndex = event.detail.value;
-		if (selectedIndex >= 0 && selectedIndex < yaoOptions.length) {
-			form.value.manualParams[index] = String(yaoOptions[selectedIndex].value);
-		} else {
-			form.value.manualParams[index] = '';
-		}
 	}
 
 	const currentMethod = computed(() => methodTabs[methodIndex.value] || methodTabs[0]);
@@ -228,13 +220,17 @@ watch(methodIndex, (newIdx, oldIdx) => {
 	}
 
 	function generateSingle() {
-		const raw = (form.value.singleInput || '').toString().replace(/\D/g, '');
+		let raw = (form.value.singleInput || '').toString().replace(/\D/g, '');
 		if (!raw) {
 			uni.showToast({ title: '请输入有效数字', icon: 'none' });
 			return;
 		}
+		// limit length for security
+		if (raw.length > 20) raw = raw.slice(0, 20);
+		
 		const len = raw.length;
-		const mid = Math.ceil(len / 2);
+		// 修正：天清地浊，上卦位数少于或等于下卦
+		const mid = Math.floor(len / 2);
 		const part1 = raw.slice(0, mid) || raw;
 		const part2 = raw.slice(mid) || raw;
 		const n1 = (parseInt(part1, 10) || 0) % 8 || 8;
@@ -246,12 +242,16 @@ watch(methodIndex, (newIdx, oldIdx) => {
 	}
 
 	function generateDouble() {
-		const a = (form.value.double1 || '').toString().replace(/\D/g, '');
-		const b = (form.value.double2 || '').toString().replace(/\D/g, '');
+		let a = (form.value.double1 || '').toString().replace(/\D/g, '');
+		let b = (form.value.double2 || '').toString().replace(/\D/g, '');
 		if (!a || !b) {
 			uni.showToast({ title: '请输入两组有效数字', icon: 'none' });
 			return;
 		}
+		// limit length for security
+		if (a.length > 20) a = a.slice(0, 20);
+		if (b.length > 20) b = b.slice(0, 20);
+		
 		const n1 = (parseInt(a, 10) || 0) % 8 || 8;
 		const n2 = (parseInt(b, 10) || 0) % 8 || 8;
 		const raw = a + b;
@@ -263,16 +263,21 @@ watch(methodIndex, (newIdx, oldIdx) => {
 
 	function generateChars() {
 		const rawAll = (form.value.charsInput || '').toString();
-		const chars = rawAll.match(/[\u4e00-\u9fff]/g) || [];
+		let chars: string[] = rawAll.match(/[\u4e00-\u9fff]/g) || [];
 		if (chars.length < 2) {
 			uni.showToast({ title: '请至少输入 2 个汉字', icon: 'none' });
 			return;
 		}
+		// limit length for security
+		if (chars.length > 20) chars = chars.slice(0, 20);
+
 		const len = chars.length;
-		const mid = Math.ceil(len / 2);
+		// 修正：天清地浊，上卦字数少于或等于下卦
+		const mid = Math.floor(len / 2);
 		const part1 = chars.slice(0, mid);
 		const part2 = chars.slice(mid);
-		const sumCode = (arr: string[]) => arr.reduce((s, ch) => s + (ch.codePointAt(0) || 0), 0);
+		// 修正：使用笔画数起卦
+		const sumCode = (arr: string[]) => arr.reduce((s, ch) => s + (cnchar.stroke(ch) as number), 0);
 		const s1 = sumCode(part1);
 		const s2 = sumCode(part2);
 		const total = s1 + s2;
@@ -324,11 +329,45 @@ watch(methodIndex, (newIdx, oldIdx) => {
 		form.value.guaBian = guaMarks[v]?.value || '';
 	});
 
+	// Input validation watchers
+	watch(() => form.value.singleInput, (val) => {
+		const filtered = String(val || '').replace(/\D/g, '');
+		if (filtered !== val) {
+			// use nextTick to ensure update cycle completes
+			setTimeout(() => { form.value.singleInput = filtered; }, 0);
+		}
+	});
+
+	watch(() => form.value.double1, (val) => {
+		const filtered = String(val || '').replace(/\D/g, '');
+		if (filtered !== val) {
+			setTimeout(() => { form.value.double1 = filtered; }, 0);
+		}
+	});
+
+	watch(() => form.value.double2, (val) => {
+		const filtered = String(val || '').replace(/\D/g, '');
+		if (filtered !== val) {
+			setTimeout(() => { form.value.double2 = filtered; }, 0);
+		}
+	});
+
 	function startLiuyao() {
 		try {
+			const errorMsg = validateStart();
+			if (errorMsg) {
+				uni.showModal({
+					title: '提示',
+					content: errorMsg,
+					showCancel: false,
+					confirmText: '知道了'
+				});
+				return;
+			}
+
 			const methodKey = currentMethod.value.key as MethodKey;
 			let params: number[] = [];
-			let dateObj = parseDate(form.value.timeLabel) || new Date();
+			const dateObj = parseDate(form.value.timeLabel) || new Date();
 
 			if (methodKey === 'number') {
 				if (!form.value.num1 || !form.value.num2) {
@@ -342,7 +381,7 @@ watch(methodIndex, (newIdx, oldIdx) => {
 				);
 			} else if (methodKey === 'time') {
 				params = liuyaoService.generateTimeParams(dateObj);
-			} else if (methodKey === 'computer') {
+			} else if (methodKey === 'computer' || methodKey === 'online') {
 				params = form.value.autoParams.length
 					? form.value.autoParams.map(v => parseInt(String(v || 0), 10) || 0)
 					: liuyaoService.generateAutoParams();
@@ -467,52 +506,57 @@ watch(methodIndex, (newIdx, oldIdx) => {
 		return false;
 	};
 
-	const canStart = computed(() => {
-		// require basic info title
-		if (!String(form.value.title || '').trim()) return false;
+	function validateStart(): string {
+		if (!String(form.value.title || '').trim()) {
+			return '请输入占卜事项（标题）';
+		}
+
+		// check if any params array contains exactly 6 entries (global check for cached/preset)
+		if (hasCompleteParams()) return '';
 
 		const methodKey = currentMethod.value.key as string;
 
-		// if already has compiled/complete params (from store or earlier), allow start
-		if (hasCompleteParams()) return true;
-
-		// require method-specific complete parameters
 		if (methodKey === 'computer' || methodKey === 'online' || methodKey === 'auto' || methodKey === 'shake') {
-			return Array.isArray(form.value.autoParams) && form.value.autoParams.length === 6;
+			if (!Array.isArray(form.value.autoParams) || form.value.autoParams.length < 6) {
+				return '请先完成起卦（生成完整卦象）';
+			}
+		} else if (methodKey === 'time') {
+			if (!Array.isArray(form.value.timeParams) || form.value.timeParams.length < 6) {
+				return '请先生成时间起卦参数';
+			}
+		} else if (methodKey === 'single') {
+			if (!Array.isArray(form.value.singleParams) || form.value.singleParams.length < 6) {
+				return '请先生成单数起卦参数';
+			}
+		} else if (methodKey === 'double') {
+			if (!Array.isArray(form.value.doubleParams) || form.value.doubleParams.length < 6) {
+				return '请先生成双数起卦参数';
+			}
+		} else if (methodKey === 'chars') {
+			if (!Array.isArray(form.value.charsParams) || form.value.charsParams.length < 6) {
+				return '请先生成汉字起卦参数';
+			}
+		} else if (methodKey === 'gua') {
+			if (!Array.isArray(form.value.guaParams) || form.value.guaParams.length < 6) {
+				return '请先生成卦名起卦参数';
+			}
+		} else if (methodKey === 'number') {
+			if (!form.value.num1 || !form.value.num2) {
+				return '请输入完整的起卦数字';
+			}
+		} else if (methodKey === 'manual') {
+			const allFilled = Array.isArray(form.value.manualParams) && 
+				form.value.manualParams.length === 6 && 
+				form.value.manualParams.every(v => String(v || '').trim() !== '');
+			if (!allFilled) {
+				return '请手工指定全部 6 爻';
+			}
 		}
 
-		if (methodKey === 'time') {
-			return Array.isArray(form.value.timeParams) && form.value.timeParams.length === 6;
-		}
+		return '';
+	}
 
-		if (methodKey === 'single') {
-			return Array.isArray(form.value.singleParams) && form.value.singleParams.length === 6;
-		}
-
-		if (methodKey === 'double') {
-			return Array.isArray(form.value.doubleParams) && form.value.doubleParams.length === 6;
-		}
-
-		if (methodKey === 'chars') {
-			return Array.isArray(form.value.charsParams) && form.value.charsParams.length === 6;
-		}
-
-		if (methodKey === 'gua') {
-			return Array.isArray(form.value.guaParams) && form.value.guaParams.length === 6;
-		}
-
-		// for 'number' require num1 and num2
-		if (methodKey === 'number') {
-			return !!form.value.num1 && !!form.value.num2;
-		}
-
-		// for manual require all 6 manual selections filled
-		if (methodKey === 'manual') {
-			return Array.isArray(form.value.manualParams) && form.value.manualParams.length === 6 && form.value.manualParams.every(v => String(v || '').trim() !== '');
-		}
-
-		return false;
-	});
+	const canStart = computed(() => !validateStart());
 
 	return {
 		form,

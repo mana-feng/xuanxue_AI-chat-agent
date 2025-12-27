@@ -4,8 +4,7 @@
 		<picker mode="selector" :range="options" range-key="label" :value="selectedIndex" @change="onChange">
 			<view class="picker-trigger">
 				<view class="picker-content">
-					<tm-text :font-size="22" :label="displayLabel" class="picker-label"></tm-text>
-					<text v-if="symbol" class="yao-symbol">{{ symbol }}</text>
+					<tm-text :font-size="28" :label="displayLabel" class="picker-label" _class="font-weight-b"></tm-text>
 				</view>
 				<tm-icon name="tmicon-angle-down" :font-size="20" color="#94a3b8"></tm-icon>
 			</view>
@@ -14,7 +13,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, defineProps, defineEmits } from 'vue';
+import { computed } from 'vue';
 
 const props = defineProps({
 	modelValue: { type: [String, Number], default: '' },
@@ -32,11 +31,6 @@ const selectedIndex = computed(() => {
 const displayLabel = computed(() => {
 	const opt = props.options[selectedIndex.value];
 	return opt ? opt.label : '请选择';
-});
-
-const symbol = computed(() => {
-	const opt = props.options[selectedIndex.value];
-	return opt ? opt.symbol : '';
 });
 
 function onChange(e: any) {

@@ -1,49 +1,50 @@
 <template>
 	<view v-if="show" class="flex flex-row " :class="[loading?'opacity-5':'']"  >
-		<tm-translate @end="aniEnd" ref="anitag" name="zoom" reverse :autoPlay="false">
+		<tm-translate ref="anitag" name="zoom" reverse :auto-play="false" @end="aniEnd">
 			
 			<tm-sheet
-			@click="onclick"
 			:transprent="props.transprent"
 			:color="props.color"
 			_class="flex-row flex flex-row-center-center"
 			:_style="customCSSStyle"
-			:followTheme="props.followTheme"
-			:followDark="props.followDark"
+			:follow-theme="props.followTheme"
+			:follow-dark="props.followDark"
 			:dark="props.dark"
 			:round="props.round"
 			:shadow="(props.checkable&&checked_com)||!props.checkable?props.shadow:0"
 			:outlined="(props.checkable&&!checked_com)?true:props.outlined"
 			:border="props.border"
-			:borderStyle="props.borderStyle"
-			:borderDirection="props.borderDirection"
+			:border-style="props.borderStyle"
+			:border-direction="props.borderDirection"
 			:text="(props.checkable&&!checked_com)?true:props.text"
 			:linear="props.linear"
-			:linearDeep="props.linearDeep"
+			:linear-deep="props.linearDeep"
 			:margin="props.margin"
 			:padding="[wh.px,wh.py]"
+			@click="onclick"
 			
 			>
-				<tm-icon :color="_fontColor" v-if="props.icon" :name="props.icon"  
-				:followDark="props.followDark" 
-				:fontSize="wh.fontSize" :dark="props.dark" :userInteractionEnabled="false"></tm-icon>
+				<tm-icon
+v-if="props.icon" :color="_fontColor" :name="props.icon"  
+				:follow-dark="props.followDark" 
+				:font-size="wh.fontSize" :dark="props.dark" :user-interaction-enabled="false"></tm-icon>
 				
 				<view class="flex-1 flex flex-center" >
 					<slot name="default">
 					<tm-text
 						:color="_fontColor"
 						:_class="props.icon?'pl-10':''"
-						:fontSize="wh.fontSize" 
-						:followDark="props.followDark"
-						:userInteractionEnabled="false"
+						:font-size="wh.fontSize" 
+						:follow-dark="props.followDark"
+						:user-interaction-enabled="false"
 						:dark="props.dark" :label="props.label"></tm-text>
 					</slot>
 				</view>
 				<view @click.stop="" >
-					<tm-icon :color="_fontColor" @click="closeTag" :followDark="props.followDark"  v-if="props.closable&&!loading" _class="pl-10" :fontSize="wh.fontSize*0.8" name="tmicon-times" :dark="props.dark"></tm-icon>
+					<tm-icon v-if="props.closable&&!loading" :color="_fontColor" :follow-dark="props.followDark"  _class="pl-10" :font-size="wh.fontSize*0.8" name="tmicon-times" :dark="props.dark" @click="closeTag"></tm-icon>
 				</view>
-				<view :userInteractionEnabled="false" v-if="loading" class=" pl-10 flex flex-center flex-row" style="line-height: 0;">
-					<tm-icon :color="_fontColor" :followDark="props.followDark"    :fontSize="wh.fontSize*0.8" name="tmicon-loading" spin :dark="dark">
+				<view v-if="loading" :user-interaction-enabled="false" class=" pl-10 flex flex-center flex-row" style="line-height: 0;">
+					<tm-icon :color="_fontColor" :follow-dark="props.followDark"    :font-size="wh.fontSize*0.8" name="tmicon-loading" spin :dark="dark">
 					</tm-icon>
 				</view>
 				
@@ -82,6 +83,7 @@
 		computedClass,
 		computedStyle
 	} from '../../tool/lib/minxs';
+	import { useUiScale } from '@/utils/viewport';
 	// #ifdef APP-PLUS-NVUE
 	const Binding = uni.requireNativePlugin('bindingx');
 	const dom = uni.requireNativePlugin('dom')
@@ -167,6 +169,8 @@
 	const customCSSStyle = computed(()=>computedStyle(props));
 	//自定类
 	const customClass = computed(()=>computedClass(props));
+	const uiScale = useUiScale();
+	const scaleInt = (value: number) => Math.round(value * uiScale.value);
 	//显示
 	const show = ref(true)
 	//是否选中。
@@ -193,44 +197,44 @@
 		
 		if(props.size=='xs') {
 			return {
-				px:props.padding[0]||10,
-				py:props.padding[1]||4,
+				px:scaleInt(props.padding[0]||10),
+				py:scaleInt(props.padding[1]||4),
 				fontSize:props.fontSize||22
 			}
 		}else if(props.size=='s'){
 			return {
-				px:props.padding[0]||14,
-				py:props.padding[1]||4,
+				px:scaleInt(props.padding[0]||14),
+				py:scaleInt(props.padding[1]||4),
 				fontSize:props.fontSize||24
 			}
 		}else if(props.size=='m'){
 			return {
-				px:props.padding[0]||16,
-				py:props.padding[1]||8,
+				px:scaleInt(props.padding[0]||16),
+				py:scaleInt(props.padding[1]||8),
 				fontSize:props.fontSize||26
 			}
 		}else if(props.size=='n'){
 			return {
-				px:props.padding[0]||18,
-				py:props.padding[1]||10,
+				px:scaleInt(props.padding[0]||18),
+				py:scaleInt(props.padding[1]||10),
 				fontSize:props.fontSize||28
 			}
 		}else if(props.size=='g'){
 			return {
-				px:props.padding[0]||20,
-				py:props.padding[1]||12,
+				px:scaleInt(props.padding[0]||20),
+				py:scaleInt(props.padding[1]||12),
 				fontSize:props.fontSize||32
 			}
 		}else if(props.size=='lg'){
 			return {
-				px:props.padding[0]||24,
-				py:props.padding[1]||16,
+				px:scaleInt(props.padding[0]||24),
+				py:scaleInt(props.padding[1]||16),
 				fontSize:props.fontSize||36
 			}
 		}
 		return {
-			px:props.padding[0],
-			py:props.padding[1],
+			px:scaleInt(props.padding[0]),
+			py:scaleInt(props.padding[1]),
 			fontSize:props.fontSize
 		}
 	})

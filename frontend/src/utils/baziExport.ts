@@ -358,7 +358,6 @@ export function buildBaziExportPayload(
 	// 注意：year_list 只包含当前大运的流年，需要从 original 获取其他大运的流年
 	if (yunStore.original && yunStore.original.length > 0) {
 		const currentIndex = yunStore.current_index || 0;
-		const dayunList = yunStore.dayun_list || [];
 		
 		// 确定要导出的大运索引：前一个大运、当前大运、后一个大运
 		const dayunIndices: number[] = [];

@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
 				 ORDER BY updated_at DESC`,
 				[now]
 			);
-			return res.json({ success: true, meta: rows || [] });
+			return res.json({ success: true, data: { meta: rows || [] } });
 		} else {
 			rows = await db.all(
 				`SELECT id, title, content, expires_at AS expiresAt, updated_at AS updatedAt, created_at AS createdAt
@@ -31,8 +31,10 @@ router.get('/', async (req, res) => {
 			);
 			res.json({
 				success: true,
-				list: rows || [],
-				updatedAt: rows?.[0]?.updatedAt || null,
+				data: {
+					list: rows || [],
+					updatedAt: rows?.[0]?.updatedAt || null,
+				}
 			});
 		}
 	} catch (err) {

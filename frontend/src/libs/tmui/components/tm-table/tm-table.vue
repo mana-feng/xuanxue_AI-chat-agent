@@ -1,57 +1,61 @@
 <template>
     <view>
-        <scroll-view v-if="_showHeader" :enable-flex="isNvue" :class="[isNvue ? 'flex-row flex' : 'tableHeader']" :scroll-x="true"
-            :scroll-with-animation="false" :show-scrollbar="false" @scroll="tableScroll" @touchstart="scrollDong = 't'"
-            @mouseup="scrollDong = 't'" :scroll-left="headerLeft"
-            :style="{ width: `${defaultProps.width}rpx`, height: `${defaultProps.headerHeight}rpx` }">
+        <scroll-view
+v-if="_showHeader" :enable-flex="isNvue" :class="[isNvue ? 'flex-row flex' : 'tableHeader']" :scroll-x="true"
+            :scroll-with-animation="false" :show-scrollbar="false" :scroll-left="headerLeft" :style="{ width: `${defaultProps.width}rpx`, height: `${defaultProps.headerHeight}rpx` }"
+            @scroll="tableScroll" @touchstart="scrollDong = 't'"
+            @mouseup="scrollDong = 't'">
             <!-- #ifndef APP-NVUE -->
             <view class="flex-1 flex-row flex-nowrap">
-                <tm-sheet  :border="_showBottomBorder?1:0" border-direction="bottom" :color="item.bgColor" :text="item.light" 
-					:_class="'flex flex-col ' + item.align"
-                    :height="defaultProps.headerHeight-6" 
-					:width="item.width-10" v-for="(item, index) in _col" 
-					:key="index"
+                <tm-sheet
+v-for="(item, index) in _col" :key="index" :border="_showBottomBorder?1:0" border-direction="bottom" 
+					:color="item.bgColor"
+                    :text="item.light" 
+					:_class="'flex flex-col ' + item.align" :height="defaultProps.headerHeight-6" 
+					:width="item.width-10"
                     :margin="[0, 0]" :padding="[10, 6]"
 					@click="headerClick(item.key,item.sort)"
 					>
-                    <view :style="{width:item.width-10+'rpx',height:defaultProps.headerHeight-6+'rpx'}" 
+                    <view
+:style="{width:item.width-10+'rpx',height:defaultProps.headerHeight-6+'rpx'}" 
 					class="flex flex-row-center-center flex-row"
 					:class="[item.align]"
 					>
-						<view @click.stop="" class="flex-1 flex-center" style="width: 0px;">
-							<tm-text @click="headerClick(item.key,item.sort)" _style="line-height:normal;" :font-size="30" _class="text-weight-b text-align-center" :label="item.title">
+						<view class="flex-1 flex-center" style="width: 0px;" @click.stop="">
+							<tm-text _style="line-height:normal;" :font-size="30" _class="text-weight-b text-align-center" :label="item.title" @click="headerClick(item.key,item.sort)">
 							</tm-text>
 						</view>
-						<view @click.stop="" v-if="item.sort" class="flex flex-col flex-col-center-center">
-							<tm-icon :lineHeight='11' @click="headerClick(item.key,item.sort)" :_class='(item.sortType=="asce"||item.sortType=="none"?"":"opacity-6")' :font-size="20" name='tmicon-sort-up'></tm-icon>
-							<tm-icon :lineHeight='11' @click="headerClick(item.key,item.sort)" :_class='(item.sortType=="desc"||item.sortType=="none"?"":"opacity-6")' :font-size="20" name='tmicon-sort-down'></tm-icon>
+						<view v-if="item.sort" class="flex flex-col flex-col-center-center" @click.stop="">
+							<tm-icon :line-height='11' :_class='(item.sortType=="asce"||item.sortType=="none"?"":"opacity-6")' :font-size="20" name='tmicon-sort-up' @click="headerClick(item.key,item.sort)"></tm-icon>
+							<tm-icon :line-height='11' :_class='(item.sortType=="desc"||item.sortType=="none"?"":"opacity-6")' :font-size="20" name='tmicon-sort-down' @click="headerClick(item.key,item.sort)"></tm-icon>
 						</view>
 					</view>
                 </tm-sheet>
             </view>
             <!-- #endif -->
             <!-- #ifdef APP-NVUE -->
-            <tm-sheet  :border="_showBottomBorder?1:0" border-direction="bottom" :color="item.bgColor" :text="item.light"
-            	:_class="'flex flex-col ' + item.align"
-                :height="defaultProps.headerHeight-6" 
-            	:width="item.width-10" v-for="(item, index) in _col" 
-            	:key="index"
+            <tm-sheet
+v-for="(item, index) in _col" :key="index" :border="_showBottomBorder?1:0" border-direction="bottom"
+            	:color="item.bgColor"
+                :text="item.light" 
+            	:_class="'flex flex-col ' + item.align" :height="defaultProps.headerHeight-6" 
+            	:width="item.width-10"
                 :margin="[0, 0]" :padding="[10, 6]"
             	@click="headerClick(item.key,item.sort)"
             	>
                 <view 
-				:userInteractionEnabled="false"
+				:user-interaction-enabled="false"
 				:style="{width:item.width-10+'rpx',height:defaultProps.headerHeight-6+'rpx'}" 
             	class="flex flex-row-center-center flex-row"
             	:class="[item.align]"
             	>
-            		<view  @click.stop="" class="flex-1 flex" style="width: 0px;">
-            			<tm-text @click="headerClick(item.key,item.sort)"  _style="line-height:normal;" :font-size="30" _class="text-weight-b text-align-center" :label="item.title">
+            		<view  class="flex-1 flex" style="width: 0px;" @click.stop="">
+            			<tm-text _style="line-height:normal;"  :font-size="30" _class="text-weight-b text-align-center" :label="item.title" @click="headerClick(item.key,item.sort)">
             			</tm-text>
             		</view>
-            		<view  @click.stop=""  v-if="item.sort" class="flex flex-col flex-col-center-center">
-            			<tm-icon :lineHeight='11' @click="headerClick(item.key,item.sort)"  :_class='(item.sortType=="asce"||item.sortType=="none"?"":"opacity-6")' :font-size="20" name='tmicon-sort-up'></tm-icon>
-            			<tm-icon :lineHeight='11' @click="headerClick(item.key,item.sort)"  :_class='(item.sortType=="desc"||item.sortType=="none"?"":"opacity-6")' :font-size="20" name='tmicon-sort-down'></tm-icon>
+            		<view  v-if="item.sort"  class="flex flex-col flex-col-center-center" @click.stop="">
+            			<tm-icon :line-height='11' :_class='(item.sortType=="asce"||item.sortType=="none"?"":"opacity-6")'  :font-size="20" name='tmicon-sort-up' @click="headerClick(item.key,item.sort)"></tm-icon>
+            			<tm-icon :line-height='11' :_class='(item.sortType=="desc"||item.sortType=="none"?"":"opacity-6")'  :font-size="20" name='tmicon-sort-down' @click="headerClick(item.key,item.sort)"></tm-icon>
             		</view>
             	</view>
             </tm-sheet>
@@ -60,15 +64,16 @@
         </scroll-view>
 
         <!-- #ifndef APP-NVUE -->
-        <scroll-view :scroll-with-animation="false" @scroll="headerScroll($event, 0)" @touchstart="touchStartScroll(0)"
-            @mouseup="touchStartScroll(0)" :scroll-x="true" :scroll-y="true" :scroll-left="tableLeft[0]"
-            :style="[defaultProps.height ? { height: `${defaultProps.height}rpx` } : '', { width: `${defaultProps.width}rpx` }]">
+        <scroll-view
+:scroll-with-animation="false" :scroll-x="true" :scroll-y="true"
+            :scroll-left="tableLeft[0]" :style="[defaultProps.height ? { height: `${defaultProps.height}rpx` } : '', { width: `${defaultProps.width}rpx` }]" @scroll="headerScroll($event, 0)" @touchstart="touchStartScroll(0)"
+            @mouseup="touchStartScroll(0)">
 
-            <view class="flex flex-row flex-nowrap" v-for="(item2, index2) in _tabel" :key="index2" :margin="[0, 0]">
+            <view v-for="(item2, index2) in _tabel" :key="index2" class="flex flex-row flex-nowrap" :margin="[0, 0]">
                 <tm-sheet  
-				:border="_showBottomBorder?1:0" 
-				border-direction="bottom" v-for="(item, index) in item2.data" 
-				:key="index" 
+				v-for="(item, index) in item2.data" 
+				:key="index" :border="_showBottomBorder?1:0" 
+				border-direction="bottom" 
 				:margin="[0, 0]"
                 :color="item.color" 
 				:text="item.light"
@@ -78,8 +83,9 @@
                    <view v-if="item.type=='vertical-text'" class="flex flex-col flex-col-center-center" style="width: 100%;">
                        <tm-text v-for="(textItem, textIndex) in item.items" :key="textIndex" :font-size="item.fontSize || 30" :label="textItem" :style="{ marginBottom: textIndex < item.items.length - 1 ? '4rpx' : '0' }"></tm-text>
                     </view>
-                   <tm-button @click="rowClick(index2,index)" :margin="[0,0]" size="small" :color="_col[index]?.bgColor" 
-				   :width="item.width-16" v-if="item.type=='button'" :font-size="24" :label="item.text"></tm-button>
+                   <tm-button
+v-if="item.type=='button'" :margin="[0,0]" size="small" :color="_col[index]?.bgColor" 
+				   :width="item.width-16" :font-size="24" :label="item.text" @click="rowClick(index2,index)"></tm-button>
                 </tm-sheet>
             </view>
 
@@ -88,17 +94,20 @@
         <!-- #endif -->
 
         <!-- #ifdef APP-NVUE -->
-        <scroll-view :scroll-with-animation="false" :enable-flex="isNvue" :class="[isNvue ? 'flex-col flex' : '']"
+        <scroll-view
+:scroll-with-animation="false" :enable-flex="isNvue" :class="[isNvue ? 'flex-col flex' : '']"
             :scroll-y="true"
             :style="[defaultProps.height ? { height: `${defaultProps.height}rpx` } : '', { width: `${defaultProps.width}rpx` }]">
-            <scroll-view :scroll-with-animation="false" @scroll="headerScroll($event, index2)"
-                @touchstart="touchStartScroll(index2)" @mouseup="touchStartScroll(index2)"
-                :scroll-left="tableLeft[index2]" :show-scrollbar="false" :enable-flex="isNvue"
-                :class="[isNvue ? 'flex-row flex' : '']" :scroll-x="true" :style="[
+            <scroll-view
+v-for="(item2, index2) in _tabel" :key="index2"
+                :scroll-with-animation="false" :scroll-left="tableLeft[index2]"
+                :show-scrollbar="false" :enable-flex="isNvue" :class="[isNvue ? 'flex-row flex' : '']"
+                :scroll-x="true" :style="[
                     { width: `${defaultProps.width}rpx` }
-                ]" v-for="(item2, index2) in _tabel" :key="index2" :margin="[0, 0]">
+                ]" :margin="[0, 0]" @scroll="headerScroll($event, index2)" @touchstart="touchStartScroll(index2)" @mouseup="touchStartScroll(index2)">
                 <view class="flex flex-row flex-nowrap">
-                    <tm-sheet :border="_showBottomBorder?1:0" border-direction="bottom" v-for="(item, index) in item2.data" :key="index" :margin="[0, 0]"
+                    <tm-sheet
+v-for="(item, index) in item2.data" :key="index" :border="_showBottomBorder?1:0" border-direction="bottom" :margin="[0, 0]"
                        :color="item.color"
                        :text="item.light"
                         :_class="'flex ' + item2.align" :height="item.type=='vertical-text' ? Math.max((item.rowHeight ?? defaultProps.cellHeight)-6, (item.items?.length || 0) * 32 + 12) : ((item.rowHeight ?? defaultProps.cellHeight)-6)" :width="item.width-10"
@@ -107,7 +116,7 @@
                         <view v-if="item.type=='vertical-text'" class="flex flex-col flex-col-center-center" style="width: 100%;">
                             <tm-text v-for="(textItem, textIndex) in item.items" :key="textIndex" :font-size="item.fontSize || 30" :label="textItem" :style="{ marginBottom: textIndex < item.items.length - 1 ? '4rpx' : '0' }"></tm-text>
                         </view>
-                        <tm-button  @click="rowClick(index2,index)" :margin="[0,0]" size="small" :color="_col[index]?.bgColor" :width="item.width-16" v-if="item.type=='button'" :font-size="24" :label="item.text"></tm-button>
+                        <tm-button  v-if="item.type=='button'" :margin="[0,0]" size="small" :color="_col[index]?.bgColor" :width="item.width-16" :font-size="24" :label="item.text" @click="rowClick(index2,index)"></tm-button>
 						
                     </tm-sheet>
                 </view>

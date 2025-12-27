@@ -1,0 +1,571 @@
+<template>
+	<tm-app>
+		<view class="page-wrapper theme-page-bg">
+			<yx-nav-header></yx-nav-header>
+			
+			<view class="page-content theme-container" :style="pageContentStyle">
+				<view class="theme-card theme-card-glass">
+				<!-- 顶部操作栏 -->
+				<view class="top-bar">
+					<view class="search-bar">
+						<tm-input
+							v-model="searchKeyword"
+							placeholder="搜索邮箱或用户名"
+							prefix="search"
+							clearable
+							@input="handleSearch"
+						></tm-input>
+					</view>
+					<view class="top-bar-buttons">
+						<yx-teal-button
+							size="small"
+							label="返回主页"
+							icon="tmicon-md-home"
+							@tap="goToHome"
+							:margin="[0, 12, 0, 0]"
+						></yx-teal-button>
+						<yx-teal-button
+							size="small"
+							label="创建用户"
+							@tap="handleCreateUser"
+							:margin="[0, 0, 0, 0]"
+						></yx-teal-button>
+					</view>
+				</view>
+				
+				<!-- 用户列表 -->
+				<view class="user-list">
+					<tm-sheet
+						v-for="user in userList"
+						:key="user.id"
+						:round="4"
+						:shadow="2"
+						:padding="[20, 20]"
+						:margin="[0, 0, 20, 0]"
+					>
+						<view class="user-header">
+							<view class="user-info">
+								<tm-text
+									:font-size="28"
+									:bold="true"
+									:label="user.username || user.email"
+								></tm-text>
+								<tm-tag
+									:margin="[8, 0, 0, 0]"
+									:label="user.role === 'admin' ? '管理员' : '普通用户'"
+									:color="user.role === 'admin' ? 'red' : 'blue'"
+									size="small"
+								></tm-tag>
+							</view>
+							<view class="user-actions">
+								<yx-teal-button
+									size="mini"
+									label="编辑"
+									:margin="[0, 10, 0, 0]"
+									@tap="() => handleEditUser(user)"
+								></yx-teal-button>
+								<yx-teal-button
+									v-if="user.role !== 'admin'"
+									size="mini"
+									label="设为管理员"
+									:margin="[0, 10, 0, 0]"
+									@tap="() => handleChangeRole(user.id, 'admin')"
+								></yx-teal-button>
+								<yx-teal-button
+									v-if="user.role === 'admin'"
+									size="mini"
+									label="取消管理员"
+									:margin="[0, 10, 0, 0]"
+									@tap="() => handleChangeRole(user.id, 'user')"
+								></yx-teal-button>
+								<yx-teal-button
+									size="mini"
+									label="删除"
+									@tap="() => handleDeleteUser(user.id)"
+								></yx-teal-button>
+							</view>
+						</view>
+						
+						<view class="user-details">
+							<tm-text
+								:font-size="22"
+								color="#666"
+								:label="'邮箱：' + user.email"
+							></tm-text>
+							<tm-text
+								class="mt-8"
+								:font-size="22"
+								color="#666"
+								:label="'注册时间：' + formatDate(user.created_at)"
+							></tm-text>
+							<tm-text
+								class="mt-8"
+								:font-size="22"
+								color="#666"
+								:label="'记录数：' + (user.recordCount || 0)"
+							></tm-text>
+						</view>
+					</tm-sheet>
+					
+					<tm-text
+						v-if="userList.length === 0 && !loading"
+						class="empty-text"
+						:font-size="24"
+						color="#999"
+						label="暂无用户数据"
+					></tm-text>
+				</view>
+				
+				<!-- 分页 -->
+				<view class="pagination" v-if="totalPages > 1">
+					<yx-teal-button
+						size="small"
+						:disabled="currentPage === 1"
+						label="上一页"
+						@tap="handlePrevPage"
+					></yx-teal-button>
+					<tm-text
+						:margin="[0, 20]"
+						:label="`${currentPage} / ${totalPages}`"
+					></tm-text>
+					<yx-teal-button
+						size="small"
+						:disabled="currentPage === totalPages"
+						label="下一页"
+						@tap="handleNextPage"
+					></yx-teal-button>
+				</view>
+				</view>
+			</view>
+			
+			<!-- 创建/编辑用户弹窗 -->
+			<tm-drawer
+				v-model:show="showUserDialog"
+				:title="editingUser ? '编辑用户' : '创建用户'"
+				:height="600"
+			>
+				<view class="user-form">
+					<tm-input
+						v-model="userForm.email"
+						label="邮箱"
+						placeholder="请输入邮箱"
+						:margin="[0, 0, 20, 0]"
+						required
+					></tm-input>
+					
+					<tm-input
+						v-model="userForm.username"
+						label="用户名（可选）"
+						placeholder="请输入用户名"
+						:margin="[0, 0, 20, 0]"
+					></tm-input>
+					
+					<tm-input
+						v-model="userForm.password"
+						label="密码"
+						:placeholder="editingUser ? '留空则不修改密码' : '请输入密码'"
+						type="password"
+						:margin="[0, 0, 20, 0]"
+						:required="!editingUser"
+					></tm-input>
+					
+					<view class="form-item">
+						<tm-text
+							:font-size="24"
+							:margin="[0, 0, 10, 0]"
+							label="角色"
+						></tm-text>
+						<tm-radio-group v-model="userForm.role" model="button">
+							<tm-radio label="普通用户" value="user"></tm-radio>
+							<tm-radio label="管理员" value="admin"></tm-radio>
+						</tm-radio-group>
+					</view>
+					
+					<view v-if="userFormError" class="error-text">
+						<tm-text
+							:label="userFormError"
+							color="#ff4d4f"
+						></tm-text>
+					</view>
+					
+					<view class="form-actions">
+						<yx-teal-button
+							block
+							size="small"
+							:loading="userFormLoading"
+							:label="editingUser ? '保存' : '创建'"
+							@tap="handleSubmitUser"
+							:margin="[20, 0, 0, 0]"
+						></yx-teal-button>
+						<yx-teal-button
+							block
+							size="small"
+							label="取消"
+							@tap="handleCancelUser"
+							:margin="[20, 0, 0, 0]"
+						></yx-teal-button>
+					</view>
+				</view>
+			</tm-drawer>
+		</view>
+	</tm-app>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted, computed } from 'vue';
+import { useUserStore } from '@/store/user';
+import { getUserList, updateUserRole, deleteUser, createUser, updateUser, type UserInfo } from '@/services/api/admin';
+
+const userStore = useUserStore();
+const userList = ref<UserInfo[]>([]);
+const searchKeyword = ref('');
+const currentPage = ref(1);
+const pageSize = ref(20);
+const total = ref(0);
+const totalPages = ref(0);
+const loading = ref(false);
+
+// navbar 高度（rpx），与 yx-nav-header 中的 navbarHeight 保持一致
+const navbarHeight = 40;
+
+// 计算页面内容的 padding-top，避免被 fixed 的 header 遮挡
+const pageContentStyle = computed(() => {
+	return {
+		paddingTop: `${navbarHeight + 20}rpx` // navbar高度 + 原有padding
+	};
+});
+
+// 用户表单相关
+const showUserDialog = ref(false);
+const editingUser = ref<UserInfo | null>(null);
+const userForm = ref({
+	email: '',
+	username: '',
+	password: '',
+	role: 'user' as 'user' | 'admin'
+});
+const userFormError = ref('');
+const userFormLoading = ref(false);
+
+onMounted(() => {
+	if (!userStore.isAdmin) {
+		uni.reLaunch({
+			url: '/pages/auth/auth'
+		});
+		return;
+	}
+	
+	loadUsers();
+});
+
+async function loadUsers() {
+	loading.value = true;
+	try {
+		const res = await getUserList({
+			page: currentPage.value,
+			pageSize: pageSize.value,
+			search: searchKeyword.value || undefined
+		});
+		
+		if (res.success && res.data) {
+			const list = Array.isArray(res.data.list) ? res.data.list : [];
+			userList.value = list;
+			total.value = Number(res.data.total ?? list.length ?? 0);
+			totalPages.value = Number(res.data.totalPages ?? Math.ceil((total.value || 0) / pageSize.value) ?? 0);
+		} else {
+			userList.value = [];
+			total.value = 0;
+			totalPages.value = 0;
+		}
+	} catch (err) {
+		console.error('加载用户列表失败:', err);
+		uni.showToast({
+			title: '加载失败',
+			icon: 'none'
+		});
+	} finally {
+		loading.value = false;
+	}
+}
+
+function handleSearch() {
+	currentPage.value = 1;
+	loadUsers();
+}
+
+function handlePrevPage() {
+	if (currentPage.value > 1) {
+		currentPage.value--;
+		loadUsers();
+	}
+}
+
+function handleNextPage() {
+	if (currentPage.value < totalPages.value) {
+		currentPage.value++;
+		loadUsers();
+	}
+}
+
+async function handleChangeRole(userId: number, role: 'user' | 'admin') {
+	uni.showModal({
+		title: '确认操作',
+		content: `确定要将该用户${role === 'admin' ? '设为管理员' : '取消管理员权限'}吗？`,
+		success: async (res) => {
+			if (res.confirm) {
+				try {
+					const result = await updateUserRole(userId, role);
+					if (result.success) {
+						uni.showToast({
+							title: '操作成功',
+							icon: 'success'
+						});
+						loadUsers();
+					} else {
+						uni.showToast({
+							title: result.error || '操作失败',
+							icon: 'none'
+						});
+					}
+				} catch (err: any) {
+					uni.showToast({
+						title: err.error || '操作失败',
+						icon: 'none'
+					});
+				}
+			}
+		}
+	});
+}
+
+async function handleDeleteUser(userId: number) {
+	uni.showModal({
+		title: '确认删除',
+		content: '删除用户将同时删除该用户的所有八字记录，此操作不可恢复，确定要删除吗？',
+		success: async (res) => {
+			if (res.confirm) {
+				try {
+					const result = await deleteUser(userId);
+					if (result.success) {
+						uni.showToast({
+							title: '删除成功',
+							icon: 'success'
+						});
+						loadUsers();
+					} else {
+						uni.showToast({
+							title: result.error || '删除失败',
+							icon: 'none'
+						});
+					}
+				} catch (err: any) {
+					uni.showToast({
+						title: err.error || '删除失败',
+						icon: 'none'
+					});
+				}
+			}
+		}
+	});
+}
+
+function goToHome() {
+	uni.reLaunch({
+		url: '/pages/admin/dashboard'
+	});
+}
+
+function formatDate(dateStr: string) {
+	if (!dateStr) return '';
+	const date = new Date(dateStr);
+	return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function handleCreateUser() {
+	editingUser.value = null;
+	userForm.value = {
+		email: '',
+		username: '',
+		password: '',
+		role: 'user'
+	};
+	userFormError.value = '';
+	showUserDialog.value = true;
+}
+
+function handleEditUser(user: UserInfo) {
+	editingUser.value = user;
+	userForm.value = {
+		email: user.email,
+		username: user.username || '',
+		password: '',
+		role: user.role
+	};
+	userFormError.value = '';
+	showUserDialog.value = true;
+}
+
+function handleCancelUser() {
+	showUserDialog.value = false;
+	editingUser.value = null;
+	userFormError.value = '';
+}
+
+async function handleSubmitUser() {
+	userFormError.value = '';
+	
+	if (!userForm.value.email) {
+		userFormError.value = '请输入邮箱';
+		return;
+	}
+	
+	if (!editingUser.value && !userForm.value.password) {
+		userFormError.value = '请输入密码';
+		return;
+	}
+	
+	userFormLoading.value = true;
+	try {
+		if (editingUser.value) {
+			// 编辑用户
+			const params: any = {
+				email: userForm.value.email,
+				role: userForm.value.role
+			};
+			if (userForm.value.username !== editingUser.value.username) {
+				params.username = userForm.value.username || null;
+			}
+			if (userForm.value.password) {
+				params.password = userForm.value.password;
+			}
+			
+			const result = await updateUser(editingUser.value.id, params);
+			if (result.success) {
+				uni.showToast({
+					title: '保存成功',
+					icon: 'success'
+				});
+				showUserDialog.value = false;
+				loadUsers();
+			} else {
+				userFormError.value = result.error || '保存失败';
+			}
+		} else {
+			// 创建用户
+			const result = await createUser({
+				email: userForm.value.email,
+				username: userForm.value.username || undefined,
+				password: userForm.value.password,
+				role: userForm.value.role
+			});
+			if (result.success) {
+				uni.showToast({
+					title: '创建成功',
+					icon: 'success'
+				});
+				showUserDialog.value = false;
+				loadUsers();
+			} else {
+				userFormError.value = result.error || '创建失败';
+			}
+		}
+	} catch (err: any) {
+		userFormError.value = err.error || '操作失败';
+	} finally {
+		userFormLoading.value = false;
+	}
+}
+</script>
+
+<style scoped>
+.page-wrapper {
+	padding-bottom: 40rpx;
+}
+
+.page-content {
+	/* theme-container + pageContentStyle 控制内边距 */
+}
+
+.theme-card {
+	padding: 24px 20px 28px;
+}
+
+.top-bar {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	margin-bottom: 20rpx;
+	flex-wrap: wrap;
+	gap: 12rpx;
+}
+
+.search-bar {
+	flex: 1;
+	min-width: 200rpx;
+}
+
+.top-bar-buttons {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 12rpx;
+}
+
+.user-form {
+	padding: 20rpx;
+}
+
+.form-item {
+	margin-bottom: 20rpx;
+}
+
+.error-text {
+	margin-top: 20rpx;
+}
+
+.form-actions {
+	margin-top: 40rpx;
+}
+
+.user-list {
+	margin-bottom: 40rpx;
+}
+
+.user-header {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: flex-start;
+	margin-bottom: 16rpx;
+}
+
+.user-info {
+	flex: 1;
+}
+
+.user-actions {
+	display: flex;
+	flex-direction: row;
+}
+
+.user-details {
+	margin-top: 16rpx;
+	padding-top: 16rpx;
+	border-top: 1px solid #eee;
+}
+
+.empty-text {
+	text-align: center;
+	padding: 60rpx 0;
+}
+
+.pagination {
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+	align-items: center;
+	padding: 20rpx 0;
+}
+</style>
+

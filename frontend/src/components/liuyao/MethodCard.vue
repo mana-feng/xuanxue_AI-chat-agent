@@ -1,20 +1,19 @@
 <template>
 	<view :class="['method-card', { active }]" @tap="$emit('select')">
-		<tm-icon :name="icon" :font-size="32" color="#667eea"></tm-icon>
-		<tm-text :font-size="18" bold :label="text"></tm-text>
-		<tm-text :font-size="14" color="#94a3b8" :label="desc"></tm-text>
+		<tm-icon :name="icon" :font-size="34" color="#667eea"></tm-icon>
+		<tm-text :font-size="20" bold :label="text" _style="line-height:1.35;" _class="method-card__title"></tm-text>
 	</view>
 </template>
 
 <script lang="ts" setup>
-import { defineProps } from 'vue';
-
-const props = defineProps({
+defineProps({
 	text: { type: String, required: true },
 	icon: { type: String, required: true },
 	desc: { type: String, required: true },
 	active: { type: Boolean, default: false }
 });
+
+defineEmits(['select']);
 </script>
 
 <style scoped>
@@ -23,7 +22,7 @@ const props = defineProps({
 	flex-direction: column;
 	align-items: flex-start;
 	gap: 6px;
-	padding: 12px;
+	padding: 14px;
 	border-radius: 10px;
 	background: transparent;
 	border: 1px solid transparent;
@@ -34,5 +33,3 @@ const props = defineProps({
 	border-color: rgba(102,126,234,0.12);
 }
 </style>
-
-

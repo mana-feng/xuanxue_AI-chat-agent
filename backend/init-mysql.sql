@@ -27,11 +27,26 @@ CREATE TABLE IF NOT EXISTS `bazi_records` (
   `gender` VARCHAR(10) DEFAULT NULL,
   `birth_datetime` VARCHAR(50) DEFAULT NULL,
   `calendar_type` VARCHAR(20) DEFAULT NULL,
-  `raw_payload` TEXT DEFAULT NULL,
+  `raw_payload` MEDIUMTEXT DEFAULT NULL,
   `created_at` DATETIME DEFAULT NULL,
   KEY `idx_user_id` (`user_id`),
   KEY `idx_created_at` (`created_at`),
   CONSTRAINT `fk_bazi_records_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 六爻记录表
+CREATE TABLE IF NOT EXISTS `liuyao_records` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `user_id` INT NOT NULL,
+  `name` VARCHAR(100) DEFAULT NULL,
+  `gender` VARCHAR(10) DEFAULT NULL,
+  `birth_datetime` VARCHAR(50) DEFAULT NULL,
+  `calendar_type` VARCHAR(20) DEFAULT NULL,
+  `raw_payload` TEXT DEFAULT NULL,
+  `created_at` DATETIME DEFAULT NULL,
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_created_at` (`created_at`),
+  CONSTRAINT `fk_liuyao_records_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 邮箱验证码表
@@ -108,6 +123,16 @@ CREATE TABLE IF NOT EXISTS `llm_usage_records` (
   KEY `idx_created_at` (`created_at`),
   KEY `idx_user_date` (`user_id`, `created_at`),
   CONSTRAINT `fk_llm_usage_records_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 公告表
+CREATE TABLE IF NOT EXISTS `announcements` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `title` VARCHAR(255) NOT NULL,
+  `content` TEXT NOT NULL,
+  `expires_at` DATETIME DEFAULT NULL,
+  `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 创建默认管理员账号

@@ -1,0 +1,1087 @@
+<template>
+	<tm-app>
+		<view class="app-shell page-liuyao-input">
+			<yx-nav-header ref="headerRef"></yx-nav-header>
+			<view class="app-main" :style="pageWrapperStyle">
+				<view class="page-shell">
+					<view class="page-card detail-card liuyao-card">
+						<view class="page-title-wrapper">
+							<view class="form-header-text">
+								<h1 class="page-title">六爻排盘</h1>
+								<p class="page-subtitle">与八字排盘一致的表单风格，填写后点击开始排盘，将在结果页展示</p>
+							</view>
+							<tm-tag type="primary" :round="8" label="Beta 体验"></tm-tag>
+						</view>
+
+						<LiuyaoBasicInfo
+							:title="form.title"
+							@update:title="val => (form.title = val)"
+							:timeLabel="form.timeLabel"
+							@update:timeLabel="val => (form.timeLabel = val)"
+							:questioner="form.questioner"
+							@update:questioner="val => (form.questioner = val)"
+							:gender="form.gender"
+							@update:gender="val => (form.gender = val)"
+							:location="form.location"
+							@update:location="val => (form.location = val)"
+							@openTimePicker="openTimePicker"
+							@useNowTime="useNowTime"
+						/>
+
+						<view class="section">
+							<header class="section__header">
+								<tm-icon name="tmicon-md-grid" :font-size="26" color="#667eea"></tm-icon>
+								<h2 class="section__title">起卦方式</h2>
+							</header>
+							<view class="section__body">
+								<view class="method-wrapper">
+									<view class="method-grid">
+										<MethodCard
+											v-for="(m, idx) in methodTabs"
+											:key="m.key"
+											:text="m.text"
+											:icon="methodInfo[m.key].icon"
+											:desc="methodInfo[m.key].desc"
+											:active="methodIndex === idx"
+											@select="() => setMethod(idx)"
+										/>
+									</view>
+								</view>
+								<!-- Method summary removed for cleaner layout -->
+
+								<view v-if="currentMethod.key === 'number'" class="method-panel">
+									<view class="form-grid three">
+										<tm-input
+											v-model="form.num1"
+											type="number"
+											label="数字1（上卦）"
+											placeholder="请输入数字"
+											:round="12"
+											:border="1"
+											:padding="[18, 16]"
+										></tm-input>
+										<tm-input
+											v-model="form.num2"
+											type="number"
+											label="数字2（下卦）"
+											placeholder="请输入数字"
+											:round="12"
+											:border="1"
+											:padding="[18, 16]"
+										></tm-input>
+										<tm-input
+											v-model="form.num3"
+											type="number"
+											label="数字3（动爻，可选）"
+											placeholder="可填 0-6，确定动爻位置"
+											:round="12"
+											:border="1"
+											:padding="[18, 16]"
+										></tm-input>
+									</view>
+									<tm-text class="helper-text" :font-size="24" color="#718096" label="根据数字推导卦象，第三个数字可选用于确定动爻位置。"></tm-text>
+								</view>
+
+								<!-- 电脑自动起卦 -->
+								<view v-else-if="currentMethod.key === 'computer'" class="method-panel">
+									<tm-text :font-size="24" color="#718096" label="电脑自动：点击按钮立即生成完整的 6 爻随机卦象。"></tm-text>
+									<view class="online-shake-wrapper">
+										<tm-icon name="tmicon-md-cpu" :font-size="48" color="#667eea"></tm-icon>
+										<tm-button type="primary" :round="12" :padding="[24,18]" icon="tmicon-md-flash" label="生成卦象" @tap="generateAuto"></tm-button>
+									</view>
+									<view v-if="form.autoParams.length" class="auto-preview">
+										<tm-text :font-size="24" color="#1f2937" label="生成的卦象（自下而上 6 爻）："></tm-text>
+										<ParamPreview :params="form.autoParams" />
+									</view>
+								</view>
+
+								<!-- 在线起卦 -->
+								<view v-else-if="currentMethod.key === 'online'" class="method-panel">
+									<tm-text :font-size="24" color="#718096" label="在线起卦：请平静心念，集中意念在所求之事上，点击开始摇卦"></tm-text>
+									<view class="online-shake-wrapper">
+										<tm-icon
+											name="tmicon-md-hand"
+											:font-size="48"
+											color="#f59e0b"
+											:class="{ 'online-active': onlineActive }"
+										></tm-icon>
+										<tm-button type="primary" :round="12" :padding="[24,18]" icon="tmicon-md-play" label="开始在线摇卦" @tap="startOnlineShake"></tm-button>
+									</view>
+									<tm-text v-if="onlineMsg" :font-size="20" color="#6b7280" :label="onlineMsg"></tm-text>
+									<view v-if="form.autoParams.length" class="auto-preview">
+										<tm-text :font-size="24" color="#1f2937" label="在线起卦结果（自下而上 6 爻）："></tm-text>
+										<ParamPreview :params="form.autoParams" />
+									</view>
+								</view>
+
+								<view v-else-if="currentMethod.key === 'time'" class="method-panel">
+									<tm-input
+										v-model="form.timeLabel"
+										label="起卦时间"
+										placeholder="请选择或使用当前时间"
+										prefix="tmicon-md-time"
+										suffix="tmicon-angle-right"
+										:round="12"
+										:border="1"
+										:padding="[20, 18]"
+										readonly
+										@tap="openTimePicker"
+									></tm-input>
+									<view class="helper-row">
+										<tm-text :font-size="22" color="#94a3b8" label="时间起卦以当前时间为准，支持点击调整。"></tm-text>
+										<tm-button size="small" type="primary" :round="10" @tap="useNowTime" :padding="[18, 14]" label="使用当前时间"></tm-button>
+										<tm-button size="small" type="primary" :round="10" @tap="generateTime" :padding="[18, 14]" label="生成参数"></tm-button>
+									</view>
+									<view v-if="form.timeParams.length" class="auto-preview">
+										<tm-text :font-size="24" color="#1f2937" label="时间起卦参数（自下而上 6 爻）："></tm-text>
+										<ParamPreview :params="form.timeParams" />
+									</view>
+								</view>
+								<!-- 单数起卦 -->
+								<view v-else-if="currentMethod.key === 'single'" class="method-panel">
+									<tm-text :font-size="24" color="#718096" label="单数起卦：输入一组数字（建议3-5位），系统将按规则拆分生成卦象。"></tm-text>
+									<tm-input
+										v-model="form.singleInput"
+										label="输入数字"
+										placeholder="如：2652"
+										:round="12"
+										:border="1"
+										:padding="[18,16]"
+									></tm-input>
+									<view class="helper-row">
+										<tm-button size="small" type="primary" :round="10" @tap="generateSingle" :padding="[18, 14]" label="生成参数"></tm-button>
+									</view>
+									<view v-if="form.singleParams.length" class="auto-preview">
+										<tm-text :font-size="24" color="#1f2937" label="单数起卦参数（自下而上 6 爻）："></tm-text>
+										<ParamPreview :params="form.singleParams" />
+									</view>
+								</view>
+
+								<!-- 双数起卦 -->
+								<view v-else-if="currentMethod.key === 'double'" class="method-panel">
+									<tm-text :font-size="24" color="#718096" label="双数起卦：输入两组数字，系统按规则生成卦象。"></tm-text>
+									<view class="form-grid three">
+										<tm-input
+											v-model="form.double1"
+											label="数字组 1"
+											placeholder="第一组数字"
+											:round="12"
+											:border="1"
+											:padding="[18,16]"
+										></tm-input>
+										<tm-input
+											v-model="form.double2"
+											label="数字组 2"
+											placeholder="第二组数字"
+											:round="12"
+											:border="1"
+											:padding="[18,16]"
+										></tm-input>
+										<!-- generate button removed -->
+										<tm-button size="small" type="primary" :round="10" @tap="generateDouble" :padding="[18, 14]" label="生成参数"></tm-button>
+									</view>
+									<view v-if="form.doubleParams.length" class="auto-preview">
+										<tm-text :font-size="24" color="#1f2937" label="双数起卦参数（自下而上 6 爻）："></tm-text>
+										<ParamPreview :params="form.doubleParams" />
+									</view>
+								</view>
+
+								<!-- 汉字起卦 -->
+								<view v-else-if="currentMethod.key === 'chars'" class="method-panel">
+									<tm-text :font-size="24" color="#718096" label="汉字起卦：输入2-5个汉字，系统将按字符码生成卦象参数。"></tm-text>
+									<tm-input
+										v-model="form.charsInput"
+										label="输入汉字"
+										placeholder="如：求财"
+										:round="12"
+										:border="1"
+										:padding="[18,16]"
+									></tm-input>
+									<view class="helper-row">
+										<tm-button size="small" type="primary" :round="10" @tap="generateChars" :padding="[18, 14]" label="生成参数"></tm-button>
+									</view>
+									<view v-if="form.charsParams && form.charsParams.length" class="auto-preview">
+										<tm-text :font-size="24" color="#1f2937" label="汉字起卦参数（自下而上 6 爻）："></tm-text>
+										<ParamPreview :params="form.charsParams" />
+									</view>
+								</view>
+								
+								<!-- 卦名起卦 -->
+								<view v-else-if="currentMethod.key === 'gua'" class="method-panel">
+									<tm-text :font-size="24" color="#718096" label="卦名起卦：选择本卦和（可选）变卦，直接使用卦码生成参数。"></tm-text>
+									<view class="form-grid three">
+										<picker mode="selector" :range="guaMarks" range-key="label" :value="guaMainIndex" @change="onGuaMainChange">
+											<view class="picker-trigger">
+												<tm-text :label="guaMainLabel || '请选择本卦'"></tm-text>
+												<tm-icon name="tmicon-angle-down" :font-size="20" color="#94a3b8"></tm-icon>
+											</view>
+										</picker>
+										<picker mode="selector" :range="guaMarks" range-key="label" :value="guaBianIndex" @change="onGuaBianChange">
+											<view class="picker-trigger">
+												<tm-text :label="guaBianLabel || '请选择变卦（可选）'"></tm-text>
+												<tm-icon name="tmicon-angle-down" :font-size="20" color="#94a3b8"></tm-icon>
+											</view>
+										</picker>
+										<!-- generate button removed -->
+										<tm-button size="small" type="primary" :round="10" @tap="generateGua" :padding="[18, 14]" label="生成参数"></tm-button>
+									</view>
+									<view v-if="form.guaParams && form.guaParams.length" class="auto-preview">
+										<tm-text :font-size="24" color="#1f2937" label="卦名起卦参数（自下而上 6 爻）："></tm-text>
+										<ParamPreview :params="form.guaParams" />
+									</view>
+								</view>
+
+								<!-- auto and shake methods removed from UI -->
+
+								<view v-else class="method-panel">
+									<tm-text :font-size="24" color="#718096" label="请选择 6 个爻位（自下而上），每个爻位可选择：静阴 / 静阳 / 动阳 / 动阴"></tm-text>
+									<view class="yao-selector-grid">
+										<YaoSelector
+											v-for="(v, idx) in form.manualParams"
+											:key="idx"
+											v-model="form.manualParams[idx]"
+											:options="yaoOptions"
+											:label="getYaoLabel(idx)"
+										/>
+									</view>
+								</view>
+							</view>
+						</view>
+
+						<!-- 起卦时间 moved to 基础信息 -->
+
+						<view class="page-card__footer">
+							<view class="actions-row primary-action">
+								<tm-button
+									:class="['primary-btn', { disabled: !canStart }]"
+									:type="canStart ? 'primary' : 'grey'"
+									:round="14"
+									:bold="true"
+									:padding="[28, 22]"
+									icon="tmicon-md-play"
+									:disabled="!canStart"
+									label="开始排盘"
+									@tap="startLiuyao"
+								></tm-button>
+								<tm-button
+									class="secondary-btn"
+									type="grey"
+									:round="14"
+									:padding="[24, 20]"
+									icon="tmicon-md-refresh"
+									label="重置表单"
+									@tap="resetForm"
+								></tm-button>
+							</view>
+						</view>
+
+						<tm-time-picker
+							v-model:show="timePickerShow"
+							:round="10"
+							:default-value="timePickerDefault"
+							:start="timePick.start"
+							:end="timePick.end"
+							:format="timePick.format"
+							:showDetail="timePick.detail"
+							:showSuffix="timeSuffix"
+							@confirm="onTimeConfirm"
+						></tm-time-picker>
+					</view>
+				</view>
+			</view>
+		</view>
+	</tm-app>
+</template>
+
+<script lang="ts" setup>
+import { computed, ref } from 'vue';
+import { onLoad } from '@dcloudio/uni-app';
+import { Solar } from 'lunar-javascript';
+import liuyaoService from '@/features/liuyao/service';
+import { getYaoName, getYaoSymbol, formatDateTime } from '@/features/liuyao/uiHelpers';
+import TimeInput from '@/components/liuyao/TimeInput.vue';
+import ParamPreview from '@/components/liuyao/ParamPreview.vue';
+import MethodCard from '@/components/liuyao/MethodCard.vue';
+import YaoSelector from '@/components/liuyao/YaoSelector.vue';
+import LiuyaoBasicInfo from '@/components/liuyao/LiuyaoBasicInfo.vue';
+import { compileNajia, buildDisplayData } from '@/features/liuyao/najiaCore';
+import { GUA64 } from '@/features/liuyao/najiaConst';
+import { useLiuyaoStore } from '@/store/liuyao';
+type MethodKey =
+	| 'computer'   // 电脑自动
+	| 'online'     // 在线起卦
+	| 'manual'     // 手工指定
+	| 'time'       // 时间起卦
+	| 'single'     // 单数起卦
+	| 'double'     // 双数起卦
+	| 'chars'      // 汉字起卦
+	| 'gua'        // 卦名起卦
+	| 'auto'       // 自动起卦（随机）
+	| 'shake';     // 手动摇卦
+
+const headerRef = ref(null);
+
+const pageWrapperStyle = computed(() => ({}));
+
+import useLiuyaoForm from '@/features/liuyao/useLiuyaoForm';
+
+const {
+	form,
+	methodTabs,
+	methodIndex,
+	currentMethod,
+	yaoOptions,
+	getYaoLabel,
+	getYaoIndex,
+	getYaoDisplayValue,
+	getYaoName,
+	getYaoSymbol,
+	methodInfo,
+	currentMethodIcon,
+	methodDesc,
+	setMethod,
+	timePickerShow,
+	timePickerDefault,
+	timePick,
+	timeSuffix,
+	openTimePicker,
+	onTimeConfirm,
+	useNowTime,
+	generateAuto,
+	generateShake,
+	generateTime,
+	generateSingle,
+	generateDouble,
+	generateChars,
+	generateGua,
+	startOnlineShake,
+	onlineActive,
+	onlineMsg,
+	startLiuyao,
+	resetForm,
+	canStart,
+	guaMarks,
+	guaMainIndex,
+	guaBianIndex,
+	guaMainLabel,
+	guaBianLabel,
+	onGuaMainChange,
+	onGuaBianChange
+} = useLiuyaoForm();
+
+onLoad(() => {
+	const now = new Date();
+	form.value.timeLabel = formatDateTime(now);
+	timePickerDefault.value = formatDateTime(now).replace(/-/g, '/');
+});
+</script>
+
+<style scoped>
+.page-liuyao-input .app-main {
+	width: 100%;
+	display: flex;
+	justify-content: center;
+	align-items: flex-start;
+	padding: var(--page-pad-y) var(--page-pad-x);
+	box-sizing: border-box;
+	background: radial-gradient(circle at 20% 20%, rgba(102, 126, 234, 0.08), transparent 40%),
+		radial-gradient(circle at 80% 10%, rgba(118, 75, 162, 0.08), transparent 38%),
+		#f6f8fc;
+}
+
+.page-liuyao-input .page-shell {
+	width: 100%;
+	max-width: var(--page-max);
+	display: flex;
+	justify-content: center;
+	box-sizing: border-box;
+	margin: 0 auto;
+}
+
+.page-liuyao-input .page-card {
+	width: 100%;
+	max-width: var(--page-max);
+	margin-inline: auto;
+	background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+	border: 1px solid #e9eef6;
+	border-radius: 16px;
+	box-shadow: 0 10px 28px rgba(31, 41, 55, 0.1);
+	padding: 18px 16px;
+	position: relative;
+	overflow: hidden;
+}
+
+.page-liuyao-input .page-card::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(circle at 12% 12%, rgba(102, 126, 234, 0.08), transparent 35%),
+		radial-gradient(circle at 88% 6%, rgba(118, 75, 162, 0.07), transparent 32%);
+	pointer-events: none;
+}
+
+.page-liuyao-input .detail-card {
+	gap: 14px;
+	display: flex;
+	flex-direction: column;
+}
+
+.page-liuyao-input .detail-card .page-title-wrapper {
+	margin-bottom: 6px;
+	padding-bottom: 8px;
+	gap: 8px;
+	align-items: flex-start;
+	flex-direction: column;
+	border-bottom: 1px dashed #e5e7eb;
+}
+
+.page-liuyao-input .form-grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 16px;
+}
+
+.page-liuyao-input .form-grid.three {
+	grid-template-columns: 1fr;
+}
+
+@media (min-width: 900px) {
+	.page-liuyao-input .form-grid {
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	}
+
+	.page-liuyao-input .form-grid.three {
+		grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+	}
+}
+
+.layout-wide .page-liuyao-input .form-grid {
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.layout-wide .page-liuyao-input .form-grid.three {
+	grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.page-liuyao-input .form-item {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.page-liuyao-input .section {
+	background: #ffffff;
+	border-radius: 14px;
+	border: 1px solid #e2e8f0;
+	padding: 14px 12px 12px;
+	margin-bottom: 14px;
+	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+	position: relative;
+	z-index: 1;
+}
+
+.page-liuyao-input .section__header {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 12px;
+	border-bottom: 1px dashed #e5e7eb;
+	padding-bottom: 12px;
+}
+
+.page-liuyao-input .section__title {
+	font-size: 22px;
+	color: #2d3748;
+}
+
+.page-liuyao-input .section__body {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.page-liuyao-input .helper-text {
+	line-height: 1.4;
+}
+
+.page-liuyao-input .helper-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.page-liuyao-input .method-wrapper {
+	display: flex;
+	justify-content: flex-start;
+	margin-bottom: 12px;
+}
+
+.page-liuyao-input .method-panel {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 14px;
+	border: 1px solid rgba(226, 234, 245, 0.9);
+	border-radius: 12px;
+	background: #ffffff;
+	box-shadow: 0 6px 18px rgba(15, 23, 42, 0.03);
+	/* panel stretches full width of container */
+	width: 100%;
+}
+
+.page-liuyao-input .method-summary {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 12px 0;
+	margin-bottom: 8px;
+	border-bottom: 1px dashed #eef4fb;
+}
+.page-liuyao-input .method-summary-left {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+.page-liuyao-input .method-summary-text tm-text:last-child {
+	color: #64748b;
+}
+.page-liuyao-input .method-summary-actions {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+/* Increase text size inside method area (except tm-button which already styled) */
+.page-liuyao-input .method-wrapper :deep(.tm-text),
+.page-liuyao-input .method-panel :deep(.tm-text),
+.page-liuyao-input .method-grid :deep(.tm-text),
+.page-liuyao-input .method-summary :deep(.tm-text) {
+	font-size: 18px !important;
+}
+
+/* Make icons in method grid slightly larger to match increased text */
+.page-liuyao-input .method-grid :deep(.tm-icon),
+.page-liuyao-input .method-card :deep(.tm-icon) {
+	font-size: 36px !important;
+}
+
+/* Stronger rule: ensure container and most descendants use larger font */
+.page-liuyao-input .method-wrapper,
+.page-liuyao-input .method-panel,
+.page-liuyao-input .method-grid,
+.page-liuyao-input .method-summary {
+	font-size: 18px !important;
+}
+.page-liuyao-input .method-wrapper :deep(view),
+.page-liuyao-input .method-wrapper :deep(text) {
+	font-size: inherit !important;
+}
+
+/* exclude buttons */
+.page-liuyao-input .method-wrapper :deep(.tm-button__body),
+.page-liuyao-input .method-wrapper :deep(.tm-button) {
+	font-size: unset !important;
+}
+
+/* Ensure method card inner text respects larger font and has clear hierarchy */
+.page-liuyao-input .method-grid :deep(.method-card) :deep(.tm-text) {
+	font-size: 18px !important;
+}
+.page-liuyao-input .method-grid :deep(.method-card) :deep(.method-card__title) {
+	font-size: 20px !important;
+}
+
+/* Online/computer wrapper styling for balanced layout */
+.page-liuyao-input .online-shake-wrapper,
+.page-liuyao-input .computer-right,
+.page-liuyao-input .computer-left {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+.page-liuyao-input .online-shake-wrapper {
+	justify-content: flex-start;
+	flex-wrap: wrap;
+}
+.page-liuyao-input .computer-right {
+	justify-content: center;
+	flex-direction: column;
+}
+.page-liuyao-input .method-panel .auto-preview {
+	margin-top: 10px;
+}
+
+/* make auto-preview area compact and left-aligned */
+.page-liuyao-input .method-panel .auto-preview {
+	max-width: 560px;
+	margin-left: 0;
+}
+
+/* center the footer actions and avoid stretching */
+.page-liuyao-input .page-card__footer .actions-row {
+	justify-content: center;
+	align-items: center;
+}
+
+/* make the whole lower area not force panels to expand */
+.page-liuyao-input .page-card {
+	align-items: stretch;
+}
+
+/* Ensure the ParamPreview inside method-panel occupies ~1/3 width and is centered */
+.page-liuyao-input .method-panel .auto-preview :deep(.param-grid) {
+	max-width: 100%;
+	width: 100%;
+	margin: 0;
+	justify-content: flex-start;
+}
+
+@media (min-width: 900px) {
+	.page-liuyao-input .method-panel .auto-preview :deep(.param-grid) {
+		max-width: 33%;
+		width: 33%;
+		margin: 0 auto;
+		justify-content: center;
+	}
+}
+
+.layout-wide .page-liuyao-input .method-panel .auto-preview :deep(.param-grid) {
+	max-width: 33%;
+	width: 33%;
+	margin: 0 auto;
+	justify-content: center;
+}
+
+/* Slightly reduce chip width to fit into the 1/3 area */
+.page-liuyao-input .method-panel .auto-preview :deep(.param-chip) {
+	min-width: 90px;
+	padding: 6px 10px;
+}
+
+.page-liuyao-input .time-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-top: 6px;
+}
+
+.page-liuyao-input .time-input-wrapper {
+	position: relative;
+	width: 100%;
+}
+
+.page-liuyao-input .time-suffix-btn {
+	position: absolute;
+	right: 8px;
+	top: 50%;
+	transform: translateY(-50%);
+	z-index: 5;
+}
+
+.page-liuyao-input .time-input-wrapper :deep(.tm-input) {
+	width: calc(100% - 88px);
+	display: inline-block;
+}
+
+.page-liuyao-input .time-suffix-btn {
+	position: absolute;
+	right: 12px;
+	top: 50%;
+	transform: translateY(-50%);
+	z-index: 6;
+}
+
+.page-liuyao-input .time-suffix-btn.embedded :deep(.tm-button__body) {
+	padding: 6px 10px !important;
+	font-size: 12px !important;
+	background: transparent !important;
+	border: none !important;
+	box-shadow: none !important;
+	color: #1f3aa6 !important;
+}
+
+.page-liuyao-input .time-suffix-btn.embedded {
+	width: 44px;
+	height: 34px;
+	border-radius: 6px;
+	overflow: visible;
+}
+
+.page-liuyao-input .method-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(140px, 1fr));
+	gap: 12px;
+	align-items: start;
+	width: 100%;
+}
+.page-liuyao-input .method-card {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 12px;
+	background: #fff;
+	border: 1px solid rgba(222, 235, 255, 0.7);
+	border-radius: 12px;
+	text-align: left;
+	cursor: pointer;
+	transition: transform 140ms ease, box-shadow 140ms ease;
+	box-shadow: 0 6px 18px rgba(15, 23, 42, 0.03);
+	min-height: 96px;
+}
+.page-liuyao-input .method-card tm-icon {
+	margin-bottom: 8px;
+}
+.page-liuyao-input .method-card .tm-text {
+	line-height: 1.25;
+}
+.page-liuyao-input .method-card {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 12px;
+	background: #fff;
+	border: 1px solid transparent;
+	border-radius: 10px;
+	text-align: left;
+	cursor: pointer;
+	transition: all 0.18s ease;
+	box-shadow: 0 6px 18px rgba(15,23,42,0.03);
+}
+.page-liuyao-input .method-card tm-icon {
+	margin-bottom: 6px;
+}
+.page-liuyao-input .method-card .tm-text {
+	line-height: 1.1;
+}
+.page-liuyao-input .method-card.active {
+	border-color: #dbeafe;
+	box-shadow: 0 10px 30px rgba(44,64,180,0.06);
+	transform: translateY(-4px);
+}
+.page-liuyao-input .method-card:active {
+	transform: translateY(-2px);
+}
+
+.page-liuyao-input .auto-preview {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.page-liuyao-input .param-preview {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+	gap: 10px;
+}
+
+.page-liuyao-input .param-chip {
+	padding: 8px 10px;
+	background: #f7fbff;
+	border: 1px solid #e6f0fb;
+	border-radius: 8px;
+}
+
+.page-liuyao-input .param-chip .tm-text {
+	font-weight: 600;
+	color: #0f1724;
+}
+
+.page-liuyao-input .picker-trigger .tm-text {
+	color: #0f1724;
+	font-weight: 500;
+}
+
+.page-liuyao-input .section__body :deep(.tm-input) {
+	min-height: 48px;
+	padding: 12px 14px;
+	font-size: 15px;
+}
+
+.page-liuyao-input .method-wrapper :deep(.tm-segtab) {
+	width: 100%;
+	max-width: 760px;
+}
+
+.page-liuyao-input .primary-btn :deep(.tm-button__body) {
+	padding: 10px 20px !important;
+	font-size: 15px !important;
+	background: linear-gradient(90deg,#4c51bf 0%,#2a3fb8 100%) !important;
+	box-shadow: 0 8px 24px rgba(44,64,180,0.14) !important;
+	border-radius: 12px !important;
+	color: #fff !important;
+	min-width: 160px;
+}
+
+.page-liuyao-input .secondary-btn :deep(.tm-button__body) {
+	padding: 10px 20px !important;
+	font-size: 15px !important;
+	background: #ffffff !important;
+	border: 1px solid #e6eefb !important;
+	color: #334155 !important;
+	box-shadow: none !important;
+}
+
+.page-liuyao-input .quick-btn :deep(.tm-button__body) {
+	padding: 8px 12px !important;
+	font-size: 13px !important;
+	background: #eef6ff !important;
+	border: 1px solid #dbeafe !important;
+	color: #1f3aa6 !important;
+	box-shadow: none !important;
+}
+
+.page-liuyao-input .param-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(80px, 1fr));
+	gap: 8px;
+}
+
+.page-liuyao-input .yao-selector-grid {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.page-liuyao-input .yao-selector-item {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 14px;
+	background: #ffffff;
+	border: 1px solid #e5e7eb;
+	border-radius: 12px;
+}
+
+.page-liuyao-input .yao-label {
+	font-weight: 500;
+	margin-bottom: 4px;
+}
+
+.page-liuyao-input .picker-trigger {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 14px 16px;
+	background: #f8fafc;
+	border: 1px solid #e5e7eb;
+	border-radius: 8px;
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+.page-liuyao-input .picker-trigger:active {
+	background: #f1f5f9;
+	transform: scale(0.98);
+}
+
+.page-liuyao-input .picker-content {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex: 1;
+}
+
+.page-liuyao-input .picker-label {
+	flex-shrink: 0;
+}
+
+.page-liuyao-input .yao-symbol {
+	font-size: 20px;
+	font-weight: 500;
+	color: #667eea;
+	font-family: monospace;
+	letter-spacing: 2px;
+}
+
+.page-liuyao-input .shake-wrapper {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.page-liuyao-input .shake-active {
+	animation: shake-anim 1.2s ease;
+}
+
+@keyframes shake-anim {
+	0% { transform: translateX(0) rotate(0deg); }
+	15% { transform: translateX(-8px) rotate(-8deg); }
+	30% { transform: translateX(8px) rotate(8deg); }
+	45% { transform: translateX(-6px) rotate(-6deg); }
+	60% { transform: translateX(6px) rotate(6deg); }
+	75% { transform: translateX(-4px) rotate(-4deg); }
+	90% { transform: translateX(4px) rotate(4deg); }
+	100% { transform: translateX(0) rotate(0deg); }
+}
+
+.page-liuyao-input .online-shake-wrapper {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	margin-top: 12px;
+	margin-bottom: 8px;
+}
+
+.page-liuyao-input .online-active {
+	animation: online-shake 1.5s linear;
+}
+
+@keyframes online-shake {
+	0% { transform: rotate(0deg) scale(1); }
+	10% { transform: rotate(-18deg) scale(1.05); }
+	20% { transform: rotate(18deg) scale(1.05); }
+	30% { transform: rotate(-12deg) scale(1.03); }
+	40% { transform: rotate(12deg) scale(1.03); }
+	50% { transform: rotate(-6deg) scale(1.01); }
+	60% { transform: rotate(6deg) scale(1.01); }
+	70% { transform: rotate(-3deg) scale(1); }
+	80% { transform: rotate(3deg) scale(1); }
+	100% { transform: rotate(0deg) scale(1); }
+}
+
+.page-liuyao-input .actions-row {
+	display: flex;
+	gap: 12px;
+	flex-direction: column;
+	align-items: stretch;
+	justify-content: center;
+}
+
+.page-liuyao-input .actions-row :deep(.tm-button) {
+	width: 100% !important;
+	min-width: 0 !important;
+	flex: 1 1 auto;
+}
+
+.page-liuyao-input .actions-row :deep(.tm-button__body) {
+	width: 100% !important;
+}
+
+@media (min-width: 900px) {
+	.page-liuyao-input .actions-row {
+		flex-direction: row;
+		align-items: center;
+		justify-content: flex-end;
+		flex-wrap: wrap;
+	}
+
+	.page-liuyao-input .actions-row :deep(.tm-button) {
+		width: auto !important;
+		flex: 0 0 auto;
+	}
+
+	.page-liuyao-input .actions-row :deep(.tm-button__body) {
+		width: auto !important;
+	}
+}
+
+.layout-wide .page-liuyao-input .actions-row {
+	flex-direction: row;
+	align-items: center;
+	justify-content: flex-end;
+	flex-wrap: wrap;
+}
+
+.layout-wide .page-liuyao-input .actions-row :deep(.tm-button) {
+	width: auto !important;
+	flex: 0 0 auto;
+}
+
+.layout-wide .page-liuyao-input .actions-row :deep(.tm-button__body) {
+	width: auto !important;
+}
+
+/* sticky footer on small screens to keep actions visible */
+.page-liuyao-input .page-card__footer {
+	position: sticky;
+	bottom: 0;
+	background: linear-gradient(180deg, rgba(255,255,255,0), #ffffff);
+	padding-top: 12px;
+	padding-bottom: calc(6px + env(safe-area-inset-bottom));
+}
+
+.page-liuyao-input .draggable-scroll {
+	cursor: grab;
+}
+
+.page-liuyao-input .draggable-scroll:active {
+	cursor: grabbing;
+}
+
+@media (min-width: 900px) {
+	.page-liuyao-input .page-card {
+		max-width: var(--page-max);
+		padding: 22px 20px;
+		border-radius: 18px;
+	}
+
+	.page-liuyao-input .page-shell {
+		padding: var(--page-pad-y) var(--page-pad-x);
+	}
+
+	.page-liuyao-input .section {
+		padding: 18px 16px 16px;
+	}
+
+	.page-liuyao-input .detail-card .page-title-wrapper {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.page-liuyao-input .param-preview {
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	}
+
+	.page-liuyao-input .yao-selector-item {
+		padding: 14px;
+	}
+
+	.page-liuyao-input .picker-trigger {
+		padding: 14px 16px;
+	}
+
+	.page-liuyao-input .method-grid {
+		grid-template-columns: repeat(4, minmax(160px, 1fr));
+		gap: 16px;
+	}
+}
+
+.layout-wide .page-liuyao-input .page-card {
+	max-width: var(--page-max);
+	padding: 22px 20px;
+	border-radius: 18px;
+}
+
+.layout-wide .page-liuyao-input .page-shell {
+	padding: var(--page-pad-y) var(--page-pad-x);
+}
+
+.layout-wide .page-liuyao-input .section {
+	padding: 18px 16px 16px;
+}
+
+.layout-wide .page-liuyao-input .detail-card .page-title-wrapper {
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.layout-wide .page-liuyao-input .param-preview {
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.layout-wide .page-liuyao-input .yao-selector-item {
+	padding: 14px;
+}
+
+.layout-wide .page-liuyao-input .picker-trigger {
+	padding: 14px 16px;
+}
+
+.layout-wide .page-liuyao-input .method-grid {
+	grid-template-columns: repeat(4, minmax(160px, 1fr));
+	gap: 16px;
+}</style>

@@ -3,8 +3,9 @@
 <!-- :mask-style="isDark?'background:linear-gradient(0deg,rgba(0,0,0,0.4),rgba(0,0,0,0),rgba(0,0,0,0.4))':'background:rgba(255,255,255,0)'" -->
 	<view class="flex-1 relative" :style="{height:props.height+'rpx'}">
 		<!-- #ifndef APP-NVUE -->
-		<picker-view  :value="[colIndex]" @change="colchange" :style="[{height:props.height+'rpx'}]"
-		:mask-style="maskStyle"
+		<picker-view
+:value="[colIndex]" :style="[{height:props.height+'rpx'}]" :mask-style="maskStyle"
+		@change="colchange"
 		>
 		    <picker-view-column
 		    :style="[{height:props.height+'rpx'}]">
@@ -15,7 +16,7 @@
 		</picker-view>
 		<!-- #endif -->
 		<!-- #ifdef APP-NVUE -->
-		<picker-view ref="picker"  :value="[colIndex]" @change="colchange" :style="[{height:props.height+'rpx'}]"
+		<picker-view ref="picker"  :value="[colIndex]" :style="[{height:props.height+'rpx'}]" @change="colchange"
 		>
 		    <picker-view-column
 		    :style="[{height:props.height+'rpx'}]">
@@ -24,8 +25,8 @@
 		        </view>
 		    </picker-view-column>
 		</picker-view>
-		<view v-if="isDark" :userInteractionEnabled="false" class="top absolute l-0 t-0" :style="{height:maskHeight+'px',width:maskWidth+'px'}"></view>
-		<view v-if="isDark" :userInteractionEnabled="false" class="bottom absolute l-0 b-0" :style="{height:maskHeight+'px',width:maskWidth+'px'}"></view>
+		<view v-if="isDark" :user-interaction-enabled="false" class="top absolute l-0 t-0" :style="{height:maskHeight+'px',width:maskWidth+'px'}"></view>
+		<view v-if="isDark" :user-interaction-enabled="false" class="bottom absolute l-0 b-0" :style="{height:maskHeight+'px',width:maskWidth+'px'}"></view>
 		<!-- #endif -->
 	</view>
 </template>
@@ -48,6 +49,8 @@ dayjs.default.extend(isSameOrAfter)
 const DayJs = dayjs.default;
 const { proxy } = getCurrentInstance();
 const store = useTmpiniaStore();
+const toSafeDate = (value: ReturnType<typeof DayJs>) =>
+	new Date(value.year(), value.month(), value.date(), value.hour(), value.minute(), value.second());
 const props = defineProps({
     nowtime:{
         type:String,
@@ -71,8 +74,8 @@ const props = defineProps({
     },
     //禁用的部分日期，禁用的日期将不会被选中，就算滑到了该位置，也会回弹到之前的时间。
 	disabledDate:{
-		type:Array as PropType<Array<Number|String|Date>>,
-		default:():Array<Number|String|Date>=>[]
+		type:Array as PropType<Array<number|string|Date>>,
+		default:():Array<number|string|Date>=>[]
 	},
     height:{
         type:Number,
@@ -146,7 +149,7 @@ function getIndexNow(){
 	let currentValue = 0;
 	if(isLunarMode.value && (props.timeType === 'month' || props.timeType === 'date')){
 		// 阴历模式下，需要获取阴历的月份或日期
-		const solar = Solar.fromDate(new Date(_nowtimeValue.value.format('YYYY-MM-DD HH:mm:ss')));
+		const solar = Solar.fromDate(toSafeDate(_nowtimeValue.value));
 		const lunar = solar.getLunar();
 		if(props.timeType === 'month'){
 			currentValue = lunar.getMonth(); // 阴历月份（1-12）
@@ -247,7 +250,7 @@ function displayLabel(val:number){
 	}
 	if(isLunarMode.value && props.timeType === 'month'){
 		// 阴历月份显示中文名称
-		const currentDate = new Date(_nowtimeValue.value.format('YYYY-MM-DD HH:mm:ss'));
+		const currentDate = toSafeDate(_nowtimeValue.value);
 		const solar = Solar.fromDate(currentDate);
 		const lunar = solar.getLunar();
 		const year = lunar.getYear();
@@ -334,7 +337,7 @@ function rangeTimeArray(){
 
 // 生成阴历月份或日期数组
 function rangeLunarTimeArray(){
-    const currentDate = new Date(_nowtimeValue.value.format('YYYY-MM-DD HH:mm:ss'));
+    const currentDate = toSafeDate(_nowtimeValue.value);
     const solar = Solar.fromDate(currentDate);
     const lunar = solar.getLunar();
     
@@ -421,7 +424,7 @@ function colchange(e:any){
     
     // 如果是阴历模式且是月份或日期类型，需要将阴历值转换为阳历时间
     if(isLunarMode.value && (props.timeType === 'month' || props.timeType === 'date')){
-        const currentDate = new Date(_nowtimeValue.value.format('YYYY-MM-DD HH:mm:ss'));
+        const currentDate = toSafeDate(_nowtimeValue.value);
         const solar = Solar.fromDate(currentDate);
         const lunar = solar.getLunar();
         

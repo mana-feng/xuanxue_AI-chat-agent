@@ -31,9 +31,8 @@ router.post('/register', authLimiter, apiSignatureMiddleware(), async (req, res)
 		return res.status(400).json({ error: '缺少 email、username 或 password' });
 	}
 
-	if (!device_id) {
-		return res.status(400).json({ error: '缺少设备ID' });
-	}
+	// 允许缺省设备ID：为 H5/管理端生成一个基于 IP/UA 的 fallback
+	const deviceIdRaw = device_id || `${req.ip || 'unknown'}-${req.headers['user-agent'] || 'ua'}`;
 
 	// 使用安全工具验证和清理输入
 	const trimmedEmail = SecurityUtils.sanitizeString(String(email), {
@@ -57,7 +56,7 @@ router.post('/register', authLimiter, apiSignatureMiddleware(), async (req, res)
 		return res.status(400).json({ error: passwordValidation.error });
 	}
 
-	const sanitizedDeviceId = SecurityUtils.sanitizeString(String(device_id), { maxLength: 255 });
+	const sanitizedDeviceId = SecurityUtils.sanitizeString(String(deviceIdRaw), { maxLength: 255 });
 
 	try {
 		const row = await db.get('SELECT id FROM users WHERE email = ? OR username = ?', [

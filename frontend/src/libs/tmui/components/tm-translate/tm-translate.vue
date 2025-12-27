@@ -1,8 +1,10 @@
 <template>
-	<view ref="bodywk" @click="hanlder" :class="[customClass, 'overflow']" :style="[
+	<view
+ref="bodywk" :class="[customClass, 'overflow']" :style="[
 			computedHeight ? { height: computedHeight } : '', 
-			computedWidth ? { width: computedWidth } : '',customCSSStyle]">
-		<view v-if="isLoadEl" ref="nvueElAni" :animation="animationData" :class="[
+			computedWidth ? { width: computedWidth } : '',customCSSStyle]" @click="hanlder">
+		<view
+v-if="isLoadEl" ref="nvueElAni" :animation="animationData" :class="[
 			'flex-col flex',
 			animationName+reverseAniPrefxname,customClass
 		]">

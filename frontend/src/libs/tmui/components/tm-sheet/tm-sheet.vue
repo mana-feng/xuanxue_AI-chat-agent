@@ -5,9 +5,8 @@
  * @Description: 文件
 -->
 <template>
-  <view :render-whole="true" v-if="_blue_sheet" :blurEffect="_blurEffect" @click="emits('click', $event)"
-    @longpress="longpress" @touchend="touchend" @touchstart="touchstart" @touchcancel="touchcancel"
-    @mousedown="mousedown" @mouseup="mouseup" @mouseleave="mouseleave" :class="[
+  <view
+v-if="_blue_sheet" :render-whole="true" :blur-effect="_blurEffect" :class="[
       'flex flex-col', parenClass_p,
       `mx-${_margin[0]}`,
       `my-${_margin[1]}`,
@@ -16,7 +15,8 @@
       isLongPress ? props.hoverClass : '',
       props.hoverClass != '' && props.hoverClass != 'none' ? 'pointer' : '',
       !isDisabledRoundAndriod ? `round-${props.round}` : '',
-    ]" :style="[
+    ]"
+    :style="[
   _height ? { height: _height + (_padding[1]*2) + props.unit } : '',
   _width ? { width: _width + (_padding[0]*2) + props.unit } : '',
   tmcomputed.borderCss,
@@ -24,7 +24,8 @@
   !_transprent && props.shadow > 0 ? tmcomputed.shadowColor : '',
   !_transprent && _blur ? { backdropFilter: 'blur(6px)' } : '',
   customCSSStyle,
-]">
+]" @click="emits('click', $event)" @longpress="longpress" @touchend="touchend"
+    @touchstart="touchstart" @touchcancel="touchcancel" @mousedown="mousedown" @mouseup="mouseup" @mouseleave="mouseleave">
     <view :render-whole="true" :class="['flex  flex-col flex-1', customClass]" :style="contStyle_p">
       <slot></slot>
     </view>

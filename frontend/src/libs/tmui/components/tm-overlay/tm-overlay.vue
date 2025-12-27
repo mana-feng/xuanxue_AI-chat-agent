@@ -1,11 +1,12 @@
 <template>
-	<view  v-if="showMask"
+	<view
+v-if="showMask"
 	ref="overlay"
-	@click.stop="close" 
 	:class="[bgColor_rp&&!props.transprent?'blurbg':'', align_rpx,' navbarheight flex flex-col  l-0  ',customClass,]" 
 	:style="[bgColor_rp&&!props.transprent ? { backgroundColor: showMask?bgColor_rp:'' } : '',{ position:'fixed'},
 		zIndex ? { zIndex: zIndex } : '', { width: width + 'px', height: height + 'px',top:top+'px'},customCSSStyle, ]" 
-		:animation="animationData">
+	:animation="animationData" 
+		@click.stop="close">
 		<slot></slot>
 	</view>
 </template>
@@ -14,6 +15,7 @@
 	 * 遮罩层
 	 * @description 遮罩层全屏弹出。
 	 */
+	/// <reference types="@dcloudio/types" />
 	import {
 		getCurrentInstance,
 		computed,
@@ -35,6 +37,7 @@ ComponentInternalInstance
 		computedClass,
 		computedStyle
 	} from '../../tool/lib/minxs';
+	import { getSystemInfo } from '@/utils/platform';
 	// #ifdef APP-PLUS-NVUE
 	const animation = uni.requireNativePlugin('animation')
 	// #endif
@@ -73,9 +76,10 @@ ComponentInternalInstance
 		},
 	});
 	const emits = defineEmits(['click', 'open', 'close', 'update:show']);
-	const {proxy} = <ComponentInternalInstance>getCurrentInstance();
+	const instance = getCurrentInstance();
+	const proxy = instance?.proxy ?? null;
 	//自定义样式：
-	const customCSSStyle = computedStyle(props);
+	const customCSSStyle = computedStyle(props) as any;
 	//自定类
 	const customClass = computedClass(props);
 	const width = ref(0);
@@ -83,7 +87,7 @@ ComponentInternalInstance
 	const top = ref(0);
 	const isAniing = ref(false)
 	let timids=uni.$tm.u.getUid(1);
-	const sysinfo = uni.getSystemInfoSync();
+	const sysinfo = getSystemInfo();
 	width.value = sysinfo.windowWidth;
 	height.value = sysinfo.windowHeight;
 
@@ -123,7 +127,7 @@ ComponentInternalInstance
 	}
 	// #endif
 	// #endif
-	let timerId = NaN;
+	let timerId: any = NaN;
 	
 	const animationData = ref(null)
 	const showMask = ref(false)
@@ -183,9 +187,10 @@ ComponentInternalInstance
 		fadeInNvue(off);
 		// #endif
 	}
-	function getEl(el:HTMLElement) {
+	function getEl(el:any) {
 		if (typeof el === 'string' || typeof el === 'number') return el;
-		if (WXEnvironment) {
+		// @ts-ignore
+		if (typeof WXEnvironment !== 'undefined' && WXEnvironment) {
 			return el.ref;
 		} else {
 			return el instanceof HTMLElement ? el : el.$el;
@@ -198,7 +203,7 @@ ComponentInternalInstance
 			// isAniing.vale = true;
 			clearTimeout(timids)
 			timids = setTimeout(function() {
-				var testEl = proxy.$refs.overlay;
+				var testEl = proxy?.$refs.overlay;
 				  animation.transition(testEl, {
 					  styles: {
 						  backgroundColor:bgColor_rp.value,
@@ -212,7 +217,7 @@ ComponentInternalInstance
 					  emits('close');
 					  emits('update:show', false);
 					  // isAniing.vale = false;
-				  })
+					  })
 			}, props.duration);
 			
 		}else{
@@ -220,7 +225,7 @@ ComponentInternalInstance
 			emits('open');
 			clearTimeout(timids)
 			timids = setTimeout(function() {
-				var testEl = proxy.$refs.overlay;
+				var testEl = proxy?.$refs.overlay;
 				  animation.transition(testEl, {
 					  styles: {
 						  backgroundColor:bgColor_rp.value,

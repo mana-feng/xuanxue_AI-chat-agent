@@ -13,24 +13,6 @@
 								<h1 class="page-title">历史排盘记录</h1>
 								<p class="page-subtitle">查看、筛选并管理已保存的排盘</p>
 							</view>
-							<view class="header-actions">
-								<yx-teal-button
-									size="small"
-									:round="12"
-									:padding="[18, 18]"
-									icon="tmicon-md-refresh"
-									label="刷新"
-									@tap="fetchCharts"
-								></yx-teal-button>
-								<yx-teal-button
-									v-if="isLoggedIn && user_store.isAdmin"
-									size="small"
-									:round="12"
-									:padding="[18, 18]"
-									label="管理员后台"
-									@tap="goToAdmin"
-								></yx-teal-button>
-							</view>
 						</view>
 
 						<view v-if="!isLoggedIn" class="empty-state">
@@ -41,14 +23,6 @@
 								label="登录后可查看和管理您保存的八字排盘记录"
 								:margin="[0, 0, 30, 0]"
 							></tm-text>
-							<yx-teal-button
-								size="small"
-								:round="12"
-								:padding="[28, 24]"
-								:bold="true"
-								label="去登录"
-								@tap="goLogin"
-							></yx-teal-button>
 						</view>
 
 						<view v-else>
@@ -58,15 +32,27 @@
 									<h2 class="section__title">筛选与排序</h2>
 								</header>
 								<view class="section__body filters-grid">
+									<view class="filter-block">
+										<tm-text :font-size="22" color="#666666" label="类型：" class="mb-6"></tm-text>
+										<tm-segtab
+											v-model="typeIndex"
+											:list="[
+												{ text: '八字' },
+												{ text: '六爻' }
+											]"
+											:margin="[0, 0]"
+											:width="160"
+										></tm-segtab>
+									</view>
 									<view class="filter-block search-block">
 										<tm-input
 											v-model="searchKeyword"
 											prefix="tmicon-md-search"
 											placeholder="搜索姓名..."
-											@input="onSearchInput"
 											clearable
 											:round="12"
 											:border="1"
+											@input="onSearchInput"
 										></tm-input>
 									</view>
 									<view class="filter-block">
@@ -252,6 +238,8 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import { useUserStore } from '@/store/user';
 import { useBaziStore } from '@/store/bazi';
+import { useLiuyaoStore } from '@/store/liuyao';
+import { compileNajia, buildDisplayData } from '@/features/liuyao/najiaCore';
 import { request } from '@/services/api/index';
 import { getAccessToken } from '@/utils/tokenStore';
 import utils from '@/libs/utils/utils';
@@ -265,10 +253,12 @@ interface ChartItem {
 	createdAt: string;
 	createdAtLabel?: string;
 	rawPayload?: any;
+	type?: string;
 }
 
 const user_store = useUserStore();
 const bazi_store = useBaziStore();
+const liuyao_store = useLiuyaoStore();
 
 const charts = ref<ChartItem[]>([]);
 const loading = ref(false);
@@ -283,6 +273,7 @@ const annLoading = ref(false);
 const annError = ref('');
 
 const searchKeyword = ref('');
+const typeIndex = ref(0); // 0: 八字, 1: 六爻
 const genderFilter = ref('');
 const sortByIndex = ref(0); // 0: 时间, 1: 姓名
 const sortBy = computed(() => (sortByIndex.value === 0 ? 'created_at' : 'name'));
@@ -300,12 +291,14 @@ function getGenderDisplayLabel(gender: any): string {
 	} else if (gender === '1' || gender === 1) {
 		return '女';
 	} else {
+		// 六爻可能没有性别，或者不重要，返回空字符串或特定显示
+		if (typeIndex.value === 1) return '';
 		console.warn('[WARN] 未知的 gender 值:', gender);
 		return '未知';
 	}
 }
 
-watch([genderFilter, sortByIndex, sortOrder], () => {
+watch([genderFilter, sortByIndex, sortOrder, typeIndex], () => {
 	if (user_store.isLoggedIn) {
 		// 延迟一下，确保 token 已刷新
 		setTimeout(() => {
@@ -368,6 +361,9 @@ async function fetchCharts() {
 
 	try {
 		const params: Record<string, string> = {};
+		// 添加类型筛选
+		params.type = typeIndex.value === 1 ? 'liuyao' : 'bazi';
+
 		if (searchKeyword.value) {
 			params.keyword = searchKeyword.value;
 		}
@@ -485,7 +481,7 @@ async function refreshAnnouncements() {
 	annLoading.value = true;
 	try {
 		const metaRes = await fetchAnnouncementMeta();
-		const metaList = ((metaRes as any)?.meta || []) as AnnouncementMeta[];
+		const metaList = (metaRes.data?.meta || []) as AnnouncementMeta[];
 		const newSig = buildSignature(metaList);
 		const cache = loadAnnouncementCache();
 		if (cache && cache.signature === newSig) {
@@ -493,7 +489,7 @@ async function refreshAnnouncements() {
 			return;
 		}
 		const fullRes = await fetchAnnouncements();
-		const list = ((fullRes as any)?.list || []) as Announcement[];
+		const list = (fullRes.data?.list || []) as Announcement[];
 		announcementList.value = list;
 		saveAnnouncementCache({ signature: newSig, list });
 	} catch (e: any) {
@@ -541,15 +537,149 @@ function formatBirth(item: ChartItem) {
 			return '';
 		}
 		const result = utils.HideSecond(d.getTime());
-		return result ? '出生：' + result : '';
+		const prefix = typeIndex.value === 1 ? '时间：' : '出生：';
+		return result ? prefix + result : '';
 	} catch (e) {
 		return '';
 	}
 }
 
 function openChart(item: ChartItem) {
+	if (typeIndex.value === 1) { // 六爻
+		try {
+			let payload: any = item.rawPayload || {};
+			
+			if (typeof payload === 'string') {
+				try {
+					payload = JSON.parse(payload);
+				} catch (e) {
+					payload = {};
+				}
+			}
+			if (!payload || typeof payload !== 'object') {
+				payload = {};
+			}
+
+			let compiled = payload.compiled;
+			let display = payload.display;
+			let profile = payload.profile;
+
+			// 检查数据有效性
+			const isValidPayload = (payload.lite && payload.params) || (compiled && profile);
+			if (!isValidPayload) {
+				uni.showToast({ title: '记录数据已损坏', icon: 'none' });
+				return;
+			}
+
+			// 如果是精简版数据，进行重新计算
+			const savedParams = payload.params || payload.p;
+			
+			if (payload.lite && Array.isArray(savedParams) && savedParams.length >= 6) {
+				const options = payload.options && typeof payload.options === 'object' ? payload.options : {};
+				
+				// 恢复 profile（如果没有完整 profile，从 options 恢复基本信息）
+				if (!profile || typeof profile !== 'object') {
+					profile = {
+						title: options.title || item.title || '',
+						gender: options.gender || item.gender || '',
+						timeLabel: '', // 可以根据 date 重新生成
+						// 其他字段可能缺失，但不影响核心排盘
+					};
+				}
+				
+				// 确保日期对象
+				let calcOptions = { ...options };
+				if (calcOptions.date && typeof calcOptions.date === 'number') {
+					calcOptions.date = new Date(calcOptions.date);
+				} else if (calcOptions.date && typeof calcOptions.date === 'string') {
+					calcOptions.date = new Date(calcOptions.date);
+				} else if (!(calcOptions.date instanceof Date)) {
+					const fallbackTs =
+						typeof payload.ts === 'number'
+							? payload.ts
+							: (item.createdAt ? new Date(item.createdAt).getTime() : Date.now());
+					calcOptions.date = new Date(fallbackTs);
+				}
+				// 强制开启卦辞查找
+				calcOptions.guaci = true;
+
+				try {
+					compiled = compileNajia(savedParams, calcOptions);
+					display = buildDisplayData(compiled);
+				} catch (e) {
+					console.error('六爻重新计算失败:', e);
+					uni.showToast({ title: '数据解析失败', icon: 'none' });
+					return;
+				}
+			} else if (compiled && !display) {
+				// 兼容旧数据：有 compiled 但无 display
+				try {
+					display = buildDisplayData(compiled);
+				} catch (e) {
+					console.warn('生成显示数据失败:', e);
+				}
+			}
+			
+			if (compiled && (!profile || typeof profile !== 'object')) {
+				profile = {
+					title: item.title || '',
+					gender: item.gender || '',
+					timeLabel: ''
+				};
+			}
+
+			if (compiled && profile) {
+				// 确保 display 存在
+				if (!display) {
+					try {
+						display = buildDisplayData(compiled);
+					} catch (e) {
+						// ignore
+					}
+				}
+				
+				liuyao_store.setResult({
+					compiled: compiled,
+					profile: profile,
+					display: display,
+					createdAt: payload.ts || new Date(item.createdAt).getTime()
+				});
+				uni.navigateTo({ url: '/pages/liuyao/result' });
+				return;
+			}
+			uni.showToast({ title: '数据不完整', icon: 'none' });
+		} catch (e) {
+			console.error(e);
+			uni.showToast({ title: '打开失败', icon: 'none' });
+		}
+		return;
+	}
+
 	try {
 		let useRawPayload = false;
+		// 检查是否是精简版八字数据
+		if (item.rawPayload && item.rawPayload.lite && item.rawPayload.user) {
+			const u = item.rawPayload.user;
+			if (u.timestamp) {
+				// 恢复用户信息
+				user_store.set({
+					realname: u.realname || '佚名',
+					gender: u.gender,
+					timestamp: u.timestamp,
+					recordId: item.id
+				});
+
+				// 触发重新计算
+				bazi_store.pull({
+					timestamp: u.timestamp,
+					gender: u.gender === '0' || u.gender === 0 ? 0 : 1
+				});
+				
+				uni.navigateTo({ url: '/pages/index/detail' });
+				return;
+			}
+		}
+
 		if (item.rawPayload && item.rawPayload.user && item.rawPayload.bazi) {
 			const u = item.rawPayload.user;
 			const b = item.rawPayload.bazi;
@@ -738,7 +868,9 @@ async function doRemove(item: ChartItem) {
 	if (!user_store.isLoggedIn) return;
 
 	try {
-		const res = await request(`/api/charts/${item.id}`, {
+		// 优先使用 item 中的 type，如果没有则使用当前选中的 typeIndex 推断
+		const type = item.type || (typeIndex.value === 1 ? 'liuyao' : 'bazi');
+		const res = await request(`/api/charts/${item.id}?type=${type}`, {
 			method: 'DELETE',
 			needAuth: true
 		});
@@ -766,17 +898,6 @@ function goToHome() {
 	});
 }
 
-function goToAdmin() {
-	uni.navigateTo({
-		url: '/pages/auth/auth'
-	});
-}
-
-function goLogin() {
-	uni.navigateTo({
-		url: '/pages/auth/auth?mode=login'
-	});
-}
 </script>
 
 <style scoped>
@@ -794,7 +915,9 @@ function goLogin() {
 }
 
 .history-header {
-	align-items: center;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 12px;
 }
 
 .header-actions {
@@ -802,7 +925,8 @@ function goLogin() {
 	flex-direction: row;
 	align-items: center;
 	flex-wrap: wrap;
-	justify-content: flex-end;
+	justify-content: flex-start;
+	width: 100%;
 }
 
 .header-actions > view {
@@ -822,17 +946,51 @@ function goLogin() {
 
 .filters-grid {
 	display: flex;
-	flex-direction: row;
-	flex-wrap: wrap;
+	flex-direction: column;
+	flex-wrap: nowrap;
+	gap: 12px;
 }
 
 .filters-grid > view {
+	width: 100%;
+	margin-right: 0;
+	margin-bottom: 0;
+}
+
+@media (min-width: 720px) {
+	.filters-grid {
+		flex-direction: row;
+		flex-wrap: wrap;
+		gap: 0;
+	}
+
+	.filters-grid > view {
+		width: calc(50% - 6px);
+		margin-right: 12px;
+		margin-bottom: 12px;
+	}
+
+	.filters-grid > view:nth-child(2n) {
+		margin-right: 0;
+	}
+}
+
+:global(.layout-medium) .filters-grid,
+:global(.layout-wide) .filters-grid {
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 0;
+}
+
+:global(.layout-medium) .filters-grid > view,
+:global(.layout-wide) .filters-grid > view {
 	width: calc(50% - 6px);
 	margin-right: 12px;
 	margin-bottom: 12px;
 }
 
-.filters-grid > view:nth-child(2n) {
+:global(.layout-medium) .filters-grid > view:nth-child(2n),
+:global(.layout-wide) .filters-grid > view:nth-child(2n) {
 	margin-right: 0;
 }
 
@@ -871,7 +1029,7 @@ function goLogin() {
 
 .filters-count {
 	flex: 1;
-	text-align: right;
+	text-align: left;
 }
 
 .records-list {
@@ -893,12 +1051,13 @@ function goLogin() {
 
 .record-card__header {
 	display: flex;
-	flex-direction: row;
-	justify-content: space-between;
+	flex-direction: column;
+	justify-content: flex-start;
+	gap: 12px;
 }
 
 .record-card__header > view {
-	margin-right: 16px;
+	margin-right: 0;
 }
 
 .record-card__header > view:last-child {
@@ -928,17 +1087,20 @@ function goLogin() {
 
 .record-actions {
 	display: flex;
-	flex-direction: column;
-	align-items: flex-end;
-	justify-content: center;
+	flex-direction: row;
+	align-items: center;
+	justify-content: flex-start;
+	flex-wrap: wrap;
+	gap: 8px;
 }
 
 .record-actions > view {
-	margin-bottom: 8px;
+	margin-bottom: 0;
+	margin-right: 8px;
 }
 
 .record-actions > view:last-child {
-	margin-bottom: 0;
+	margin-right: 0;
 }
 
 .empty-state {
@@ -970,33 +1132,85 @@ function goLogin() {
 	margin-bottom: 12px;
 }
 
-@media screen and (max-width: 640px) {
+@media (min-width: 900px) {
 	.history-header {
-		flex-direction: column;
-		align-items: flex-start;
-	}
-
-	.history-header > view {
-		margin-bottom: 12px;
-	}
-
-	.history-header > view:last-child {
-		margin-bottom: 0;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
 	}
 
 	.header-actions {
-		width: 100%;
-		justify-content: flex-start;
+		width: auto;
+		justify-content: flex-end;
 	}
 
 	.record-card__header {
-		flex-direction: column;
-		align-items: flex-start;
+		flex-direction: row;
+		justify-content: space-between;
+	}
+
+	.record-card__header > view {
+		margin-right: 16px;
 	}
 
 	.record-actions {
-		flex-direction: row;
-		align-items: center;
+		flex-direction: column;
+		align-items: flex-end;
+		justify-content: center;
+		gap: 0;
 	}
+
+	.record-actions > view {
+		margin-right: 0;
+		margin-bottom: 8px;
+	}
+
+	.record-actions > view:last-child {
+		margin-bottom: 0;
+	}
+
+	.filters-count {
+		text-align: right;
+	}
+}
+
+:global(.layout-wide) .history-header {
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+}
+
+:global(.layout-wide) .header-actions {
+	width: auto;
+	justify-content: flex-end;
+}
+
+:global(.layout-wide) .record-card__header {
+	flex-direction: row;
+	justify-content: space-between;
+}
+
+:global(.layout-wide) .record-card__header > view {
+	margin-right: 16px;
+}
+
+:global(.layout-wide) .record-actions {
+	flex-direction: column;
+	align-items: flex-end;
+	justify-content: center;
+	gap: 0;
+}
+
+:global(.layout-wide) .record-actions > view {
+	margin-right: 0;
+	margin-bottom: 8px;
+}
+
+:global(.layout-wide) .record-actions > view:last-child {
+	margin-bottom: 0;
+}
+
+:global(.layout-wide) .filters-count {
+	text-align: right;
 }
 </style>

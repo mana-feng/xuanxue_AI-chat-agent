@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { fetchNet } from './tool/lib/fetch';
 import themeTool from './tool/theme/theme';
 import preview, * as util from './tool/function/util';
@@ -6,7 +7,7 @@ import { share } from "./tool/lib/share"
 import { App, nextTick } from "vue"
 import PageJsonInit from "@/pages.json"
 
-let pages = [];
+const pages = [];
 PageJsonInit.pages.forEach(el => {
 	pages.push({
 		path: el.path,
@@ -15,7 +16,7 @@ PageJsonInit.pages.forEach(el => {
 })
 if (Array.isArray(PageJsonInit?.subPackages)) {
 	PageJsonInit.subPackages.forEach(el => {
-		let rootPath = el.root;
+		const rootPath = el.root;
 		el.pages.forEach(el2 => {
 			pages.push({
 				path: rootPath + "/" + el2.path,

@@ -24,11 +24,11 @@
     ],
     "types": [
       "@dcloudio/types",
-      "vite/client"
+      "vite/client",
+      "node"
     ]
   },
   "vueCompilerOptions": {
-    "globalTypesPath": "./src/__volar_global.d.ts"
   },
   "include": [
     "src/**/*.ts",
@@ -36,5 +36,9 @@
     "src/**/*.tsx",
     "src/**/*.vue",
     "src/**/*.nvue"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
   ]
 }

@@ -1,11 +1,11 @@
 <template>
 	<view class="flex flex-row" >
-		<timePanelVue v-if="showCol.year" :suffix="props.showSuffix.year" :showSuffix="props.showSuffix" :height="props.height" :disabledDate="props.disabledDate" :time-type="timeDetailType.year" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
-		<timePanelVue v-if="showCol.month" :suffix="props.showSuffix.month" :showSuffix="props.showSuffix" :height="props.height" :disabledDate="props.disabledDate" :time-type="timeDetailType.month" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
-		<timePanelVue v-if="showCol.day" :suffix="props.showSuffix.day" :showSuffix="props.showSuffix" :height="props.height" :disabledDate="props.disabledDate" :time-type="timeDetailType.day" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
-		<timePanelVue v-if="showCol.hour" :suffix="props.showSuffix.hour" :showSuffix="props.showSuffix" :height="props.height" :disabledDate="props.disabledDate" :time-type="timeDetailType.hour" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
-		<timePanelVue v-if="showCol.minute" :suffix="props.showSuffix.minute" :showSuffix="props.showSuffix" :height="props.height" :disabledDate="props.disabledDate" :time-type="timeDetailType.minute" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
-		<timePanelVue v-if="showCol.second" :suffix="props.showSuffix.second" :showSuffix="props.showSuffix" :height="props.height" :disabledDate="props.disabledDate" :time-type="timeDetailType.second" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
+		<timePanelVue v-if="showCol.year" :suffix="props.showSuffix.year" :show-suffix="props.showSuffix" :height="props.height" :disabled-date="props.disabledDate" :time-type="timeDetailType.year" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
+		<timePanelVue v-if="showCol.month" :suffix="props.showSuffix.month" :show-suffix="props.showSuffix" :height="props.height" :disabled-date="props.disabledDate" :time-type="timeDetailType.month" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
+		<timePanelVue v-if="showCol.day" :suffix="props.showSuffix.day" :show-suffix="props.showSuffix" :height="props.height" :disabled-date="props.disabledDate" :time-type="timeDetailType.day" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
+		<timePanelVue v-if="showCol.hour" :suffix="props.showSuffix.hour" :show-suffix="props.showSuffix" :height="props.height" :disabled-date="props.disabledDate" :time-type="timeDetailType.hour" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
+		<timePanelVue v-if="showCol.minute" :suffix="props.showSuffix.minute" :show-suffix="props.showSuffix" :height="props.height" :disabled-date="props.disabledDate" :time-type="timeDetailType.minute" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
+		<timePanelVue v-if="showCol.second" :suffix="props.showSuffix.second" :show-suffix="props.showSuffix" :height="props.height" :disabled-date="props.disabledDate" :time-type="timeDetailType.second" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
 	</view>
 </template>
 
@@ -46,8 +46,8 @@ const props = defineProps({
 	 * 现在暂时只禁用到天，也就是一个时间到天这如果==下面的禁用日期，就会选不中。
 	 */
 	disabledDate:{
-		type:Array as PropType<Array<Number|String|Date>>,
-		default:():Array<Number|String|Date>=>[]
+		type:Array as PropType<Array<number|string|Date>>,
+		default:():Array<number|string|Date>=>[]
 	},
 	//展示格式。最终影响到modelStr输出格式的内容。
 	format:{

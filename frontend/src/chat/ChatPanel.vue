@@ -22,8 +22,8 @@
 		>
 			<view
 				v-for="msg in messages"
-				:key="msg.id"
 				:id="msg.id"
+				:key="msg.id"
 				class="chat-item"
 				:class="msg.role === 'user' ? 'from-user' : 'from-bot'"
 			>
@@ -52,8 +52,8 @@
 				maxlength="-1"
 				placeholder="输入消息，回车发送"
 				:disabled="sending"
-				@confirm="handleSend"
 				confirm-type="send"
+				@confirm="handleSend"
 			/>
 			<button class="chat-send" :disabled="sending || !draft.trim()" @tap="handleSend">
 				{{ sending ? '发送中...' : '发送' }}
@@ -231,11 +231,12 @@ defineExpose({
 	display: flex;
 	flex-direction: column;
 	height: 100vh;
-	background: #f3f4f6;
+	background: radial-gradient(circle at 20% 18%, rgba(99, 102, 241, 0.08), transparent 40%),
+		#f3f4f6;
 }
 
 .chat-header {
-	padding: 12px 16px;
+	padding: 10px 14px;
 	background: #ffffff;
 	border-bottom: 1px solid #e5e7eb;
 	display: flex;
@@ -302,7 +303,7 @@ defineExpose({
 
 .chat-body {
 	flex: 1;
-	padding: 12px;
+	padding: 12px 12px 16px;
 	/* #ifndef APP-PLUS-NVUE */
 	box-sizing: border-box;
 	/* #endif */
@@ -332,14 +333,14 @@ defineExpose({
 
 .bubble {
 	/* #ifndef APP-PLUS-NVUE */
-	max-width: 70%;
+	max-width: 82%;
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 	/* #endif */
 	/* #ifdef APP-PLUS-NVUE */
-	width: 70%;
+	width: 82%;
 	/* #endif */
 	padding: 10px 12px;
-	border-radius: 12px;
+	border-radius: 14px;
 	background: #ffffff;
 }
 
@@ -400,7 +401,7 @@ defineExpose({
 .chat-input-bar {
 	display: flex;
 	/* gap: 8px; nvue 不支持，使用 margin 替代 */
-	padding: 10px 12px;
+	padding: 10px 12px calc(10px + var(--safe-bottom));
 	background: #ffffff;
 	border-top: 1px solid #e5e7eb;
 	/* #ifndef APP-PLUS-NVUE */
@@ -410,7 +411,7 @@ defineExpose({
 
 .chat-input {
 	flex: 1;
-	min-height: 40px;
+	min-height: 44px;
 	max-height: 120px;
 	padding: 8px 10px;
 	border-radius: 10px;
@@ -421,13 +422,14 @@ defineExpose({
 }
 
 .chat-send {
-	width: 82px;
+	width: 76px;
 	border: none;
 	border-radius: 10px;
 	background: #4f46e5;
 	color: #f9fafb;
 	font-size: 14px;
 	font-weight: 600;
+	min-height: 44px;
 }
 
 .chat-send:disabled {

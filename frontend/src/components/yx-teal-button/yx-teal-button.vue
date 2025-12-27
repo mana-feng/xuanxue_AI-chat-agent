@@ -2,7 +2,8 @@
 	<tm-button
 		class="btn-gradient"
 		:size="size"
-		color="soft-blue"
+		color="primary"
+		font-color="white"
 		linear="right"
 		:round="round"
 		:padding="padding"
@@ -13,7 +14,7 @@
 		:label="label"
 		:icon="icon"
 	>
-		<slot />
+		<slot v-if="$slots.default" />
 	</tm-button>
 </template>
 
@@ -22,7 +23,7 @@ import { PropType } from 'vue';
 
 type BtnSize = 'mini' | 'small' | 'normal' | 'middle' | 'large' | 'block';
 
-const props = defineProps({
+defineProps({
 	size: {
 		type: String as PropType<BtnSize>,
 		default: 'small'

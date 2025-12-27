@@ -209,20 +209,25 @@ router.put('/:id', authMiddleware, apiSignatureMiddleware(), async (req, res) =>
 });
 
 /**
- * 获取八字记录列表（图表列表）
+ * 获取排盘记录列表（图表列表）
+ * 支持 type 参数：bazi (默认) | liuyao
  */
 router.get('/charts', authMiddleware, async (req, res) => {
 	const userId = req.user.id;
 	const searchKeyword = SecurityUtils.sanitizeSearchKeyword(req.query.keyword || '');
 	const genderFilter = SecurityUtils.validateGender(req.query.gender);
+	const type = req.query.type || 'bazi'; // 默认为八字
 
 	const allowedSortFields = ['created_at', 'name', 'birth_datetime'];
 	const sort = SecurityUtils.validateSort(req.query.sortBy, req.query.sortOrder, allowedSortFields);
 	const sortBy = sort.sortBy;
 	const sortOrder = sort.sortOrder;
 
+	// 根据 type 选择表名
+	const tableName = type === 'liuyao' ? 'liuyao_records' : 'bazi_records';
+
 	let sql =
-		'SELECT id, name, gender, birth_datetime AS birthDatetime, calendar_type AS calendarType, raw_payload AS rawPayload, created_at AS createdAt FROM bazi_records WHERE user_id = ?';
+		`SELECT id, name, gender, birth_datetime AS birthDatetime, calendar_type AS calendarType, raw_payload AS rawPayload, created_at AS createdAt FROM ${tableName} WHERE user_id = ?`;
 	const params = [userId];
 
 	if (searchKeyword) {
@@ -249,15 +254,30 @@ router.get('/charts', authMiddleware, async (req, res) => {
 		const rows = await db.all(sql, params);
 
 		const list =
-			rows?.map((r) => ({
-				id: r.id,
-				title: r.name || '未命名排盘',
-				gender: r.gender,
-				birthDatetime: r.birthDatetime,
-				calendarType: r.calendarType,
-				rawPayload: r.rawPayload ? safeJsonParse(r.rawPayload) : null,
-				createdAt: r.createdAt,
-			})) || [];
+			rows?.map((r) => {
+				const rawPayload = r.rawPayload ? safeJsonParse(r.rawPayload) : null;
+				
+				// 尝试从 rawPayload 中获取更准确的标题
+				let title = r.name || '未命名排盘';
+				// 如果是六爻排盘，尝试从 payload 中获取标题
+				if (type === 'liuyao' && rawPayload) {
+					const payloadTitle = rawPayload.options?.title || rawPayload.profile?.title;
+					if (payloadTitle) {
+						title = payloadTitle;
+					}
+				}
+
+				return {
+					id: r.id,
+					title: title,
+					gender: r.gender,
+					birthDatetime: r.birthDatetime,
+					calendarType: r.calendarType,
+					rawPayload: rawPayload,
+					createdAt: r.createdAt,
+					type: type // 返回类型标识
+				};
+			}) || [];
 
 		// 返回列表和统计信息
 		res.json({
@@ -272,10 +292,12 @@ router.get('/charts', authMiddleware, async (req, res) => {
 });
 
 /**
- * 删除八字记录
+ * 删除排盘记录
+ * 支持 type 参数：bazi (默认) | liuyao
  */
 router.delete('/charts/:id', authMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	const userId = req.user.id;
+	const type = req.query.type || 'bazi'; // 默认为八字
 
 	// 使用安全工具验证 ID
 	const id = SecurityUtils.validateId(req.params.id);
@@ -283,8 +305,11 @@ router.delete('/charts/:id', authMiddleware, apiSignatureMiddleware(), async (re
 		return res.status(400).json({ error: '缺少有效的 id' });
 	}
 
+	// 根据 type 选择表名
+	const tableName = type === 'liuyao' ? 'liuyao_records' : 'bazi_records';
+
 	try {
-		const result = await db.run('DELETE FROM bazi_records WHERE id = ? AND user_id = ?', [
+		const result = await db.run(`DELETE FROM ${tableName} WHERE id = ? AND user_id = ?`, [
 			id,
 			userId,
 		]);
