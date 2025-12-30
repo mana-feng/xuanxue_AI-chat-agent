@@ -34,14 +34,15 @@
 				</view>
 				
 				<!-- 用户列表 -->
-				<view class="user-list">
+				<view class="responsive-list-container" style="margin-bottom: 40rpx;">
 					<tm-sheet
 						v-for="user in userList"
 						:key="user.id"
 						:round="4"
 						:shadow="2"
 						:padding="[20, 20]"
-						:margin="[0, 0, 20, 0]"
+						:margin="[0, 0, 0, 0]"
+						class="responsive-list-item"
 					>
 						<view class="user-header">
 							<view class="user-info">
@@ -526,10 +527,6 @@ async function handleSubmitUser() {
 
 .form-actions {
 	margin-top: 40rpx;
-}
-
-.user-list {
-	margin-bottom: 40rpx;
 }
 
 .user-header {

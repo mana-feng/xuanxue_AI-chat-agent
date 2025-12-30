@@ -14,13 +14,15 @@ function securityHeaders(req, res, next) {
 	res.setHeader('X-XSS-Protection', '1; mode=block');
 
 	// 内容安全策略（完整版，包含 frame-ancestors）
+	const connectSrcExtra = config.CSP_CONNECT_SRC ? String(config.CSP_CONNECT_SRC) : '';
 	res.setHeader(
 		'Content-Security-Policy',
 		"default-src 'self'; " +
-			"script-src 'self' 'unsafe-eval' 'unsafe-inline' blob:; " +
+			"script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://www.statcounter.com; " +
+			"script-src-elem 'self' 'unsafe-eval' 'unsafe-inline' blob: https://www.statcounter.com; " +
 			"style-src 'self' 'unsafe-inline'; " +
-			"img-src 'self' data: blob:; " +
-			`connect-src 'self' ${config.CSP_CONNECT_SRC} ws: wss:; ` +
+			"img-src 'self' data: blob: https://cdn.dcimg.net https://c.statcounter.com; " +
+			`connect-src 'self' ${connectSrcExtra} https://c.statcounter.com https://www.statcounter.com ws: wss:; ` +
 			"font-src 'self' data:; " +
 			"object-src 'none'; " +
 			"base-uri 'self'; " +

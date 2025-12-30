@@ -1,14 +1,14 @@
-﻿@echo off
+@echo off
 setlocal
 cd /d "%~dp0"
 
-echo [INFO] Starting backend UI (admin)...
-start "Backend UI" cmd /k "cd /d %~dp0backend && start /B npm start && cd /d %~dp0backend\admin-ui && npm run dev:h5"
+echo [INFO] Building Admin UI first (Development Mode)...
+cd backend/admin-ui && call npm run build:h5 -- --mode development && cd ../..
 
-echo [INFO] Starting frontend (H5)...
-start "Frontend" cmd /k "cd /d %~dp0frontend && npm run dev:h5"
-
-echo [INFO] Done. Backend UI and frontend are starting in separate windows.
-echo [INFO] Frontend H5: http://localhost:3000
-echo [INFO] Backend UI: http://localhost:3002
-echo [INFO] Backend API: http://localhost:3001
+echo [INFO] Starting Development Server (One-Click Script)...
+echo [INFO] This will start:
+echo [INFO] 1. Backend API on HTTPS port 3001
+echo [INFO] 2. Frontend H5 on internal HTTP port 24678
+echo [INFO] 3. Secure Proxy on HTTPS port 3000 (Forwarding to Frontend and API)
+echo.
+call npm run dev

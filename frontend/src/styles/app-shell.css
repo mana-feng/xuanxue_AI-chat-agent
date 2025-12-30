@@ -491,15 +491,16 @@ page {
 
 /* ==================== 按钮风格统一 ==================== */
 .btn-gradient {
-	border-radius: 12px;
+	border-radius: 999px;
 	overflow: hidden;
 }
 
 .btn-gradient .button {
 	/* 不自定义背景色，使用 tmui 默认 primary 渐变（与首页一致） */
 	color: #ffffff !important;
-	box-shadow: 0 8px 18px rgba(148, 163, 184, 0.24) !important;
-	border: 1px solid rgba(255, 255, 255, 0.4) !important;
+	border-radius: 999px !important;
+	box-shadow: 0 10px 22px rgba(148, 163, 184, 0.22) !important;
+	border: 1px solid rgba(255, 255, 255, 0.32) !important;
 	backdrop-filter: blur(3px);
 	min-height: 34px;
 	padding: 0 16px;
@@ -509,16 +510,16 @@ page {
 
 .btn-gradient .button:active {
 	transform: translateY(1px);
-	box-shadow: 0 6px 14px rgba(129, 140, 248, 0.2) !important;
-	filter: brightness(0.98);
+	box-shadow: 0 8px 18px rgba(129, 140, 248, 0.18) !important;
+	filter: brightness(0.985);
 }
 
 .btn-soft {
-	border-radius: 10px;
+	border-radius: 14px;
 }
 
 .btn-soft .button {
-	background: rgba(255, 255, 255, 0.85) !important;
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(241, 245, 249, 0.9)) !important;
 	color: #1f2937 !important;
 	border: 1px solid rgba(226, 232, 240, 0.9) !important;
 	box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06) !important;
@@ -535,11 +536,11 @@ page {
 }
 
 .btn-outline-danger {
-	border-radius: 10px;
+	border-radius: 14px;
 }
 
 .btn-outline-danger .button {
-	background: rgba(255, 255, 255, 0.9) !important;
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 241, 242, 0.9)) !important;
 	color: #e11d48 !important;
 	border: 1px solid rgba(225, 29, 72, 0.55) !important;
 	box-shadow: 0 6px 14px rgba(225, 29, 72, 0.16) !important;

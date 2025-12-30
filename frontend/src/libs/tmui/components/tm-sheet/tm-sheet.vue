@@ -116,7 +116,8 @@ const props = defineProps({
   }
 });
 const emits = defineEmits(["click", "longpress", "touchend", "touchstart", "touchcancel", "mousedown", "mouseup", "mouseleave"]);
-const { proxy } = getCurrentInstance();
+const instance = getCurrentInstance();
+const proxy = instance?.proxy ?? null;
 const parenClass_p = computed(() => props.parenClass)
 const contStyle_p = computed(() => props.contStyle)
 const _transprent = computed(() => props.transprent)

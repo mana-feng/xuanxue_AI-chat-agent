@@ -9,10 +9,11 @@
   "scripts": {
     "dev": "uni dev -p h5",
     "dev:h5": "uni dev -p h5",
+    "dev:h5:https": "uni dev -p h5 --https",
     "build": "npm run build:h5",
     "build:h5": "uni build -p h5",
-    "lint": "eslint \"./src/**/*.{js,ts,vue,nvue}\"",
-    "lint:fix": "eslint \"./src/**/*.{js,ts,vue,nvue}\" --fix",
+    "lint": "eslint --resolve-plugins-relative-to ./node_modules \"./src/**/*.{js,ts,vue,nvue}\"",
+    "lint:fix": "eslint --resolve-plugins-relative-to ./node_modules \"./src/**/*.{js,ts,vue,nvue}\" --fix",
     "format": "prettier --write \"./**/*.{js,ts,vue,nvue,json,md,scss,css}\"",
     "typecheck": "vue-tsc --noEmit",
     "check:security": "node scripts/check-build-security.js"

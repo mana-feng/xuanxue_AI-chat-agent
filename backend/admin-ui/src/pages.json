@@ -40,6 +40,9 @@
         },
         {
           "path": "announcements"
+        },
+        {
+          "path": "analytics-snippet"
         }
       ]
     }

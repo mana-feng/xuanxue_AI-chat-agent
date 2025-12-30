@@ -36,9 +36,7 @@ export function useLiuyaoForm() {
 
 	const form = ref({
 		title: '',
-		questioner: '',
 		gender: '',
-		location: '',
 		timeLabel: '',
 		num1: '',
 		num2: '',
@@ -85,11 +83,11 @@ export function useLiuyaoForm() {
 	};
 
 	const yaoOptions = [
-		{ label: '请选择', value: '', symbol: '' },
-		{ label: '━　━', value: 0, symbol: '━　━' },
-		{ label: '━━━', value: 1, symbol: '━━━' },
-		{ label: '━━━○', value: 3, symbol: '━━━○' },
-		{ label: '━　━×', value: 4, symbol: '━　━×' }
+		{ label: '请选择', value: '', symbol: '', name: '' },
+		{ label: `${getYaoSymbol(0)} ${getYaoName(0)}`, value: 0, symbol: getYaoSymbol(0), name: getYaoName(0) },
+		{ label: `${getYaoSymbol(1)} ${getYaoName(1)}`, value: 1, symbol: getYaoSymbol(1), name: getYaoName(1) },
+		{ label: `${getYaoSymbol(3)} ${getYaoName(3)}`, value: 3, symbol: getYaoSymbol(3), name: getYaoName(3) },
+		{ label: `${getYaoSymbol(4)} ${getYaoName(4)}`, value: 4, symbol: getYaoSymbol(4), name: getYaoName(4) }
 	];
 
 	const yaoLabels = ['初爻', '二爻', '三爻', '四爻', '五爻', '上爻'];
@@ -233,9 +231,11 @@ watch(methodIndex, (newIdx, oldIdx) => {
 		const mid = Math.floor(len / 2);
 		const part1 = raw.slice(0, mid) || raw;
 		const part2 = raw.slice(mid) || raw;
-		const n1 = (parseInt(part1, 10) || 0) % 8 || 8;
-		const n2 = (parseInt(part2, 10) || 0) % 8 || 8;
-		const n3 = (raw.split('').reduce((s, ch) => s + parseInt(ch, 10), 0) % 6) || 6;
+		const rawN1 = parseInt(part1, 10) || 0;
+		const rawN2 = parseInt(part2, 10) || 0;
+		const n1 = (rawN1 % 8) || 8;
+		const n2 = (rawN2 % 8) || 8;
+		const n3 = ((Math.abs(rawN1) + Math.abs(rawN2)) % 6) || 6;
 		const params = liuyaoService.generateNumberParams(n1, n2, n3);
 		form.value.singleParams = params;
 		uni.showToast({ title: '已生成单数起卦参数', icon: 'none' });
@@ -252,10 +252,11 @@ watch(methodIndex, (newIdx, oldIdx) => {
 		if (a.length > 20) a = a.slice(0, 20);
 		if (b.length > 20) b = b.slice(0, 20);
 		
-		const n1 = (parseInt(a, 10) || 0) % 8 || 8;
-		const n2 = (parseInt(b, 10) || 0) % 8 || 8;
-		const raw = a + b;
-		const n3 = (raw.split('').reduce((s, ch) => s + parseInt(ch, 10), 0) % 6) || 6;
+		const rawN1 = parseInt(a, 10) || 0;
+		const rawN2 = parseInt(b, 10) || 0;
+		const n1 = (rawN1 % 8) || 8;
+		const n2 = (rawN2 % 8) || 8;
+		const n3 = ((Math.abs(rawN1) + Math.abs(rawN2)) % 6) || 6;
 		const params = liuyaoService.generateNumberParams(n1, n2, n3);
 		form.value.doubleParams = params;
 		uni.showToast({ title: '已生成双数起卦参数', icon: 'none' });
@@ -277,7 +278,15 @@ watch(methodIndex, (newIdx, oldIdx) => {
 		const part1 = chars.slice(0, mid);
 		const part2 = chars.slice(mid);
 		// 修正：使用笔画数起卦
-		const sumCode = (arr: string[]) => arr.reduce((s, ch) => s + (cnchar.stroke(ch) as number), 0);
+		const getStroke = (ch: string) => {
+			const stroke: any = cnchar.stroke(ch);
+			const value = Array.isArray(stroke) ? stroke[0] : stroke;
+			const n = Number(value);
+			if (Number.isFinite(n) && n > 0) return n;
+			const fallback = ch.codePointAt(0) || 0;
+			return (fallback % 30) + 1;
+		};
+		const sumCode = (arr: string[]) => arr.reduce((s, ch) => s + getStroke(ch), 0);
 		const s1 = sumCode(part1);
 		const s2 = sumCode(part2);
 		const total = s1 + s2;
@@ -308,12 +317,58 @@ watch(methodIndex, (newIdx, oldIdx) => {
 	}
 
 	function generateGua() {
-		const mark = form.value.guaBian || form.value.guaMain || '';
-		if (!mark) {
-			uni.showToast({ title: '请先选择本卦或变卦', icon: 'none' });
+		const mainMark = form.value.guaMain || '';
+		const bianMark = form.value.guaBian || '';
+
+		if (!mainMark) {
+			uni.showToast({ title: '请先选择本卦', icon: 'none' });
 			return;
 		}
-		const params = mark.split('').map(ch => (ch === '1' ? 1 : 0));
+
+		// 校验数据格式
+		if (mainMark.length !== 6) {
+			console.error('本卦数据异常', mainMark);
+			uni.showToast({ title: '本卦数据异常', icon: 'none' });
+			return;
+		}
+		if (bianMark && bianMark.length !== 6) {
+			console.error('变卦数据异常', bianMark);
+			uni.showToast({ title: '变卦数据异常', icon: 'none' });
+			return;
+		}
+
+		// If no bian gua or same as main, return static lines
+		if (!bianMark || bianMark === mainMark) {
+			const params = mainMark.split('').map(ch => (ch === '1' ? 1 : 0));
+			form.value.guaParams = params;
+			uni.showToast({ title: '已生成卦名参数', icon: 'none' });
+			return;
+		}
+
+		// Compare main and bian to determine moving lines
+		const params: number[] = [];
+		for (let i = 0; i < 6; i++) {
+			const m = mainMark[i];
+			const b = bianMark[i];
+
+			if (m === b) {
+				// Static
+				params.push(m === '1' ? 1 : 0);
+			} else {
+				// Moving
+				if (m === '1' && b === '0') {
+					// Yang -> Yin: Old Yang (3)
+					params.push(3);
+				} else if (m === '0' && b === '1') {
+					// Yin -> Yang: Old Yin (4)
+					params.push(4);
+				} else {
+					// Should not happen for binary strings, fallback to static
+					params.push(m === '1' ? 1 : 0);
+				}
+			}
+		}
+
 		form.value.guaParams = params;
 		uni.showToast({ title: '已生成卦名参数', icon: 'none' });
 	}
@@ -441,10 +496,8 @@ watch(methodIndex, (newIdx, oldIdx) => {
 
 			const profilePayload = {
 				title: form.value.title || '起卦记录',
-				questioner: form.value.questioner || '未填写',
 				method: currentMethod.value.text,
 				gender: form.value.gender === '' ? '未填写' : (String(form.value.gender) === '0' ? '男' : '女'),
-				location: form.value.location || '未填写',
 				dayGanZhi: dayGz,
 				timeLabel,
 				focus: form.value.title || '未填写',
@@ -604,5 +657,3 @@ watch(methodIndex, (newIdx, oldIdx) => {
 }
 
 export default useLiuyaoForm;
-
-

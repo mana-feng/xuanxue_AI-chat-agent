@@ -10,6 +10,7 @@ const { checkLLMQuota, recordLLMUsage } = require('../services/quota');
 const { buildLLMHeaders, buildLLMPayload } = require('../services/llm');
 const { authMiddleware } = require('../middleware/auth');
 const { apiSignatureMiddleware } = require('../middleware/api-signature');
+const { llmLimiter } = require('../config/rateLimit');
 
 const db = getDatabase();
 
@@ -59,7 +60,7 @@ router.get('/quota', authMiddleware, async (req, res) => {
  * 聊天接口（HTTP，支持流式和非流式）
  * 注意：此接口涉及敏感操作，已添加API签名验证
  */
-router.post('/chat', authMiddleware, apiSignatureMiddleware(), async (req, res) => {
+router.post('/chat', llmLimiter, authMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	const { messages = [], stream = false } = req.body || {};
 
 	if (!Array.isArray(messages) || messages.length === 0) {

@@ -111,9 +111,6 @@
             "base" : "./"
         },
         "title" : "mana玄学AI",
-        "devServer" : {
-            "https" : false
-        },
         "optimization" : {
             "treeShaking" : {
                 "enable" : true

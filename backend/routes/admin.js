@@ -174,6 +174,85 @@ router.put('/email-config', adminMiddleware, apiSignatureMiddleware(), async (re
 });
 
 /**
+ * 获取邮箱配置历史
+ */
+router.get('/email-configs', adminMiddleware, async (req, res) => {
+	try {
+		const list = await ConfigService.getEmailConfigs(db);
+		res.json({ success: true, data: list });
+	} catch (e) {
+		console.error('获取邮箱配置历史失败:', e);
+		res.status(500).json({ error: '获取邮箱配置历史失败' });
+	}
+});
+
+/**
+ * 切换激活的邮箱配置
+ */
+router.post('/email-configs/:id/activate', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
+	try {
+		const configId = parseInt(req.params.id, 10);
+		if (!configId || isNaN(configId)) {
+			return res.status(400).json({ error: '无效的配置ID' });
+		}
+		await ConfigService.activateEmailConfig(db, configId);
+		await reloadEmailConfig();
+		res.json({ success: true, message: '邮箱配置已切换' });
+	} catch (e) {
+		console.error('切换邮箱配置失败:', e);
+		const msg = e.message || '切换失败';
+		const status = msg.includes('不存在') ? 404 : 400;
+		res.status(status).json({ error: msg });
+	}
+});
+
+/**
+ * 删除邮箱配置历史
+ */
+router.delete('/email-configs/:id', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
+	try {
+		const configId = parseInt(req.params.id, 10);
+		if (!configId || isNaN(configId)) {
+			return res.status(400).json({ error: '无效的配置ID' });
+		}
+		await ConfigService.deleteEmailConfig(db, configId);
+		res.json({ success: true, message: '配置已删除' });
+	} catch (e) {
+		console.error('删除邮箱配置失败:', e);
+		const msg = e.message || '删除失败';
+		const status = msg.includes('不存在') ? 404 : 400;
+		res.status(status).json({ error: msg });
+	}
+});
+
+/**
+ * 获取统计代码
+ */
+router.get('/analytics-snippet', adminMiddleware, async (req, res) => {
+	try {
+		const snippet = await ConfigService.getAnalyticsSnippet(db);
+		res.json({ success: true, data: { snippet } });
+	} catch (e) {
+		console.error('获取统计代码失败:', e);
+		res.status(500).json({ error: '获取统计代码失败' });
+	}
+});
+
+/**
+ * 更新统计代码
+ */
+router.put('/analytics-snippet', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
+	const { snippet } = req.body || {};
+	try {
+		await ConfigService.setAnalyticsSnippet(db, snippet || '');
+		res.json({ success: true });
+	} catch (e) {
+		console.error('更新统计代码失败:', e);
+		res.status(500).json({ error: '更新统计代码失败' });
+	}
+});
+
+/**
  * 获取 LLM 配置
  */
 router.get('/llm-config', adminMiddleware, async (req, res) => {
@@ -244,6 +323,23 @@ router.post('/llm-models/:id/activate', adminMiddleware, apiSignatureMiddleware(
 	} catch (e) {
 		console.error('切换模型失败:', e);
 		res.status(500).json({ error: e.message || '切换模型失败' });
+	}
+});
+
+/**
+ * 删除模型配置
+ */
+router.delete('/llm-models/:id', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
+	try {
+		const modelId = parseInt(req.params.id, 10);
+		if (!modelId || isNaN(modelId)) {
+			return res.status(400).json({ error: '无效的模型 ID' });
+		}
+		await ConfigService.deleteLLMModel(db, modelId);
+		res.json({ success: true, message: '配置已删除' });
+	} catch (e) {
+		console.error('删除模型失败:', e);
+		res.status(500).json({ error: e.message || '删除模型失败' });
 	}
 });
 
@@ -1461,4 +1557,3 @@ router.delete('/liuyao-records/:id', adminMiddleware, apiSignatureMiddleware(), 
 });
 
 module.exports = router;
-

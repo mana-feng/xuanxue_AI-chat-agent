@@ -91,7 +91,7 @@ import { getCurrentInstance, computed, ref, provide, inject, onMounted, onUnmoun
 import { cssstyle, tmVuetify, colorThemeType } from '../../tool/lib/interface';
 import { custom_props, computedTheme, computedClass, computedStyle, computedDark } from '../../tool/lib/minxs';
 import { useTmpiniaStore } from '../../tool/lib/tmpinia';
-import { getSystemInfo } from '@/utils/platform';
+import { getSystemInfo } from '../../../../utils/platform';
 const drawerANI = ref<InstanceType<typeof tmTranslate> | null>(null)
 const store = useTmpiniaStore();
 const props = defineProps({
@@ -178,7 +178,7 @@ const props = defineProps({
 	},
 	zIndex: {
 		type: [Number, String],
-		default: 401
+		default: 1100
 	},
 	unit: {
 		type: String,

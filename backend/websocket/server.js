@@ -14,6 +14,7 @@ const config = require('../config');
 // 在初始化阶段获取数据库和密钥，确保已完成 initDatabase 后再调用
 let cachedDb = null;
 const JWT_SECRET = config.JWT_SECRET;
+const wsRateMap = new Map();
 
 /**
  * 初始化 WebSocket 服务器
@@ -31,6 +32,7 @@ function initWebSocketServer(server) {
 		const token = url.searchParams.get('token');
 		
 		if (!token) {
+			try { ws.send(JSON.stringify({ event: 'error', code: 'MISSING_TOKEN', message: 'missing token' }) + '\n'); } catch (_) { void 0; }
 			ws.close(4001, 'missing token');
 			return;
 		}
@@ -39,22 +41,37 @@ function initWebSocketServer(server) {
 			const decoded = jwt.verify(token, JWT_SECRET);
 			ws.userId = decoded.uid;
 		} catch (e) {
+			try { ws.send(JSON.stringify({ event: 'error', code: 'INVALID_TOKEN', message: 'invalid token' }) + '\n'); } catch (_) { void 0; }
 			ws.close(4002, 'invalid token');
 			return;
 		}
 
 		ws.on('message', async (message) => {
+			const now = Date.now();
+			const key = String(ws.userId || 'unknown');
+			let rec = wsRateMap.get(key) || { count: 0, resetAt: now + 60000 };
+			if (now > rec.resetAt) {
+				rec.count = 0;
+				rec.resetAt = now + 60000;
+			}
+			rec.count++;
+			wsRateMap.set(key, rec);
+			if (rec.count > 5) {
+				try { ws.send(JSON.stringify({ event: 'error', code: 'RATE_LIMIT', message: '消息过于频繁' }) + '\n'); } catch (_) { void 0; }
+				ws.close();
+				return;
+			}
 			let parsed = null;
 			try {
 				parsed = JSON.parse(message.toString());
 			} catch (e) {
-				ws.send(JSON.stringify({ error: 'invalid json' }));
+				try { ws.send(JSON.stringify({ event: 'error', code: 'INVALID_JSON', message: 'invalid json' }) + '\n'); } catch (_) { void 0; }
 				return;
 			}
 			
 			const { messages = [], stream = true } = parsed || {};
 			if (!Array.isArray(messages) || messages.length === 0) {
-				ws.send(JSON.stringify({ error: 'messages 不能为空' }));
+				try { ws.send(JSON.stringify({ event: 'error', code: 'INVALID_PARAMS', message: 'messages 不能为空' }) + '\n'); } catch (_) { void 0; }
 				return;
 			}
 			
@@ -63,14 +80,14 @@ function initWebSocketServer(server) {
 				const userId = ws.userId;
 				const quotaCheck = await checkLLMQuota(userId);
 				if (!quotaCheck.allowed) {
-					ws.send(JSON.stringify({ error: quotaCheck.reason || '额度已用完', usage: quotaCheck.usage }) + '\n');
+					try { ws.send(JSON.stringify({ event: 'error', code: 'QUOTA_EXHAUSTED', message: quotaCheck.reason || '额度已用完', usage: quotaCheck.usage }) + '\n'); } catch (_) { void 0; }
 					ws.close();
 					return;
 				}
 
 				const cfg = await ConfigService.getLLMConfig(db);
 				if (!cfg.baseUrl || !cfg.apiKey || !cfg.model) {
-					ws.send(JSON.stringify({ error: 'LLM 配置不完整' }) + '\n');
+					try { ws.send(JSON.stringify({ event: 'error', code: 'CONFIG_INCOMPLETE', message: 'LLM 配置不完整' }) + '\n'); } catch (_) { void 0; }
 					ws.close();
 					return;
 				}
@@ -85,7 +102,7 @@ function initWebSocketServer(server) {
 				
 				if (!llmRes.ok || !llmRes.body) {
 					const text = await llmRes.text();
-					ws.send(JSON.stringify({ error: text || 'LLM 请求失败' }) + '\n');
+					try { ws.send(JSON.stringify({ event: 'error', code: 'LLM_REQUEST_FAILED', message: text || 'LLM 请求失败' }) + '\n'); } catch (_) { void 0; }
 					ws.close();
 					return;
 				}
@@ -93,7 +110,6 @@ function initWebSocketServer(server) {
 				const decoder = new StringDecoder('utf8');
 				let buffer = '';
 				let jsonBuffer = '';
-				let totalText = '';
 
 				llmRes.body.on('data', (chunk) => {
 					const safeText = decoder.write(chunk);
@@ -138,11 +154,7 @@ function initWebSocketServer(server) {
 									}
 								}
 								if (text) {
-									totalText += text;
-									// 按字符逐个发送，实现逐个token显示效果
-									for (let i = 0; i < text.length; i++) {
-										ws.send(JSON.stringify({ event: 'delta', text: text[i] }) + '\n');
-									}
+									ws.send(JSON.stringify({ event: 'delta', text }) + '\n');
 								}
 							} catch (e) {
 								// 忽略解析错误
@@ -193,11 +205,7 @@ function initWebSocketServer(server) {
 							}
 
 							if (text) {
-								totalText += text;
-								// 按字符逐个发送，实现逐个token显示效果
-								for (let i = 0; i < text.length; i++) {
-									ws.send(JSON.stringify({ event: 'delta', text: text[i] }) + '\n');
-								}
+								ws.send(JSON.stringify({ event: 'delta', text }) + '\n');
 							}
 						} catch (e) {
 							// 忽略解析错误
@@ -237,10 +245,7 @@ function initWebSocketServer(server) {
 										}
 									}
 									if (text) {
-										totalText += text;
-										for (let i = 0; i < text.length; i++) {
-											ws.send(JSON.stringify({ event: 'delta', text: text[i] }) + '\n');
-										}
+										ws.send(JSON.stringify({ event: 'delta', text }) + '\n');
 									}
 								} catch (e) {
 									// 忽略解析错误
@@ -255,23 +260,20 @@ function initWebSocketServer(server) {
 									if (buffer.startsWith('data:')) {
 										jsonStr = buffer.replace(/^data:\s*/, '').trim();
 									}
-									if (jsonStr !== '[DONE]') {
-										const json = JSON.parse(jsonStr);
-										let text = '';
-										if (cfg.provider === 'anthropic' && json.delta?.text) {
-											text = json.delta.text;
-										} else if (json.choices?.[0]?.delta?.content) {
-											text = json.choices[0].delta.content;
-										}
-										if (text) {
-											totalText += text;
-											for (let i = 0; i < text.length; i++) {
-												ws.send(JSON.stringify({ event: 'delta', text: text[i] }) + '\n');
+										if (jsonStr !== '[DONE]') {
+											const json = JSON.parse(jsonStr);
+											let text = '';
+											if (cfg.provider === 'anthropic' && json.delta?.text) {
+												text = json.delta.text;
+											} else if (json.choices?.[0]?.delta?.content) {
+												text = json.choices[0].delta.content;
+											}
+											if (text) {
+												ws.send(JSON.stringify({ event: 'delta', text }) + '\n');
 											}
 										}
-									}
-								} catch (e) {
-									// 忽略解析错误
+									} catch (e) {
+										// 忽略解析错误
 								}
 							}
 						}
@@ -292,11 +294,11 @@ function initWebSocketServer(server) {
 
 				llmRes.body.on('error', (err) => {
 					console.error('[WebSocket] 流式响应错误:', err);
-					ws.send(JSON.stringify({ error: err.message || '流式错误' }) + '\n');
+					try { ws.send(JSON.stringify({ event: 'error', code: 'STREAM_ERROR', message: err.message || '流式错误' }) + '\n'); } catch (_) { void 0; }
 					ws.close();
 				});
 			} catch (err) {
-				ws.send(JSON.stringify({ error: err.message || '调用失败' }) + '\n');
+				try { ws.send(JSON.stringify({ event: 'error', code: 'INTERNAL_ERROR', message: err.message || '调用失败' }) + '\n'); } catch (_) { void 0; }
 				ws.close();
 			}
 		});

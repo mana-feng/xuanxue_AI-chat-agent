@@ -2,10 +2,8 @@ import { defineStore } from 'pinia';
 
 export interface LiuyaoProfile {
 	title: string;
-	questioner: string;
 	method: string;
 	gender: string;
-	location: string;
 	dayGanZhi: string;
 	timeLabel: string;
 	focus: string;

@@ -33,20 +33,39 @@
 import { useTmpiniaStore } from '../../tool/lib/tmpinia';
 import { computed, PropType, Ref,onUpdated, watchEffect,ref,getCurrentInstance,nextTick,onMounted,watch, toRaw } from 'vue';
 import { showDetail,coltimeData,timeDetailType } from './interface'
-import * as dayjs from "../../tool/dayjs/esm/index"
-import isSameOrBefore from '../../tool/dayjs/esm/plugin/isSameOrBefore/index';
-import isSameOrAfter from '../../tool/dayjs/esm/plugin/isSameOrAfter/index';
-import isBetween from '../../tool/dayjs/esm/plugin/isBetween/index';
+import dayjs from "../../tool/dayjs/esm/index"
 import TmText from '../tm-text/tm-text.vue';
 import { Solar, Lunar } from 'lunar-javascript';
 // #ifdef APP-PLUS-NVUE
 const dom = uni.requireNativePlugin('dom')
 // #endif
-dayjs.default.extend(isBetween)
-dayjs.default.extend(isSameOrBefore)
-dayjs.default.extend(isSameOrAfter)
-const DayJs = dayjs.default;
-const { proxy } = getCurrentInstance();
+const DayJs = dayjs;
+type DayjsInstance = dayjs.Dayjs;
+type DayjsInput = dayjs.ConfigType;
+type DayjsUnit = dayjs.OpUnitType;
+
+const isSameOrBeforeLocal = (value: DayjsInstance, other: DayjsInput, unit?: DayjsUnit) =>
+	value.isSame(other, unit) || value.isBefore(other, unit);
+const isSameOrAfterLocal = (value: DayjsInstance, other: DayjsInput, unit?: DayjsUnit) =>
+	value.isSame(other, unit) || value.isAfter(other, unit);
+const isBetweenLocal = (
+	value: DayjsInstance,
+	start: DayjsInput,
+	end: DayjsInput,
+	unit?: DayjsUnit,
+	inclusivity: '()' | '[]' | '(]' | '[)' = '()'
+) => {
+	const leftInclusive = inclusivity[0] === '[';
+	const rightInclusive = inclusivity[1] === ']';
+	const leftOk = leftInclusive
+		? value.isAfter(start, unit) || value.isSame(start, unit)
+		: value.isAfter(start, unit);
+	const rightOk = rightInclusive
+		? value.isBefore(end, unit) || value.isSame(end, unit)
+		: value.isBefore(end, unit);
+	return leftOk && rightOk;
+};
+const proxy = getCurrentInstance()!.proxy as any;
 const store = useTmpiniaStore();
 const toSafeDate = (value: ReturnType<typeof DayJs>) =>
 	new Date(value.year(), value.month(), value.date(), value.hour(), value.minute(), value.second());
@@ -73,8 +92,8 @@ const props = defineProps({
     },
     //禁用的部分日期，禁用的日期将不会被选中，就算滑到了该位置，也会回弹到之前的时间。
 	disabledDate:{
-		type:Array as PropType<Array<Number|String|Date>>,
-		default:():Array<Number|String|Date>=>[]
+		type:Array as PropType<Array<number|string|Date>>,
+		default:():Array<number|string|Date>=>[]
 	},
     height:{
         type:Number,
@@ -92,7 +111,7 @@ const props = defineProps({
 	},
 })
 //父级方法。
-let parent = proxy.$parent
+let parent: any = proxy?.$parent
 while (parent) {
     if (parent?.tmTimeViewName == 'tmTimeViewName' || !parent) {
         break;
@@ -216,7 +235,7 @@ function getLunarMonthName(month: number, year?: number): string {
 		if (year) {
 			try {
 				// 尝试创建该月的日期来判断是否是闰月
-				const testLunar = Lunar.fromYmd(year, month, 1);
+				const testLunar = (Lunar as any).fromYmd(year, month, 1);
 				// 如果 month 大于 12，可能是闰月
 				// 但 lunar-javascript 可能用其他方式表示闰月
 				// 这里先简单处理
@@ -258,7 +277,7 @@ function displayLabel(val:number){
 			// 检查是否是闰月
 			// 尝试通过创建该月的日期来判断
 			try {
-				const testLunar = Lunar.fromYmd(year, val, 1);
+				const testLunar = (Lunar as any).fromYmd(year, val, 1);
 				// 如果能创建，说明是正常月份
 				return lunarMonthNames[val];
 			} catch (e) {
@@ -318,14 +337,14 @@ function rangeTimeArray(){
     }
 
     function setd(type:timeDetailType,isno=true){
-        if(_nowtimeValue.value.isSameOrBefore(_start,type)){
+        if(isSameOrBeforeLocal(_nowtimeValue.value,_start,type)){
             // 这是开始的数字。
             intdate = _start[props.timeType]();
 			
             tmArray.value = rangeNumber(intdate,getEndNumber(_start,true));
-        }else if(_nowtimeValue.value.isSameOrAfter(_end,type)){
+        }else if(isSameOrAfterLocal(_nowtimeValue.value,_end,type)){
             tmArray.value = rangeNumber(intdate,getEndNumber(_end,isno));
-        }else if(_nowtimeValue.value.isBetween(_start,_end,props.timeType,'()')){
+        }else if(isBetweenLocal(_nowtimeValue.value,_start,_end,props.timeType,'()')){
             tmArray.value = rangeNumber(intdate,getEndNumber(_nowtimeValue.value,true));
             
         }
@@ -350,7 +369,7 @@ function rangeLunarTimeArray(){
         // 先尝试1-12月
         for(let m = 1; m <= 12; m++){
             try {
-                const testLunar = Lunar.fromYmd(year, m, 1);
+                const testLunar = (Lunar as any).fromYmd(year, m, 1);
                 months.push(m);
             } catch (e) {
                 // 如果创建失败，说明该月不存在（不应该发生）
@@ -362,7 +381,7 @@ function rangeLunarTimeArray(){
         // 实际上，我们需要检查当前年份是否有闰月
         // 通过尝试创建13个月来判断
         try {
-            const testLunar13 = Lunar.fromYmd(year, 13, 1);
+            const testLunar13 = (Lunar as any).fromYmd(year, 13, 1);
             months.push(13);
         } catch (e) {
             // 没有第13个月
@@ -377,7 +396,7 @@ function rangeLunarTimeArray(){
         let dayCount = 0;
         for(let d = 1; d <= 30; d++){
             try {
-                const testLunar = Lunar.fromYmd(year, month, d);
+                const testLunar = (Lunar as any).fromYmd(year, month, d);
                 dayCount = d;
             } catch (e) {
                 // 如果创建失败，说明该日期不存在，说明上一天就是该月的最后一天
@@ -391,7 +410,7 @@ function rangeLunarTimeArray(){
     nextTick(()=>getIndexNow())
 }
 
-function getEndNumber(d,isno=true){
+function getEndNumber(d: ReturnType<typeof DayJs>,isno=true){
     let _start = DayJs(props.start);
     let _end = DayJs(props.end);
     let jh = {
@@ -438,7 +457,7 @@ function colchange(e:any){
         
         // 将阴历日期转换为阳历日期
         try {
-            const newLunar = Lunar.fromYmd(newLunarYear, newLunarMonth, newLunarDay);
+            const newLunar = (Lunar as any).fromYmd(newLunarYear, newLunarMonth, newLunarDay);
             const newSolar = newLunar.getSolar();
             const newDate = new Date(newSolar.getYear(), newSolar.getMonth() - 1, newSolar.getDay(), 
                                     currentDate.getHours(), currentDate.getMinutes(), currentDate.getSeconds());
@@ -472,7 +491,7 @@ function colchange(e:any){
 function nvuegetClientRect() {
     nextTick(function () {
         // #ifdef APP-PLUS-NVUE
-        dom.getComponentRect(proxy.$refs.picker, function (res) {
+        dom.getComponentRect(proxy.$refs.picker, function (res: any) {
             if (res?.size) {
                 maskWidth.value = res.size.width;
 				

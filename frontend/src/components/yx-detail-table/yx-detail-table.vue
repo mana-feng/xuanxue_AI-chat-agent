@@ -1,16 +1,108 @@
 <template>
-	<tm-table
-		:width="tableWidth"
-		:cell-height="cellHeight"
-		:header="header"
-		:table-data="tableData"
-	></tm-table>
+	<view class="yx-table-container">
+		<!-- 左侧固定列 -->
+		<view class="yx-table-fixed" :style="{ width: fixedColumnWidth + 'rpx' }">
+			<!-- 表头 -->
+			<tm-sheet
+				:width="fixedColumnWidth"
+				:height="headerHeight"
+				:margin="[0, 0]"
+				:padding="[10, 6]"
+				:color="'grey-5'"
+				_class="flex-center flex-col"
+				:border="1"
+				border-direction="bottom"
+			>
+				<tm-text :label="fixedHeader?.title || ''" :font-size="24"></tm-text>
+			</tm-sheet>
+			<!-- 数据行 -->
+			<view v-for="(row, rowIndex) in tableData" :key="'fixed-' + rowIndex">
+				<tm-sheet
+					:width="fixedColumnWidth"
+					:height="row.rowHeight || cellHeight"
+					:margin="[0, 0]"
+					:padding="[10, 6]"
+					:color="row.data.name.color"
+					:text="row.data.name.light"
+					_class="flex-center flex-col"
+					:border="1"
+					border-direction="bottom"
+				>
+					<tm-text
+						:label="row.data.name.text"
+						:font-size="row.data.name.fontSize"
+						:color="row.data.name.light ? undefined : row.data.name.color"
+					></tm-text>
+				</tm-sheet>
+			</view>
+		</view>
+
+		<!-- 右侧滚动区域 -->
+		<scroll-view class="yx-table-scroll" scroll-x enable-flex>
+			<view class="yx-table-scroll-content">
+				<!-- 表头 -->
+				<view class="yx-row">
+					<tm-sheet
+						v-for="col in scrollableHeaders"
+						:key="col.key"
+						:width="col.width"
+						:height="headerHeight"
+						:margin="[0, 0]"
+						:padding="[10, 6]"
+						:color="'grey-5'"
+						_class="flex-center flex-col"
+						:border="1"
+						border-direction="bottom"
+					>
+						<tm-text :label="col.title" :font-size="30" _class="text-weight-b"></tm-text>
+					</tm-sheet>
+				</view>
+				<!-- 数据行 -->
+				<view v-for="(row, rowIndex) in tableData" :key="'row-' + rowIndex" class="yx-row">
+					<view v-for="col in scrollableHeaders" :key="col.key">
+						<tm-sheet
+							:width="col.width"
+							:height="row.rowHeight || cellHeight"
+							:margin="[0, 0]"
+							:padding="[10, 6]"
+							:color="row.data[col.key].color"
+							:text="row.data[col.key].light"
+							_class="flex-center flex-col"
+							:border="1"
+							border-direction="bottom"
+						>
+							<template v-if="row.data[col.key].type === 'vertical-text'">
+								<view class="flex flex-col flex-center">
+									<tm-text
+										v-for="(txt, ti) in row.data[col.key].items"
+										:key="ti"
+										:label="txt"
+										:font-size="row.data[col.key].fontSize"
+										:style="{ marginBottom: Number(ti) < row.data[col.key].items.length - 1 ? '4rpx' : '0' }"
+									></tm-text>
+								</view>
+							</template>
+							<template v-else>
+								<tm-text
+									:label="row.data[col.key].text"
+									:font-size="row.data[col.key].fontSize"
+								></tm-text>
+							</template>
+						</tm-sheet>
+					</view>
+				</view>
+			</view>
+		</scroll-view>
+	</view>
 </template>
 
 <script lang="ts" setup>
 import { computed } from 'vue';
 import { useBaziStore } from '@/store/bazi';
 import { useYunStore } from '@/store/yun';
+import tmSheet from '@/libs/tmui/components/tm-sheet/tm-sheet.vue';
+import tmText from '@/libs/tmui/components/tm-text/tm-text.vue';
+import { useUiScale } from '@/utils/viewport';
 import {
 	getHideGanForGanZhi,
 	getFuXingForGanZhi,
@@ -32,18 +124,18 @@ type FormattedCell = Record<string, any>;
 
 const baziStore = useBaziStore();
 const yunStore = useYunStore();
-const width: number = 150;
-// 四柱列宽：加宽以避免单个神煞名称换行
-const sizhuWidth: number = 200;
+const uiScale = useUiScale();
+const scaleNumber = (value: number) => Math.round(value * uiScale.value * 100) / 100;
+const baseFixedColumnWidth = 80;
+const fixedColumnWidth = computed(() => scaleNumber(baseFixedColumnWidth));
 // 分开行高：主星/天干/地支/星运/纳音较短，藏干/副星稍高
 const compactRows = new Set(['主星', '天干', '地支', '星运', '纳音']);
 const midRows = new Set(['藏干', '副星']);
-const compactRowHeight = 88;
-const midRowHeight = 130;
-const baseRowHeight = 120;
-const baseDayZhi = computed(() => baziStore.dizhi?.day || '');
-const baseTimeZhi = computed(() => baziStore.dizhi?.time || '');
-const yearGan = computed(() => baziStore.tiangan?.year || '');
+const compactRowHeight = computed(() => scaleNumber(66));
+const midRowHeight = computed(() => scaleNumber(100));
+const baseRowHeight = computed(() => scaleNumber(90));
+const headerHeight = computed(() => scaleNumber(88));
+
 
 // 获取选中的大运、流年、流月、流日
 function normalizeGanZhi(value: any): string {
@@ -89,48 +181,164 @@ const selectedDay = computed(() => {
 	return '';
 });
 
-const header = computed<headerOpts[]>(() => {
-	// 检查是否有神煞行，如果有则使用更大的列宽以适应神煞名称
-	const hasShenshaRow = baziStore.table?.some((row) => row.data?.name === '神煞');
-	// 四柱列宽：有神煞时使用更大的宽度，否则使用基础宽度
-	const columnWidth = hasShenshaRow ? 220 : sizhuWidth;
+// 公用：日干、原四柱地支
+const dayGan = computed(() => baziStore.tiangan?.day || '');
+const yearZhi = computed(() => baziStore.dizhi?.year || '');
+const monthZhi = computed(() => baziStore.dizhi?.month || '');
+const originalZhiList = computed<string[]>(() => {
+	const list: string[] = [];
+	if (baziStore.dizhi?.year) list.push(baziStore.dizhi.year);
+	if (baziStore.dizhi?.month) list.push(baziStore.dizhi.month);
+	if (baziStore.dizhi?.day) list.push(baziStore.dizhi.day);
+	if (baziStore.dizhi?.time) list.push(baziStore.dizhi.time);
+	return list;
+});
+const baseDayZhi = computed(() => baziStore.dizhi?.day || '');
+const baseTimeZhi = computed(() => baziStore.dizhi?.time || '');
+const yearGan = computed(() => baziStore.tiangan?.year || '');
+
+function toArray(value: any): string[] {
+	if (!value) return [];
+	if (Array.isArray(value)) return value.filter(Boolean).map(String);
+	if (typeof value === 'string') return value.split(/[\s、，,]+/).filter(Boolean);
+	return [String(value)];
+}
+
+// 计算各列的神煞最大字数
+const columnShenShaMaxLen = computed(() => {
+	const maxLens: Record<string, number> = {
+		year: 0,
+		month: 0,
+		day: 0,
+		time: 0,
+		dayun: 0,
+		year_yun: 0,
+		month_yun: 0,
+		day_yun: 0,
+	};
+
+	// 辅助函数：计算数组中最长字符串的长度
+	const getMaxLen = (arr: any[]) => {
+		if (!arr || arr.length === 0) return 0;
+		return Math.max(...arr.map(s => String(s).length));
+	};
+
+	// 1. 基础四柱：直接从表格数据中获取
+	const shenshaRow = baziStore.table?.find((row) => row.data?.name === '神煞');
+	if (shenshaRow) {
+		['year', 'month', 'day', 'time'].forEach((key) => {
+			const val = (shenshaRow.data as any)[key];
+			const arr = Array.isArray(val) ? val : toArray(val);
+			maxLens[key] = getMaxLen(arr);
+		});
+	}
+
+	// 2. 扩展列：需实时计算
+	const calc = (ganZhi: string) => {
+		return calculateShenShaForGanZhi(
+			dayGan.value,
+			ganZhi,
+			originalZhiList.value,
+			yearZhi.value,
+			monthZhi.value,
+			baseDayZhi.value,
+			baseTimeZhi.value,
+			yearGan.value
+		);
+	};
+
+	if (selectedDayun.value) {
+		const res = calc(selectedDayun.value);
+		maxLens.dayun = getMaxLen(Array.isArray(res) ? res : toArray(res));
+	}
+	if (selectedYear.value) {
+		const res = calc(selectedYear.value);
+		maxLens.year_yun = getMaxLen(Array.isArray(res) ? res : toArray(res));
+	}
+	if (selectedMonth.value) {
+		const res = calc(selectedMonth.value);
+		maxLens.month_yun = getMaxLen(Array.isArray(res) ? res : toArray(res));
+	}
+	if (selectedDay.value) {
+		const res = calc(selectedDay.value);
+		maxLens.day_yun = getMaxLen(Array.isArray(res) ? res : toArray(res));
+	}
+
+	return maxLens;
+});
+
+const fullHeaders = computed<headerOpts[]>(() => {
+	// 动态计算列宽
+	// 基础宽度 60 (3个字)，每个字增加约 20
+	const getWidth = (key: string) => {
+		const maxLen = columnShenShaMaxLen.value[key] || 0;
+		// 如果没有神煞，或者神煞字数少于3个，使用最小宽度
+		const minLen = 3; 
+		const len = Math.max(minLen, maxLen);
+		
+		const fontSize = scaleNumber(20);
+		const padding = scaleNumber(12);
+		const computedWidth = len * fontSize + padding;
+		const minWidthMap: Record<string, number> = {
+			year: 120,
+			month: 120,
+			day: 120,
+			time: 120,
+			dayun: 140,
+			year_yun: 140,
+			month_yun: 140,
+			day_yun: 140,
+		};
+		const minWidth = scaleNumber(minWidthMap[key] ?? 120);
+		return Math.max(minWidth, computedWidth);
+	};
 
 	const headers: headerOpts[] = [
-		{ title: '\\', key: 'name', width: width },
-		{ title: '年柱', key: 'year', width: columnWidth },
-		{ title: '月柱', key: 'month', width: columnWidth },
-		{ title: '日柱', key: 'day', width: columnWidth },
-		{ title: '时柱', key: 'time', width: columnWidth },
+		{ title: '\\', key: 'name', width: fixedColumnWidth.value },
+		{ title: '年柱', key: 'year', width: getWidth('year') },
+		{ title: '月柱', key: 'month', width: getWidth('month') },
+		{ title: '日柱', key: 'day', width: getWidth('day') },
+		{ title: '时柱', key: 'time', width: getWidth('time') },
 	];
 
 	// 如果有选中的大运、流年、流月、流日，添加列
 	if (selectedDayun.value || selectedYear.value || selectedMonth.value || selectedDay.value) {
 		if (selectedDayun.value) {
-			headers.push({ title: '大运', key: 'dayun', width: columnWidth });
+			headers.push({ title: '大运', key: 'dayun', width: getWidth('dayun') });
 		}
 		if (selectedYear.value) {
-			headers.push({ title: '流年', key: 'year_yun', width: columnWidth });
+			headers.push({ title: '流年', key: 'year_yun', width: getWidth('year_yun') });
 		}
 		if (selectedMonth.value) {
-			headers.push({ title: '流月', key: 'month_yun', width: columnWidth });
+			headers.push({ title: '流月', key: 'month_yun', width: getWidth('month_yun') });
 		}
 		if (selectedDay.value) {
-			headers.push({ title: '流日', key: 'day_yun', width: columnWidth });
+			headers.push({ title: '流日', key: 'day_yun', width: getWidth('day_yun') });
 		}
+	}
+
+	// 充满容器逻辑：
+	// 只调整可滚动列（除第一列外的所有列）
+	const scrollableCols = headers.slice(1);
+	const scrollableContentWidth = scrollableCols.reduce((sum, h) => sum + h.width, 0);
+	
+	// 预估容器可用宽度 (rpx)
+	// 屏幕 750rpx - 左侧固定列 - padding (约 40)
+	const minScrollableWidth = Math.max(0, 750 - fixedColumnWidth.value - 40);
+	
+	if (scrollableContentWidth < minScrollableWidth) {
+		const extra = minScrollableWidth - scrollableContentWidth;
+		const perColExtra = extra / scrollableCols.length;
+		scrollableCols.forEach(h => {
+			h.width += perColExtra;
+		});
 	}
 
 	return headers;
 });
 
-// 表格宽度：动态计算所有列的总宽度，使所有列直接显示，无需滚动
-// tm-table 组件的 width prop 用于设置 scroll-view 的可见宽度
-// 将宽度设置为所有列的总宽度，这样就不会出现横向滚动
-const tableWidth = computed(() => {
-	// 计算所有列的总宽度，并添加一些额外空间确保所有列完全显示
-	const totalWidth = header.value.reduce((sum, col) => sum + col.width, 0);
-	// 添加额外的边距空间（每列约10rpx的边距）
-	return totalWidth + header.value.length * 10;
-});
+const fixedHeader = computed(() => fullHeaders.value[0]);
+const scrollableHeaders = computed(() => fullHeaders.value.slice(1));
 
 // 格式化单元格数据，应用 zydx.top 样式
 // 参考 zydx.top：偶数行 #EEE（浅灰），奇数行 #CCC（深灰）
@@ -149,6 +357,7 @@ function formatCellData(
 			items: safeItems,
 			color: isEvenRow ? 'grey-4' : 'grey-3',
 			light: true,
+			fontSize: 20,
 		};
 	}
 
@@ -159,6 +368,7 @@ function formatCellData(
 			...obj,
 			color: obj.color || (isEvenRow ? 'grey-4' : 'grey-3'),
 			light: obj.light !== undefined ? obj.light : true,
+			fontSize: obj.fontSize || 22,
 		};
 	}
 
@@ -169,28 +379,11 @@ function formatCellData(
 		type: 'text',
 		color: isEvenRow ? 'grey-4' : 'grey-3',
 		light: true,
+		fontSize: 22,
 	};
 }
 
-// 公用：日干、原四柱地支
-const dayGan = computed(() => baziStore.tiangan?.day || '');
-const yearZhi = computed(() => baziStore.dizhi?.year || '');
-const monthZhi = computed(() => baziStore.dizhi?.month || '');
-const originalZhiList = computed<string[]>(() => {
-	const list: string[] = [];
-	if (baziStore.dizhi?.year) list.push(baziStore.dizhi.year);
-	if (baziStore.dizhi?.month) list.push(baziStore.dizhi.month);
-	if (baziStore.dizhi?.day) list.push(baziStore.dizhi.day);
-	if (baziStore.dizhi?.time) list.push(baziStore.dizhi.time);
-	return list;
-});
 
-function toArray(value: any): string[] {
-	if (!value) return [];
-	if (Array.isArray(value)) return value.filter(Boolean).map(String);
-	if (typeof value === 'string') return value.split(/[\s、，,]+/).filter(Boolean);
-	return [String(value)];
-}
 
 // 计算神煞行在当前场景下的最大条目数，用于按需抬高该行
 function getShenshaMaxItems(baseRowData: any, includeExtended: boolean): number {
@@ -336,7 +529,7 @@ function getShenshaMaxItems(baseRowData: any, includeExtended: boolean): number 
 }
 
 // 基础行高（未单独指定的行）
-const cellHeight = computed(() => baseRowHeight);
+const cellHeight = computed(() => baseRowHeight.value);
 
 const tableData = computed(() => {
 	const baseTable = baziStore.table || [];
@@ -354,8 +547,13 @@ const tableData = computed(() => {
 			const requiredKeys = ['name', 'year', 'month', 'day', 'time'];
 			requiredKeys.forEach((key) => {
 				if (key === 'name') {
-					// 行名称列保持原样
-					newData[key] = row.data[key];
+					newData[key] = {
+						text: row.data[key],
+						type: 'text',
+						color: isEvenRow ? 'grey-4' : 'grey-3',
+						light: true,
+						fontSize: 20,
+					};
 				} else {
 					// 如果是神煞行，确保传递正确的 isShensha 参数
 					const value = (row.data as any)[key];
@@ -365,16 +563,16 @@ const tableData = computed(() => {
 
 			newRow.data = newData;
 			if (compactRows.has(row.data.name)) {
-				newRow.rowHeight = compactRowHeight;
+				newRow.rowHeight = compactRowHeight.value;
 			} else if (midRows.has(row.data.name)) {
-				newRow.rowHeight = midRowHeight;
+				newRow.rowHeight = midRowHeight.value;
 			} else if (row.data.name === '神煞') {
 				const maxItems = getShenshaMaxItems(row.data, false);
 				// 根据神煞数量动态调整高度：每个神煞约36rpx高度，加上上下内边距24rpx
 				// 至少保持基础行高，如果神煞多则增加高度
-				const minHeight = baseRowHeight;
-				const itemHeight = 36; // 每个神煞项的高度
-				const padding = 24; // 上下内边距
+				const minHeight = baseRowHeight.value;
+				const itemHeight = scaleNumber(36);
+				const padding = scaleNumber(24);
 				newRow.rowHeight = Math.max(minHeight, maxItems * itemHeight + padding);
 			}
 			return newRow;
@@ -393,7 +591,13 @@ const tableData = computed(() => {
 		const requiredKeys = ['name', 'year', 'month', 'day', 'time'];
 		requiredKeys.forEach((key) => {
 			if (key === 'name') {
-				newData[key] = row.data[key];
+				newData[key] = {
+					text: row.data[key],
+					type: 'text',
+					color: isEvenRow ? 'grey-4' : 'grey-3',
+					light: true,
+					fontSize: 20,
+				};
 			} else {
 				const value = (row.data as any)[key];
 				newData[key] = formatCellData(value, isEvenRow, isShenshaRow);
@@ -547,19 +751,54 @@ const tableData = computed(() => {
 
 		newRow.data = newData;
 		if (compactRows.has(row.data.name)) {
-			newRow.rowHeight = compactRowHeight;
+			newRow.rowHeight = compactRowHeight.value;
 		} else if (midRows.has(row.data.name)) {
-			newRow.rowHeight = midRowHeight;
+			newRow.rowHeight = midRowHeight.value;
 		} else if (row.data.name === '神煞') {
 			const maxItems = getShenshaMaxItems(row.data, true);
 			// 根据神煞数量动态调整高度：每个神煞约36rpx高度，加上上下内边距24rpx
 			// 至少保持基础行高，如果神煞多则增加高度
-			const minHeight = baseRowHeight;
-			const itemHeight = 36; // 每个神煞项的高度
-			const padding = 24; // 上下内边距
+			const minHeight = baseRowHeight.value;
+			const itemHeight = scaleNumber(36);
+			const padding = scaleNumber(24);
 			newRow.rowHeight = Math.max(minHeight, maxItems * itemHeight + padding);
 		}
 		return newRow;
 	});
 });
 </script>
+
+<style scoped>
+.yx-table-container {
+	display: flex;
+	flex-direction: row;
+	width: 100%;
+	position: relative;
+	background-color: #ffffff;
+}
+
+.yx-table-fixed {
+	flex-shrink: 0;
+	z-index: 10;
+	background-color: #ffffff;
+	box-shadow: 4rpx 0 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.yx-table-scroll {
+	flex: 1;
+	width: 0;
+	/* 关键：允许 flex 项目收缩 */
+}
+
+.yx-table-scroll-content {
+	display: flex;
+	flex-direction: column;
+	min-width: 100%;
+}
+
+.yx-row {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: nowrap;
+}
+</style>

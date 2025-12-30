@@ -4,6 +4,22 @@
  */
 
 const TABLE_NAME = 'app_config';
+const DEFAULT_ANALYTICS_SNIPPET = `<!-- Default Statcounter code for xuan -->
+<script type="text/javascript">
+var sc_project=13195480; 
+var sc_invisible=1; 
+var sc_security="98632ca4"; 
+</script>
+<script type="text/javascript"
+src="https://www.statcounter.com/counter/counter.js"
+async></script>
+<noscript><div class="statcounter"><a title="Web Analytics"
+href="https://statcounter.com/" target="_blank"><img
+class="statcounter"
+src="https://c.statcounter.com/13195480/0/98632ca4/1/"
+alt="Web Analytics"
+referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
+<!-- End of Statcounter Code -->`;
 
 /**
  * 初始化配置表
@@ -82,6 +98,24 @@ async function deleteConfigByPrefix(db, prefix) {
 	await db.run(`DELETE FROM ${TABLE_NAME} WHERE \`key\` LIKE ?`, [`${prefix}%`]);
 }
 
+async function ensureEmailConfigsTable(db) {
+	await db.run(
+		`CREATE TABLE IF NOT EXISTS email_configs (
+			id INT AUTO_INCREMENT PRIMARY KEY,
+			host VARCHAR(200) NOT NULL,
+			port INT NOT NULL,
+			user VARCHAR(200) NOT NULL,
+			pass TEXT NOT NULL,
+			\`from\` VARCHAR(200) NOT NULL,
+			from_name VARCHAR(200) DEFAULT NULL,
+			is_active TINYINT(1) DEFAULT 0,
+			created_at DATETIME DEFAULT NULL,
+			updated_at DATETIME DEFAULT NULL,
+			KEY idx_is_active (is_active)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+	);
+}
+
 /**
  * 获取邮箱配置
  * @param {Object} db - 数据库实例
@@ -147,6 +181,11 @@ async function setEmailConfig(db, config) {
 		throw new Error('端口号无效（1-65535）');
 	}
 
+	// 确保历史表存在
+	await ensureEmailConfigsTable(db).catch(() => {
+		// 表可能不存在或创建失败，继续主流程
+	});
+
 	// 保存配置（明文存储）
 	await setConfig(db, 'EMAIL_HOST', String(host).trim());
 	await setConfig(db, 'EMAIL_PORT', String(portNum));
@@ -160,6 +199,69 @@ async function setEmailConfig(db, config) {
 
 	await setConfig(db, 'EMAIL_FROM', String(from).trim().toLowerCase());
 	await setConfig(db, 'EMAIL_FROM_NAME', fromName ? String(fromName).trim() : '');
+
+	// 记录历史并标记当前激活
+	try {
+		// 获取最终用于连接的密码（若未传入则读取已有配置）
+		const finalPass =
+			pass !== undefined && pass !== null && pass !== ''
+				? String(pass)
+				: await getConfig(db, 'EMAIL_PASS');
+
+		// 关闭其他记录的激活状态
+		await db.run('UPDATE email_configs SET is_active = 0 WHERE is_active = 1').catch(() => {});
+
+		// 查找是否已有相同配置
+		const existing = await db
+			.get(
+				`SELECT id FROM email_configs 
+				WHERE host = ? AND port = ? AND user = ? AND \`from\` = ? AND COALESCE(from_name, '') = COALESCE(?, '')`,
+				[
+					String(host).trim(),
+					portNum,
+					String(user).trim(),
+					String(from).trim().toLowerCase(),
+					fromName ? String(fromName).trim() : '',
+				]
+			)
+			.catch(() => null);
+
+		if (existing && existing.id) {
+			await db
+				.run(
+					`UPDATE email_configs 
+					SET pass = ?, host = ?, port = ?, user = ?, \`from\` = ?, from_name = ?, is_active = 1, updated_at = NOW() 
+					WHERE id = ?`,
+					[
+						finalPass || '',
+						String(host).trim(),
+						portNum,
+						String(user).trim(),
+						String(from).trim().toLowerCase(),
+						fromName ? String(fromName).trim() : '',
+						existing.id,
+					]
+				)
+				.catch(() => {});
+		} else {
+			await db
+				.run(
+					`INSERT INTO email_configs (host, port, user, pass, \`from\`, from_name, is_active, created_at, updated_at)
+					VALUES (?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
+					[
+						String(host).trim(),
+						portNum,
+						String(user).trim(),
+						finalPass || '',
+						String(from).trim().toLowerCase(),
+						fromName ? String(fromName).trim() : '',
+					]
+				)
+				.catch(() => {});
+		}
+	} catch (e) {
+		console.warn('记录邮箱配置历史失败:', e.message);
+	}
 }
 
 /**
@@ -189,6 +291,91 @@ async function clearEmailConfig(db) {
 	for (const key of emailKeys) {
 		await deleteConfig(db, key);
 	}
+}
+
+async function getEmailConfigs(db) {
+	try {
+		await ensureEmailConfigsTable(db);
+		let rows = await db.all(
+			`SELECT id, host, port, user, pass, \`from\`, from_name AS fromName, is_active, created_at, updated_at
+			 FROM email_configs
+			 ORDER BY created_at DESC`
+		);
+		if (!rows || rows.length === 0) {
+			// 如果历史表为空，但 app_config 中已有有效配置，则补录一条作为当前记录
+			const current = await getEmailConfig(db);
+			const valid = await isEmailConfigValid(db);
+			if (valid && current.host && current.user && current.pass && current.from) {
+				await db
+					.run(
+						`INSERT INTO email_configs (host, port, user, pass, \`from\`, from_name, is_active, created_at, updated_at)
+						 VALUES (?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
+						[
+							current.host,
+							current.port,
+							current.user,
+							current.pass,
+							current.from,
+							current.fromName || null,
+						]
+					)
+					.catch(() => {});
+				rows = await db.all(
+					`SELECT id, host, port, user, pass, \`from\`, from_name AS fromName, is_active, created_at, updated_at
+					 FROM email_configs
+					 ORDER BY created_at DESC`
+				);
+			}
+		}
+		return rows || [];
+	} catch (e) {
+		if (e.code === 'ER_NO_SUCH_TABLE' || e.message?.includes("doesn't exist")) {
+			console.warn('邮箱配置历史表不存在，返回空列表');
+			return [];
+		}
+		throw e;
+	}
+}
+
+async function activateEmailConfig(db, configId) {
+	await ensureEmailConfigsTable(db);
+	const cfg = await db.get('SELECT * FROM email_configs WHERE id = ?', [configId]);
+	if (!cfg) {
+		throw new Error('邮箱配置不存在');
+	}
+	await setEmailConfig(db, {
+		host: cfg.host,
+		port: cfg.port,
+		user: cfg.user,
+		pass: cfg.pass,
+		from: cfg.from,
+		fromName: cfg.from_name,
+	});
+}
+
+async function deleteEmailConfig(db, configId) {
+	await ensureEmailConfigsTable(db);
+	const cfg = await db.get('SELECT is_active FROM email_configs WHERE id = ?', [configId]);
+	if (!cfg) {
+		throw new Error('邮箱配置不存在');
+	}
+	if (cfg.is_active) {
+		throw new Error('无法删除当前使用的配置');
+	}
+	await db.run('DELETE FROM email_configs WHERE id = ?', [configId]);
+}
+
+async function getAnalyticsSnippet(db) {
+	const saved = await getConfig(db, 'ANALYTICS_SNIPPET');
+	if (saved !== null && saved !== undefined) {
+		return String(saved);
+	}
+	return DEFAULT_ANALYTICS_SNIPPET;
+}
+
+async function setAnalyticsSnippet(db, snippet) {
+	const value = snippet !== undefined && snippet !== null ? String(snippet) : '';
+	await setConfig(db, 'ANALYTICS_SNIPPET', value);
 }
 
 // ===== 大模型配置 =====
@@ -295,6 +482,20 @@ async function activateLLMModel(db, modelId) {
 	});
 }
 
+/**
+ * 删除模型配置
+ */
+async function deleteLLMModel(db, modelId) {
+	const model = await db.get('SELECT is_active FROM llm_models WHERE id = ?', [modelId]);
+	if (!model) {
+		throw new Error('模型配置不存在');
+	}
+	if (model.is_active) {
+		throw new Error('无法删除当前正在使用的配置');
+	}
+	await db.run('DELETE FROM llm_models WHERE id = ?', [modelId]);
+}
+
 module.exports = {
 	initTable,
 	getEmailConfig,
@@ -303,10 +504,16 @@ module.exports = {
 	setLLMConfig,
 	getLLMModels,
 	activateLLMModel,
+	deleteLLMModel,
 	getConfig,
 	setConfig,
 	deleteConfig,
 	deleteConfigByPrefix,
 	isEmailConfigValid,
 	clearEmailConfig,
+	getEmailConfigs,
+	activateEmailConfig,
+	deleteEmailConfig,
+	getAnalyticsSnippet,
+	setAnalyticsSnippet,
 };

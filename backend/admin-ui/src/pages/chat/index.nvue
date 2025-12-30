@@ -197,108 +197,8 @@ function getWsUrl() {
 }
 
 function cleanHtml(str: string) {
-	if (!str) return '';
-	const cleaned = String(str).replace(/<[^>]+>/g, '');
-	// 如果清理后为空或只有空白，返回原始内容（可能是纯文本）
-	if (!cleaned.trim() && str.trim()) {
-		return str;
-	}
-	return cleaned;
-}
-
-function parseOpenAIChunk(line: string) {
-	if (!line.startsWith('data:')) return '';
-	const payload = line.replace(/^data:\s*/, '');
-	if (payload.trim() === '[DONE]') return '';
-	try {
-		const json = JSON.parse(payload);
-		const delta = json.choices?.[0]?.delta || json.choices?.[0];
-		const content = delta?.content || delta?.text || '';
-		return typeof content === 'string' ? content : '';
-	} catch (e) {
-		return '';
-	}
-}
-
-function parseAnthropicChunk(line: string) {
-	if (!line.startsWith('data:')) return '';
-	const payload = line.replace(/^data:\s*/, '');
-	try {
-		const json = JSON.parse(payload);
-		// message_delta or content_block_delta
-		const delta = json.delta || json;
-		const text = delta?.text || delta?.content?.[0]?.text || '';
-		return typeof text === 'string' ? text : '';
-	} catch (e) {
-		return '';
-	}
-}
-
-function parseGeminiChunk(line: string) {
-	// Gemini 流返回 JSON，无 data: 前缀
-	const payload = line.trim().replace(/^data:\s*/, '');
-	try {
-		const json = JSON.parse(payload);
-		const text = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-		return typeof text === 'string' ? text : '';
-	} catch (e) {
-		return '';
-	}
-}
-
-function parseJsonReply(provider: string, raw: string) {
-	try {
-		const json = JSON.parse(raw);
-		// 严格按照配置的 provider 解析，不自动检测
-		return extractReply(provider, json);
-	} catch (e) {
-		return '';
-	}
-}
-
-function parseStreamChunk(provider: string, rawChunk: string) {
-	// 如果是完整的 JSON 响应（不以 data: 开头），直接解析
-	if (rawChunk.trim().startsWith('{') && !rawChunk.includes('data:')) {
-		const jsonResult = parseJsonReply(provider, rawChunk);
-		if (jsonResult) {
-			return jsonResult;
-		}
-	}
-	
-	// 流式 SSE 格式解析（严格按照 provider）
-	const lines = rawChunk.split('\n').map((l) => l.trim()).filter(Boolean);
-	let acc = '';
-	for (const line of lines) {
-		let piece = '';
-		// 严格按照配置的 provider 选择解析方式
-		if (provider === 'anthropic') {
-			piece = parseAnthropicChunk(line);
-		} else if (provider === 'gemini') {
-			piece = parseGeminiChunk(line);
-		} else {
-			// openai / deepseek / qwen 走同一流格式
-			piece = parseOpenAIChunk(line);
-		}
-		if (piece) {
-			acc += piece;
-		}
-	}
-	if (acc) {
-		const cleaned = cleanHtml(acc);
-		return cleaned;
-	}
-	
-	// 如果流式解析失败，尝试作为完整 JSON 解析（兜底）
-	if (rawChunk.trim().startsWith('{')) {
-		const jsonResult = parseJsonReply(provider, rawChunk);
-		if (jsonResult) {
-			return jsonResult;
-		}
-	}
-	
-	// 最后兜底：如果是纯文本，返回清理后的文本
-	const cleaned = cleanHtml(rawChunk);
-	return cleaned || rawChunk; // 如果清理后为空，返回原始文本
+	// 移除对 HTML 标签的清理，防止误伤代码块
+	return String(str || '');
 }
 
 async function sendWithWS(messages: Array<{ role: string; content: string }>, token: string) {
@@ -388,9 +288,12 @@ async function sendWithWS(messages: Array<{ role: string; content: string }>, to
 				try {
 					msg = JSON.parse(line);
 				} catch (err) {
-					// 这一行还没收完整，放回去等待下一段
-					lineBuffer = line + '\n' + lineBuffer;
-					break;
+					// 这一行解析失败，可能是数据不完整或格式错误
+					// 简单地丢弃它，防止无限循环
+					// 如果需要更复杂的重试逻辑，可以检查 line 是否以 '}' 结尾等
+					console.warn('NDJSON parse error for line:', line);
+					// lineBuffer = line + '\n' + lineBuffer; // 这种回退逻辑会导致无限循环
+					continue;
 				}
 
 				// 处理不同事件类型
@@ -407,6 +310,13 @@ async function sendWithWS(messages: Array<{ role: string; content: string }>, to
 					setTimeout(() => {
 						loadQuotaInfo();
 					}, 300);
+				} else if (msg.event === 'error') {
+					const errorMsg = msg.message || msg.error || '未知错误';
+					if (String(errorMsg).includes('额度') || String(errorMsg).includes('用完') || String(errorMsg).includes('频繁')) {
+						panel.appendAssistant(`⚠️ ${errorMsg}`, 'error');
+					} else {
+						panel.appendAssistant(`错误：${errorMsg}`, 'error');
+					}
 				} else if (msg.error) {
 					// 错误消息
 					const errorMsg = msg.error || '未知错误';
@@ -434,8 +344,16 @@ async function sendWithWS(messages: Array<{ role: string; content: string }>, to
 						if (cleaned) {
 							panel.appendAssistant(cleaned, 'stream');
 						}
+					} else if (msg.event === 'error') {
+						const errorMsg = msg.message || msg.error || '未知错误';
+						if (String(errorMsg).includes('额度') || String(errorMsg).includes('用完') || String(errorMsg).includes('频繁')) {
+							panel.appendAssistant(`⚠️ ${errorMsg}`, 'error');
+						} else {
+							panel.appendAssistant(`错误：${errorMsg}`, 'error');
+						}
 					}
 				} catch (e) {
+					void 0;
 				}
 			}
 			// 将流式状态改为完成
@@ -458,23 +376,6 @@ async function sendWithWS(messages: Array<{ role: string; content: string }>, to
 			reject(new Error(errorMsg));
 		});
 	});
-}
-
-// 注意：extractReply 函数已不再需要，因为后端已统一返回格式
-// 保留此函数以防其他地方调用，但实际已不使用
-function extractReply(provider: string, data: any) {
-	if (!data) {
-		return '无响应';
-	}
-
-	// 后端已统一返回格式：只返回 { reply: text }
-	const text = data?.reply || '';
-	if (text) {
-		const cleaned = cleanHtml(text);
-		return cleaned || text; // 如果清理后为空，返回原始内容
-	}
-	
-	return '无响应';
 }
 </script>
 

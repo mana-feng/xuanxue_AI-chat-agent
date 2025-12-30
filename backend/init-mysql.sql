@@ -62,6 +62,21 @@ CREATE TABLE IF NOT EXISTS `email_verification_codes` (
   KEY `idx_email_expires` (`email`, `expires_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 邮箱服务配置历史表
+CREATE TABLE IF NOT EXISTS `email_configs` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `host` VARCHAR(200) NOT NULL COMMENT 'SMTP 主机',
+  `port` INT NOT NULL COMMENT 'SMTP 端口',
+  `user` VARCHAR(200) NOT NULL COMMENT '邮箱账号',
+  `pass` TEXT NOT NULL COMMENT '邮箱密码/授权码',
+  `from` VARCHAR(200) NOT NULL COMMENT '发件邮箱地址',
+  `from_name` VARCHAR(200) DEFAULT NULL COMMENT '发件人名称',
+  `is_active` TINYINT(1) DEFAULT 0 COMMENT '是否当前使用',
+  `created_at` DATETIME DEFAULT NULL,
+  `updated_at` DATETIME DEFAULT NULL,
+  KEY `idx_is_active` (`is_active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 大模型配置历史表
 CREATE TABLE IF NOT EXISTS `llm_models` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,

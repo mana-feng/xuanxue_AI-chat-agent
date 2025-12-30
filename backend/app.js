@@ -8,6 +8,7 @@ const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const http = require('http');
+const https = require('https');
 const net = require('net');
 const { initDatabase, getDatabase, autoInitMySQLTables } = require('./db');
 const ConfigService = require('./config-service');
@@ -28,13 +29,13 @@ const {
 
 const PORT = config.PORT;
 const CORS_ORIGINS = config.CORS_ORIGINS;
+const DEV_PROXY_FRONTEND = process.env.DEV_PROXY_FRONTEND === 'true';
+const FRONTEND_DEV_HOST = process.env.FRONTEND_DEV_HOST || 'localhost';
+const FRONTEND_DEV_PORT = process.env.FRONTEND_DEV_PORT ? Number(process.env.FRONTEND_DEV_PORT) : 3000;
 
 if (!process.env.JWT_SECRET) {
 	console.warn('⚠️  JWT_SECRET 未设置，正在使用默认值。请在生产环境配置安全的随机字符串。');
 }
-
-// 仅加载 backend/.env
-require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 
@@ -123,47 +124,98 @@ app.use(responseWrapper);
  */
 async function bootstrap() {
 	try {
+		let skipDb = process.env.SKIP_DB === 'true';
+		let dbUnavailableMessage = '';
+
 		// 启动前先检测端口占用，避免 EADDRINUSE 直接抛出未处理错误
 		await ensurePortAvailable(PORT);
 
-		// 初始化数据库连接
-		await initDatabase();
-		const db = getDatabase();
+		let baziRouter = null;
+		const indexRouter = require('./routes/index');
+		app.use('/api', indexRouter);
 
-		if (db.pool) {
-			await autoInitMySQLTables(db.pool);
+		if (!skipDb) {
+			try {
+				await initDatabase();
+				const db = getDatabase();
+
+				if (db.pool) {
+					await autoInitMySQLTables(db.pool);
+				}
+
+				await initTables();
+				await ConfigService.initTable(db);
+				await loadEmailConfig();
+			} catch (e) {
+				skipDb = true;
+				dbUnavailableMessage = e?.message ? String(e.message) : 'MySQL 不可用';
+				console.warn(`⚠️  MySQL 不可用，后端将以降级模式启动（仅提供基础接口）。原因: ${dbUnavailableMessage}`);
+			}
 		}
 
-		// 初始化数据库表
-		await initTables();
-		await ConfigService.initTable(db);
-		
-		// 加载邮件配置
-		await loadEmailConfig();
+		if (!skipDb) {
+			const authRouter = require('./routes/auth');
+			const emailRouter = require('./routes/email');
+			baziRouter = require('./routes/bazi');
+			const liuyaoRouter = require('./routes/liuyao');
+			const llmRouter = require('./routes/llm');
+			const adminRouter = require('./routes/admin');
+			const announcementRouter = require('./routes/announcement');
 
-		// 路由（在数据库初始化之后再加载，避免路由模块提前访问数据库）
-		const indexRouter = require('./routes/index');
-		const authRouter = require('./routes/auth');
-		const emailRouter = require('./routes/email');
-		const baziRouter = require('./routes/bazi');
-		const liuyaoRouter = require('./routes/liuyao');
-		const llmRouter = require('./routes/llm');
-		const adminRouter = require('./routes/admin');
-		const announcementRouter = require('./routes/announcement');
+			app.use('/api/auth', authRouter);
+			app.use('/api/email', emailRouter);
+			app.use('/api/bazi', baziRouter);
+			app.use('/api/liuyao', liuyaoRouter);
+			app.use('/api/llm', llmRouter);
+			app.use('/api/admin', adminRouter);
+			app.use('/api/announcements', announcementRouter);
+			app.use('/api/charts', (req, res, next) => {
+				req.url = '/charts' + (req.url === '/' ? '' : req.url);
+				return baziRouter(req, res, next);
+			});
+		} else {
+			app.use('/api', (req, res, next) => {
+				if (req.path === '/health' || req.path === '/config/bootstrap') return next();
+				return res.status(503).json({
+					success: false,
+					error: '数据库不可用',
+					message: dbUnavailableMessage || '数据库不可用',
+				});
+			});
+		}
 
-		app.use('/api', indexRouter);
-		app.use('/api/auth', authRouter);
-		app.use('/api/email', emailRouter);
-		app.use('/api/bazi', baziRouter);
-		app.use('/api/liuyao', liuyaoRouter);
-		app.use('/api/llm', llmRouter);
-		app.use('/api/admin', adminRouter);
-		app.use('/api/announcements', announcementRouter);
-		// 兼容旧路径：/api/charts 等价于 /api/bazi/charts
-		app.use('/api/charts', (req, res, next) => {
-			req.url = '/charts' + (req.url === '/' ? '' : req.url); // 保留查询串
-			return baziRouter(req, res, next);
-		});
+		if (DEV_PROXY_FRONTEND) {
+			app.use((req, res, next) => {
+				if (req.path.startsWith('/api')) return next();
+
+				const proxyReq = http.request(
+					{
+						hostname: FRONTEND_DEV_HOST,
+						port: FRONTEND_DEV_PORT,
+						path: req.originalUrl,
+						method: req.method,
+						headers: {
+							...req.headers,
+							host: `${FRONTEND_DEV_HOST}:${FRONTEND_DEV_PORT}`,
+						},
+					},
+					(proxyRes) => {
+						res.statusCode = proxyRes.statusCode || 502;
+						for (const [key, value] of Object.entries(proxyRes.headers)) {
+							if (value === undefined) continue;
+							res.setHeader(key, value);
+						}
+						proxyRes.pipe(res);
+					}
+				);
+
+				proxyReq.on('error', (e) => {
+					res.status(502).json({ error: `前端代理失败: ${e.message}` });
+				});
+
+				proxyReq.end();
+			});
+		}
 
 		// 兼容旧接口（重定向到新接口）
 		app.post('/api/login', (req, res) => {
@@ -171,33 +223,25 @@ async function bootstrap() {
 			app._router.handle(req, res);
 		});
 
-		// Admin UI (H5 build) static hosting on separate port
+		// Admin UI (H5 build) static hosting (Merged on same port)
 		const adminUiPath = path.join(__dirname, 'admin-ui', 'dist', 'build', 'h5');
-		const ADMIN_PORT = process.env.ADMIN_PORT || 3000;
 		
 		if (fs.existsSync(adminUiPath)) {
-			const adminApp = express();
-			
-			// 启用 gzip 压缩
+			console.log(`Serving Admin UI from ${adminUiPath}`);
+			// 启用 gzip 压缩 (for static assets)
 			const compression = require('compression');
-			adminApp.use(compression());
-			
+			app.use(compression());
+
 			// 静态文件服务
-			adminApp.use('/', express.static(adminUiPath));
+			app.use(express.static(adminUiPath));
 			
 			// SPA 路由回退到 index.html
-			adminApp.get('*', (req, res) => {
+			app.get('*', (req, res, next) => {
+				// 如果是 API 请求，跳过（交给后面的 404 处理）
+				if (req.path.startsWith('/api')) {
+					return next();
+				}
 				res.sendFile(path.join(adminUiPath, 'index.html'));
-			});
-			
-			// 启动 Admin Server
-			const adminServer = http.createServer(adminApp);
-			adminServer.on('error', (err) => {
-				console.error(`Admin Server error on port ${ADMIN_PORT}:`, err.message);
-			});
-			
-			adminServer.listen(ADMIN_PORT, () => {
-				console.log(`Admin UI listening on http://localhost:${ADMIN_PORT}`);
 			});
 		} else {
 			console.warn('Admin UI build not found. Run admin-ui build to enable Admin UI.');
@@ -222,8 +266,20 @@ async function bootstrap() {
 			next(err);
 		});
 
-		// 创建 HTTP 服务器
-		const server = http.createServer(app);
+		const httpsKeyPath = path.join(__dirname, '..', 'cert', 'localhost-key.pem');
+		const httpsCertPath = path.join(__dirname, '..', 'cert', 'localhost.pem');
+		const certAvailable = fs.existsSync(httpsKeyPath) && fs.existsSync(httpsCertPath);
+		const useHttps = certAvailable;
+
+		const server = useHttps
+			? https.createServer(
+					{
+						key: fs.readFileSync(httpsKeyPath),
+						cert: fs.readFileSync(httpsCertPath),
+					},
+					app
+				)
+			: http.createServer(app);
 
 		// 监听底层错误，提供更明确的提示
 		server.on('error', (err) => {
@@ -236,11 +292,40 @@ async function bootstrap() {
 		});
 
 		// 初始化 WebSocket 服务器
-		initWebSocketServer(server);
+		if (!skipDb) {
+			initWebSocketServer(server);
+		}
+
+		if (DEV_PROXY_FRONTEND) {
+			server.on('upgrade', (req, socket, head) => {
+				if (req.url && req.url.startsWith('/api/llm/chat/ws')) {
+					return;
+				}
+
+				const targetSocket = net.connect(FRONTEND_DEV_PORT, FRONTEND_DEV_HOST, () => {
+					const headers = Object.entries(req.headers)
+						.filter(([k]) => k.toLowerCase() !== 'host')
+						.map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
+						.join('\r\n');
+
+					targetSocket.write(
+						`${req.method} ${req.url} HTTP/${req.httpVersion}\r\n${headers}\r\nhost: ${FRONTEND_DEV_HOST}:${FRONTEND_DEV_PORT}\r\n\r\n`
+					);
+					if (head && head.length > 0) {
+						targetSocket.write(head);
+					}
+					socket.pipe(targetSocket).pipe(socket);
+				});
+
+				targetSocket.on('error', () => {
+					socket.destroy();
+				});
+			});
+		}
 
 		// 启动服务器
 		server.listen(PORT, () => {
-			console.log(`Bazi backend listening on http://localhost:${PORT}`);
+			console.log(`Bazi backend listening on ${useHttps ? 'https' : 'http'}://localhost:${PORT}`);
 		});
 	} catch (err) {
 		console.error('服务器启动失败，原因:', err.message || err);

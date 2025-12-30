@@ -1,17 +1,36 @@
 import { defineConfig, loadEnv } from "vite";
 import path from "path";
+import fs from "fs";
 import uni from "@dcloudio/vite-plugin-uni";
 import progress from "vite-plugin-progress";
 
 export default defineConfig(({ mode }) => {
 	const env = loadEnv(mode, __dirname);
-	const devPort = Number(env.VITE_DEV_PORT) || 3002;
+	const devPort = Number(env.VITE_DEV_PORT) || 3002; // 开发端口避开 3000/3001
 	const platform = process.env.UNI_PLATFORM || "h5";
 	const isH5 = platform === "h5";
+	const apiTarget = env.VITE_API_PROXY_TARGET || "http://localhost:3001";
+	const httpsKeyPath = path.resolve(__dirname, "../../cert/localhost-key.pem");
+	const httpsCertPath = path.resolve(__dirname, "../../cert/localhost.pem");
+	const httpsEnabled =
+		fs.existsSync(httpsKeyPath) && fs.existsSync(httpsCertPath) && env.VITE_DEV_HTTPS !== "false";
 
 	return {
 		server: {
 			port: devPort,
+			https: httpsEnabled
+				? {
+						key: fs.readFileSync(httpsKeyPath, "utf8"),
+						cert: fs.readFileSync(httpsCertPath, "utf8"),
+					}
+				: undefined,
+            proxy: {
+                '/api': {
+                    target: apiTarget,
+                    changeOrigin: true,
+                    secure: false
+                }
+            }
 		},
 		resolve: {
 			alias: {
@@ -58,5 +77,3 @@ export default defineConfig(({ mode }) => {
 		},
 	};
 });
-
-

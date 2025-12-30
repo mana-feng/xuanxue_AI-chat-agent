@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "uni dev -p mp-weixin",
     "dev:h5": "uni dev -p h5",
+    "dev:h5:https": "uni dev -p h5 --https",
     "dev:mp-weixin": "uni dev -p mp-weixin",
     "dev:app": "uni dev -p app",
     "build": "uni build -p mp-weixin",

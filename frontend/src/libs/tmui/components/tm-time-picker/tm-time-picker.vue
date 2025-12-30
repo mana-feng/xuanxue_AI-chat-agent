@@ -11,6 +11,7 @@ ref="drawer" :round="props.round" :height="dHeight" :show="_show" title="请选�
             :format="props.format"
             :show-detail="props.showDetail"
             :show-suffix="props.showSuffix"
+            :column-flex="props.columnFlex"
             :start="props.start"
             :end="props.end"
             @update:model-value="_value = $event"
@@ -42,7 +43,10 @@ import tmDrawer from "../tm-drawer/tm-drawer.vue";
 import TmSheet from "../tm-sheet/tm-sheet.vue";
 import tmText from "../tm-text/tm-text.vue";
 import tmButton from "../tm-button/tm-button.vue";
-const { proxy } = getCurrentInstance();
+import type { showDetail } from "../tm-time-view/interface";
+const instance = getCurrentInstance();
+const proxy = instance?.proxy as any;
+type ColumnFlex = Partial<Record<'year' | 'month' | 'day' | 'hour' | 'minute' | 'second', number>>;
 
 const emits = defineEmits(["update:modelValue", "update:modelStr", "update:show", "confirm","change", "cancel", "close", "open"])
 
@@ -110,6 +114,10 @@ const props = defineProps({
 				second:'秒'
 			}
 		}
+	},
+	columnFlex: {
+		type: Object as PropType<ColumnFlex>,
+		default: () => ({})
 	},
 	start:{
 		type:[Number,String,Date],

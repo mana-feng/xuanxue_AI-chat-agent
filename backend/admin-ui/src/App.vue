@@ -1,11 +1,28 @@
 <script setup lang="ts">
+import { onMounted } from 'vue';
 import { onPageNotFound } from '@dcloudio/uni-app';
+import { useAppConfigStore } from '@/store/appConfig';
+import { injectAnalyticsSnippet } from '@/utils/analytics';
+import { bootstrapApp, waitBootstrap } from '@/utils/bootstrap';
 
 // 未匹配到页面时统一回到首页
 onPageNotFound(() => {
 	uni.redirectTo({
 		url: '/pages/auth/auth',
 	});
+});
+
+onMounted(async () => {
+	if (typeof window === 'undefined') return;
+	const bootstrapPromise = waitBootstrap();
+	if (bootstrapPromise) {
+		await bootstrapPromise;
+	} else {
+		await bootstrapApp();
+	}
+	const appConfigStore = useAppConfigStore();
+	const snippet = (appConfigStore.get<string>('analyticsSnippet', '') as string) || '';
+	injectAnalyticsSnippet(snippet, 'admin-analytics');
 });
 </script>
 
@@ -74,14 +91,32 @@ tm-app {
 
 @media (min-width: 900px) {
 	.page-content-scale {
-		max-width: 1200px;
+		max-width: 980px;
 		padding: 0 24px;
+	}
+}
+
+@media (min-width: 1280px) {
+	.page-content-scale {
+		max-width: 1200px;
+	}
+}
+
+@media (min-width: 1600px) {
+	.page-content-scale {
+		max-width: 1520px;
 	}
 }
 
 .layout-wide .page-content-scale {
 	max-width: 1200px;
 	padding: 0 24px;
+}
+
+@media (min-width: 1600px) {
+	.layout-wide .page-content-scale {
+		max-width: 1520px;
+	}
 }
 /* #endif */
 

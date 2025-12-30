@@ -34,14 +34,15 @@
 				</view>
 				
 				<!-- 记录列表 -->
-				<view class="record-list">
+				<view class="responsive-list-container" style="margin-bottom: 40rpx;">
 					<tm-sheet
 						v-for="record in recordList"
 						:key="record.id"
 						:round="4"
 						:shadow="2"
 						:padding="[20, 20]"
-						:margin="[0, 0, 20, 0]"
+						:margin="[0, 0, 0, 0]"
+						class="responsive-list-item"
 					>
 						<view class="record-header">
 							<view class="record-info">
@@ -143,52 +144,54 @@
 				:height="700"
 			>
 				<view class="record-form">
-					<tm-input
-						v-model.number="recordForm.userId"
-						label="用户ID"
-						placeholder="请输入用户ID"
-						type="number"
-						:margin="[0, 0, 20, 0]"
-						required
-					></tm-input>
-					
-					<tm-input
-						v-model="recordForm.name"
-						label="姓名（可选）"
-						placeholder="请输入姓名"
-						:margin="[0, 0, 20, 0]"
-					></tm-input>
-					
-					<view class="form-item">
-						<tm-text
-							:font-size="24"
-							:margin="[0, 0, 10, 0]"
-							label="性别"
-						></tm-text>
-						<tm-radio-group v-model="recordForm.gender" model="button">
-							<tm-radio label="男" value="0"></tm-radio>
-							<tm-radio label="女" value="1"></tm-radio>
-						</tm-radio-group>
-					</view>
-					
-					<tm-input
-						v-model="recordForm.birthDatetime"
-						label="出生时间"
-						placeholder="格式：YYYY-MM-DD HH:mm:ss"
-						:margin="[0, 0, 20, 0]"
-						required
-					></tm-input>
-					
-					<view class="form-item">
-						<tm-text
-							:font-size="24"
-							:margin="[0, 0, 10, 0]"
-							label="历法类型"
-						></tm-text>
-						<tm-radio-group v-model="recordForm.calendarType" model="button">
-							<tm-radio label="阳历" value="solar"></tm-radio>
-							<tm-radio label="阴历" value="lunar"></tm-radio>
-						</tm-radio-group>
+					<view class="responsive-form-grid-md-2">
+						<tm-input
+							v-model.number="recordForm.userId"
+							label="用户ID"
+							placeholder="请输入用户ID"
+							type="number"
+							:margin="[0, 0, 20, 0]"
+							required
+						></tm-input>
+						
+						<tm-input
+							v-model="recordForm.name"
+							label="姓名（可选）"
+							placeholder="请输入姓名"
+							:margin="[0, 0, 20, 0]"
+						></tm-input>
+						
+						<view class="form-item">
+							<tm-text
+								:font-size="24"
+								:margin="[0, 0, 10, 0]"
+								label="性别"
+							></tm-text>
+							<tm-radio-group v-model="recordForm.gender" model="button">
+								<tm-radio label="男" value="0"></tm-radio>
+								<tm-radio label="女" value="1"></tm-radio>
+							</tm-radio-group>
+						</view>
+						
+						<tm-input
+							v-model="recordForm.birthDatetime"
+							label="出生时间"
+							placeholder="格式：YYYY-MM-DD HH:mm:ss"
+							:margin="[0, 0, 20, 0]"
+							required
+						></tm-input>
+						
+						<view class="form-item">
+							<tm-text
+								:font-size="24"
+								:margin="[0, 0, 10, 0]"
+								label="历法类型"
+							></tm-text>
+							<tm-radio-group v-model="recordForm.calendarType" model="button">
+								<tm-radio label="阳历" value="solar"></tm-radio>
+								<tm-radio label="阴历" value="lunar"></tm-radio>
+							</tm-radio-group>
+						</view>
 					</view>
 					
 					<view v-if="recordFormError" class="error-text">
@@ -602,10 +605,6 @@ async function handleViewDetail(recordId: number) {
 	border-radius: 8rpx;
 	max-height: 400rpx;
 	overflow-y: auto;
-}
-
-.record-list {
-	margin-bottom: 40rpx;
 }
 
 .record-header {

@@ -20,29 +20,29 @@
 							<view class="section__body info-grid">
 								<view class="info-tile">
 									<tm-text :font-size="24" color="#718096" label="姓名"></tm-text>
-									<tm-text :font-size="30" :bold="true" color="#2d3748" :label="user_store.realname || '佚名'"></tm-text>
-								</view>
-								<view class="info-tile">
-									<tm-text :font-size="24" color="#718096" label="生肖"></tm-text>
-									<tm-text :font-size="30" :bold="true" color="#2d3748" :label="GetChineseZodiac(bazi_store.solar.year)"></tm-text>
+									<tm-text :font-size="30" :bold="true" color="#2d3748" :label="(user_store.realname || '').trim() || '佚名'"></tm-text>
 								</view>
 								<view class="info-tile">
 									<tm-text :font-size="24" color="#718096" label="性别"></tm-text>
 									<tm-text :font-size="30" :bold="true" color="#2d3748" :label="getGenderLabel()"></tm-text>
 								</view>
 								<view class="info-tile">
-									<tm-text :font-size="24" color="#718096" label="阴历"></tm-text>
-									<tm-text :font-size="30" :bold="true" color="#2d3748" :label="bazi_store.yinli"></tm-text>
-								</view>
-								<view class="info-tile">
-									<tm-text :font-size="24" color="#718096" label="阳历"></tm-text>
-									<tm-text :font-size="30" :bold="true" color="#2d3748" :label="bazi_store.yangli || utils.HideSecond(user_store.timestamp)"></tm-text>
+									<tm-text :font-size="24" color="#718096" label="生肖"></tm-text>
+									<tm-text :font-size="30" :bold="true" color="#2d3748" :label="GetChineseZodiac(bazi_store.solar.year)"></tm-text>
 								</view>
 								<view class="info-tile">
 									<tm-text :font-size="24" color="#718096" label="星座"></tm-text>
 									<tm-text :font-size="30" :bold="true" color="#2d3748" :label="bazi_store.xinzuo + '座'"></tm-text>
+								</view>
+								<view class="info-tile full-width">
+									<tm-text :font-size="24" color="#718096" label="阳历"></tm-text>
+									<tm-text :font-size="30" :bold="true" color="#2d3748" :label="bazi_store.yangli || utils.HideSecond(user_store.timestamp)"></tm-text>
+								</view>
+								<view class="info-tile full-width">
+									<tm-text :font-size="24" color="#718096" label="阴历"></tm-text>
+									<tm-text :font-size="30" :bold="true" color="#2d3748" :label="bazi_store.yinli"></tm-text>
+								</view>
 							</view>
-						</view>
 							<view class="actions-row">
 								<tm-button
 									type="primary"
@@ -55,9 +55,10 @@
 									@tap="saveToAccount"
 								></tm-button>
                 <tm-button
-                  type="grey"
+                  type="primary"
                   :round="12"
                   :padding="[24, 20]"
+                  :bold="true"
                   label="导出为 JSON"
                   @tap="exportJson"
                 ></tm-button>
@@ -148,7 +149,7 @@
 						<view class="section flow-section">
 							<header class="section__header">
 								<tm-icon name="tmicon-md-time" :font-size="26" color="#667eea"></tm-icon>
-								<h2 class="section__title">流运流年</h2>
+								<h2 class="section__title">大运流年</h2>
 							</header>
 							<view ref="flowWrapperRef" class="section__body flow-section__body draggable-scroll">
 								<yx-yun-scroll-list></yx-yun-scroll-list>
@@ -163,6 +164,7 @@
 
 <script lang="ts" setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { onShow } from '@dcloudio/uni-app';
 import { useBaziStore } from '@/store/bazi';
 import { useYunStore } from '@/store/yun';
 import { useUserStore } from '@/store/user';
@@ -176,6 +178,58 @@ const yun_store = useYunStore();
 const user_store = useUserStore();
 const tableWrapperRef = ref<any>(null);
 const flowWrapperRef = ref<any>(null);
+
+const BAZI_LAST_CONTEXT_KEY = 'bazi_last_context';
+
+function restoreBaziContext() {
+	if (user_store.timestamp !== null && user_store.timestamp !== undefined) return;
+	try {
+		const raw = uni.getStorageSync(BAZI_LAST_CONTEXT_KEY);
+		if (!raw) return;
+		const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+		const ts = Number(data?.timestamp);
+		if (!Number.isFinite(ts) || ts <= 0) return;
+		const gender = data?.gender === 1 || data?.gender === '1' ? 1 : 0;
+		user_store.realname = data?.realname ?? user_store.realname;
+		user_store.gender = gender ?? user_store.gender ?? 0;
+		user_store.timestamp = ts;
+		user_store.recordId = data?.recordId ?? user_store.recordId ?? null;
+	} catch (e) {
+		void e;
+	}
+}
+
+function ensureBaziComputed() {
+	const ts = user_store.timestamp;
+	if (!ts) return;
+	if (bazi_store.solar?.year) return;
+	bazi_store.pull({
+		timestamp: Number(ts),
+		gender: Number(user_store.gender ?? 0)
+	});
+}
+
+function persistBaziContext() {
+	const ts = user_store.timestamp;
+	if (!ts) return;
+	try {
+		uni.setStorageSync(
+			BAZI_LAST_CONTEXT_KEY,
+			JSON.stringify({
+				realname: user_store.realname ?? null,
+				gender: user_store.gender ?? 0,
+				timestamp: Number(ts),
+				recordId: user_store.recordId ?? null
+			})
+		);
+	} catch (e) {
+		void e;
+	}
+}
+
+restoreBaziContext();
+ensureBaziComputed();
+persistBaziContext();
 
 const combinedGanZhiRelations = computed(() => {
 	const list: string[] = [];
@@ -340,10 +394,19 @@ function isLocalDuplicate(entry: { name: string | null; birthDatetime: number | 
 }
 
 if (user_store.timestamp === null) {
-	uni.redirectTo({
-		url: '/pages/index/index'
-	});
+	restoreBaziContext();
+	if (!user_store.timestamp) {
+		uni.redirectTo({
+			url: '/pages/index/index'
+		});
+	}
 }
+
+onShow(() => {
+	restoreBaziContext();
+	ensureBaziComputed();
+	persistBaziContext();
+});
 
 function getGenderLabel() {
 	// 统一标准：0=男，1=女
@@ -414,7 +477,7 @@ function saveToAccount() {
 	}
 
 	const requestData = {
-		name: user_store.realname || '佚名',
+		name: (user_store.realname || '').trim() || '佚名',
 		gender: user_store.gender !== undefined && user_store.gender !== null ? String(user_store.gender) : null,
 		birthDatetime: user_store.timestamp !== undefined && user_store.timestamp !== null ? Number(user_store.timestamp) : null,
 		calendarType: 'solar',
@@ -592,7 +655,7 @@ function exportJson() {
 
 function goToChat() {
 	uni.navigateTo({
-		url: '/pages/chat/index'
+		url: '/pages/chat/index?from=bazi'
 	});
 }
 
@@ -702,13 +765,21 @@ const GetChineseZodiac = year => utils.GetChineseZodiac(year);
 
 .page-bazi-detail .info-summary .info-grid {
 	display: grid;
-	grid-template-columns: 1fr;
+	grid-template-columns: 1fr 1fr;
 	gap: 10px;
+}
+
+.page-bazi-detail .info-summary .info-grid .info-tile.full-width {
+	grid-column: 1 / -1;
 }
 
 @media (min-width: 720px) {
 	.page-bazi-detail .info-summary .info-grid {
-		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		grid-template-columns: repeat(4, 1fr);
+	}
+	
+	.page-bazi-detail .info-summary .info-grid .info-tile.full-width {
+		grid-column: span 2;
 	}
 }
 
@@ -720,17 +791,15 @@ const GetChineseZodiac = year => utils.GetChineseZodiac(year);
 }
 
 .page-bazi-detail .actions-row {
-	display: flex;
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
 	gap: 10px;
-	flex-direction: column;
-	align-items: stretch;
 	margin-top: 12px;
 }
 
 .page-bazi-detail .actions-row :deep(.tm-button) {
 	width: 100% !important;
 	min-width: 0 !important;
-	flex: 1 1 auto;
 }
 
 .page-bazi-detail .actions-row :deep(.tm-button__body) {
@@ -739,6 +808,7 @@ const GetChineseZodiac = year => utils.GetChineseZodiac(year);
 
 @media (min-width: 720px) {
 	.page-bazi-detail .actions-row {
+		display: flex;
 		flex-direction: row;
 		flex-wrap: wrap;
 		align-items: center;
@@ -765,29 +835,11 @@ const GetChineseZodiac = year => utils.GetChineseZodiac(year);
 
 .page-bazi-detail .table-wrapper {
 	width: 100%;
-	overflow-x: auto;
 	box-sizing: border-box;
-	scrollbar-width: thin;
 }
 
 .page-bazi-detail .table-wrapper :deep(.tm-table) {
-	max-width: 100%;
 	box-sizing: border-box;
-}
-
-.page-bazi-detail .table-wrapper::-webkit-scrollbar {
-	height: 8px;
-	display: block;
-}
-
-.page-bazi-detail .table-wrapper::-webkit-scrollbar-track {
-	background: #f1f1f1;
-	border-radius: 4px;
-}
-
-.page-bazi-detail .table-wrapper::-webkit-scrollbar-thumb {
-	background: #cbd5e0;
-	border-radius: 4px;
 }
 
 .page-bazi-detail .analysis-card .analysis-grid {
@@ -808,11 +860,17 @@ const GetChineseZodiac = year => utils.GetChineseZodiac(year);
 
 .layout-medium .page-bazi-detail .info-summary .info-grid,
 .layout-wide .page-bazi-detail .info-summary .info-grid {
-	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	grid-template-columns: repeat(4, 1fr);
+}
+
+.layout-medium .page-bazi-detail .info-summary .info-grid .info-tile.full-width,
+.layout-wide .page-bazi-detail .info-summary .info-grid .info-tile.full-width {
+	grid-column: span 2;
 }
 
 .layout-medium .page-bazi-detail .actions-row,
 .layout-wide .page-bazi-detail .actions-row {
+	display: flex;
 	flex-direction: row;
 	flex-wrap: wrap;
 	align-items: center;

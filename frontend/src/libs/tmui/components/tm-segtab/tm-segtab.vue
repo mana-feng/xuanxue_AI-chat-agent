@@ -54,12 +54,13 @@ import tmSheet from '../tm-sheet/tm-sheet.vue';
 import tmText from '../tm-text/tm-text.vue';
 import {listitem} from './interface'
 import { custom_props } from '../../tool/lib/minxs';
-import { useUiScale } from '@/utils/viewport';
+import { useUiScale } from '../../../../utils/viewport';
 // #ifdef APP-PLUS-NVUE
 const dom = uni.requireNativePlugin('dom')
 const animation = uni.requireNativePlugin('animation')
 // #endif
-const { proxy } = getCurrentInstance();
+const instance = getCurrentInstance();
+const proxy = instance?.proxy as any;
 const emits = defineEmits(["update:modelValue", "change", "click"])
 
 const props = defineProps({
@@ -116,12 +117,12 @@ const props = defineProps({
 })
 const leftPos = ref(0)
 const leftWidth = ref(0)
-let timid = uni.$tm.u.getUid()
+let timid = ((uni as any).$tm?.u?.getUid?.() ?? 0) as any
 const _list = computed(()=>{
 	let templist = [];
 	for(let i=0,len=props.list.length;i<len;i++){
 		let al:listitem = {text:'',id:i};
-		let el = props.list[i];
+		let el = props.list[i] as any;
 		if(typeof el == 'string'||typeof el == 'number'){
 		    al.text = el;
 		}else if(typeof el == 'object'){
@@ -186,9 +187,10 @@ function initPos(){
 	    nextTick(()=>getDomRectBound(indexel))
 	},300)
 }
-function getEl(el) {
+function getEl(el:any) {
     if (typeof el === 'string' || typeof el === 'number') return el;
-    if (WXEnvironment) {
+	const wxEnvironment = (globalThis as any).WXEnvironment;
+    if (wxEnvironment) {
         return el.ref;
     } else {
         return el instanceof HTMLElement ? el : el.$el;
@@ -196,10 +198,10 @@ function getEl(el) {
 }
 function getDomRectBound(idx: number) {
     // #ifdef APP-NVUE
-    dom.getComponentRect(proxy.$refs['tm-segtab'], function (PARENAREDS) {
+    dom.getComponentRect(proxy.$refs['tm-segtab'], function (PARENAREDS:any) {
         if (PARENAREDS?.size) {
             let parentleft = Math.floor((PARENAREDS.size.left ?? 0));
-            dom.getComponentRect(proxy.$refs['tab_'][idx], function (res) {
+            dom.getComponentRect(proxy.$refs['tab_'][idx], function (res:any) {
                 if (res?.size) {
                     const { left, top, width } = res.size
                     let domx = getEl(proxy.$refs['tmBgEl']);
@@ -222,12 +224,14 @@ function getDomRectBound(idx: number) {
     })
     // #endif
     // #ifndef APP-NVUE
-    uni.createSelectorQuery().in(proxy).select('.tm-segtab').boundingClientRect((nodeParent) => {
-        let parentleft = (nodeParent?.left ?? 0);
-        uni.createSelectorQuery().in(proxy).select('.tab' + idx).boundingClientRect((node) => {
-            if(!node) return;
-            leftPos.value = (node?.left ?? 0) - uni.upx2px(scaledGutter.value) - parentleft;
-            leftWidth.value = (node?.width ?? 0) - 0
+    uni.createSelectorQuery().in(proxy).select('.tm-segtab').boundingClientRect((nodeParent:any) => {
+		const parentNode = Array.isArray(nodeParent) ? nodeParent[0] : nodeParent;
+        let parentleft = (parentNode?.left ?? 0);
+        uni.createSelectorQuery().in(proxy).select('.tab' + idx).boundingClientRect((node:any) => {
+			const tabNode = Array.isArray(node) ? node[0] : node;
+            if(!tabNode) return;
+            leftPos.value = (tabNode?.left ?? 0) - uni.upx2px(scaledGutter.value) - parentleft;
+            leftWidth.value = (tabNode?.width ?? 0) - 0
         }).exec()
     }).exec()
     // #endif

@@ -16,12 +16,12 @@
  */
 import { computed, PropType, watchEffect,ref, toRaw,onMounted,nextTick, watch } from 'vue';
 import { showDetail,coltimeData,timeDetailType } from './interface'
-import * as dayjs from "../../tool/dayjs/esm/index"
+import dayjs from "../../tool/dayjs/esm/index"
 import timePanelVue from './time-panel.vue';
 
 const emits = defineEmits(['update:modelValue','update:modelStr','change'])
 const tmTimeViewName = "tmTimeViewName"
-const DayJs = dayjs.default;
+const DayJs = dayjs;
 const props = defineProps({
 	//这里是动态返回时间戳。这是一个标准的时间，不管showDetail是如何设置都将不影响这里的输出。
 	modelValue:{
@@ -46,8 +46,8 @@ const props = defineProps({
 	 * 现在暂时只禁用到天，也就是一个时间到天这如果==下面的禁用日期，就会选不中。
 	 */
 	disabledDate:{
-		type:Array as PropType<Array<Number|String|Date>>,
-		default:():Array<Number|String|Date>=>[]
+		type:Array as PropType<Array<number|string|Date>>,
+		default:():Array<number|string|Date>=>[]
 	},
 	//展示格式。最终影响到modelStr输出格式的内容。
 	format:{

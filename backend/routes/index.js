@@ -3,6 +3,8 @@
  */
 const express = require('express');
 const router = express.Router();
+const { getDatabase } = require('../db');
+const ConfigService = require('../config-service');
 
 // 健康检查
 router.get('/health', (req, res) => {
@@ -10,7 +12,16 @@ router.get('/health', (req, res) => {
 });
 
 // 前端启动配置接口（返回运行时配置）
-router.get('/config/bootstrap', (req, res) => {
+router.get('/config/bootstrap', async (req, res) => {
+	const db = getDatabase();
+	let analyticsSnippet = '';
+	try {
+		analyticsSnippet = await ConfigService.getAnalyticsSnippet(db);
+	} catch (e) {
+		console.warn('加载统计代码失败，使用空配置:', e.message);
+		analyticsSnippet = '';
+	}
+
 	res.json({
 		success: true,
 		data: {
@@ -20,6 +31,7 @@ router.get('/config/bootstrap', (req, res) => {
 				llmChat: true,
 				adminPanel: true,
 			},
+			analyticsSnippet,
 		},
 	});
 });

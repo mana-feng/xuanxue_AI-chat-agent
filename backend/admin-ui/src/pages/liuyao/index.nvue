@@ -10,7 +10,6 @@
 								<h1 class="page-title">六爻排盘</h1>
 								<p class="page-subtitle">与八字排盘一致的表单风格，填写后点击开始排盘，将在结果页展示</p>
 							</view>
-							<tm-tag type="primary" :round="8" label="Beta 体验"></tm-tag>
 						</view>
 
 						<LiuyaoBasicInfo
@@ -18,12 +17,8 @@
 							@update:title="val => (form.title = val)"
 							:timeLabel="form.timeLabel"
 							@update:timeLabel="val => (form.timeLabel = val)"
-							:questioner="form.questioner"
-							@update:questioner="val => (form.questioner = val)"
 							:gender="form.gender"
 							@update:gender="val => (form.gender = val)"
-							:location="form.location"
-							@update:location="val => (form.location = val)"
 							@openTimePicker="openTimePicker"
 							@useNowTime="useNowTime"
 						/>

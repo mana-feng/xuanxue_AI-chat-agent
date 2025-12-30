@@ -12,8 +12,8 @@ const router = express.Router();
 const { getDatabase } = require('../db');
 const { safeJsonParse } = require('../utils/helpers');
 const { authMiddleware } = require('../middleware/auth');
-const SecurityUtils = require('../security');
 const { apiSignatureMiddleware } = require('../middleware/api-signature');
+const SecurityUtils = require('../security');
 
 const db = getDatabase();
 
@@ -51,15 +51,19 @@ router.post('/', authMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	
 	let rawPayloadJson = null;
 	if (rawPayload) {
-		try {
-			const payloadStr = JSON.stringify(rawPayload);
-			if (payloadStr.length > 1000000) {
-				return res.status(400).json({ error: '数据过大，无法保存' });
+		if (typeof rawPayload === 'string') {
+			rawPayloadJson = rawPayload;
+		} else {
+			try {
+				const payloadStr = JSON.stringify(rawPayload);
+				if (payloadStr.length > 1000000) {
+					return res.status(400).json({ error: '数据过大，无法保存' });
+				}
+				rawPayloadJson = payloadStr;
+			} catch (e) {
+				console.error('序列化 rawPayload 失败:', e);
+				return res.status(400).json({ error: '数据格式错误，无法保存: ' + e.message });
 			}
-			rawPayloadJson = payloadStr;
-		} catch (e) {
-			console.error('序列化 rawPayload 失败:', e);
-			return res.status(400).json({ error: '数据格式错误，无法保存: ' + e.message });
 		}
 	}
 
@@ -141,14 +145,18 @@ router.put('/:id', authMiddleware, apiSignatureMiddleware(), async (req, res) =>
 	// 安全地序列化 rawPayload
 	let rawPayloadJson = null;
 	if (rawPayload) {
-		try {
-			const payloadStr = JSON.stringify(rawPayload);
-			if (payloadStr.length > 1000000) {
-				return res.status(400).json({ error: '数据过大，无法保存' });
+		if (typeof rawPayload === 'string') {
+			rawPayloadJson = rawPayload;
+		} else {
+			try {
+				const payloadStr = JSON.stringify(rawPayload);
+				if (payloadStr.length > 1000000) {
+					return res.status(400).json({ error: '数据过大，无法保存' });
+				}
+				rawPayloadJson = payloadStr;
+			} catch (e) {
+				return res.status(400).json({ error: '数据格式错误，无法保存: ' + e.message });
 			}
-			rawPayloadJson = payloadStr;
-		} catch (e) {
-			return res.status(400).json({ error: '数据格式错误，无法保存: ' + e.message });
 		}
 	}
 
@@ -356,4 +364,3 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 module.exports = router;
-

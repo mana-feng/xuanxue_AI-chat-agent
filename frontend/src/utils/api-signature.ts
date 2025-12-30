@@ -182,7 +182,14 @@ export function sanitizeRequestData(data: any): any {
 			} : null
 		};
 	}
+
+	if (sanitized.rawPayload && typeof sanitized.rawPayload === 'object') {
+		try {
+			sanitized.rawPayload = JSON.stringify(sanitized.rawPayload);
+		} catch (e) {
+			console.warn('序列化 rawPayload 失败', e);
+		}
+	}
 	
 	return sanitized;
 }
-

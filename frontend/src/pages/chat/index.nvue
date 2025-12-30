@@ -1,12 +1,17 @@
 <template>
-	<view class="chat-page-shell">
-		<yx-nav-header></yx-nav-header>
-		<chat-panel ref="panelRef" class="chat-panel-wrapper" @send="handleSend" />
-	</view>
+	<tm-app>
+		<view class="app-shell chat-page-container">
+			<yx-nav-header></yx-nav-header>
+			<view class="app-main chat-main-layout">
+				<chat-panel ref="panelRef" class="chat-panel-wrapper" :disable-auto-restore="shouldDisableRestore" @send="handleSend" />
+			</view>
+		</view>
+	</tm-app>
 </template>
 
 <script lang="ts" setup>
 import { ref, onMounted, nextTick } from 'vue';
+import { onLoad } from '@dcloudio/uni-app';
 import ChatPanel from '@/chat/ChatPanel.vue';
 import { request } from '@/services/api/index';
 import { getAccessToken } from '@/utils/tokenStore';
@@ -14,7 +19,9 @@ import { API_BASE_URL } from '@/config/config';
 import { useUserStore } from '@/store/user';
 import { useBaziStore } from '@/store/bazi';
 import { useYunStore } from '@/store/yun';
+import { useLiuyaoStore } from '@/store/liuyao';
 import { buildBaziExportPayload } from '@/utils/baziExport';
+import { buildLiuyaoExportPayload } from '@/utils/liuyaoExport';
 
 const panelRef = ref<InstanceType<typeof ChatPanel> | null>(null);
 const config = ref<{ provider: string; baseUrl: string; apiKey: string; model: string; extra?: string }>({
@@ -28,7 +35,19 @@ const config = ref<{ provider: string; baseUrl: string; apiKey: string; model: s
 const userStore = useUserStore();
 const baziStore = useBaziStore();
 const yunStore = useYunStore();
+const liuyaoStore = useLiuyaoStore();
+const chatContext = ref<'bazi' | 'liuyao'>('bazi');
 let firstSendDone = false;
+
+onLoad((options: any) => {
+	if (options?.from === 'liuyao') {
+		chatContext.value = 'liuyao';
+		shouldDisableRestore.value = true;
+	} else if (options?.from === 'bazi') {
+		chatContext.value = 'bazi';
+		shouldDisableRestore.value = true;
+	}
+});
 
 // 加载用户额度信息
 async function loadQuotaInfo() {
@@ -54,6 +73,9 @@ onMounted(() => {
 	// 延迟一下确保组件完全挂载
 	setTimeout(() => {
 		loadQuotaInfo();
+		if (chatContext.value === 'liuyao') {
+			panelRef.value?.appendAssistant('已为您加载六爻排盘结果，您可以让 AI 为您解读卦象。', 'ready');
+		}
 	}, 100);
 });
 
@@ -73,15 +95,25 @@ function buildMessages(text: string) {
 	const historyMessages = panel.getMessages();
 	const messages: Array<{ role: string; content: string }> = [];
 	
-	// 只在第一次发送时添加系统消息（八字信息）
+	// 只在第一次发送时添加系统消息（八字或六爻信息）
 	if (!firstSendDone) {
-		const payload = buildBaziExportPayload(userStore, baziStore, yunStore);
-		const baziJson = payload ? JSON.stringify(payload) : null;
-		if (baziJson) {
-			messages.push({
-				role: 'system',
-				content: `User Bazi profile (JSON): ${baziJson}`
-			});
+		if (chatContext.value === 'liuyao') {
+			const payload = buildLiuyaoExportPayload(liuyaoStore);
+			if (payload) {
+				messages.push({
+					role: 'system',
+					content: `User Liuyao result:\n${payload}`
+				});
+			}
+		} else {
+			const payload = buildBaziExportPayload(userStore, baziStore, yunStore);
+			const baziJson = payload ? JSON.stringify(payload) : null;
+			if (baziJson) {
+				messages.push({
+					role: 'system',
+					content: `User Bazi profile (JSON): ${baziJson}`
+				});
+			}
 		}
 		firstSendDone = true;
 	}
@@ -119,16 +151,35 @@ async function sendToLLM(text: string) {
 		// 后端已统一处理配置，前端不需要重新加载
 		const messages = buildMessages(text);
 		const token = getAccessToken();
+		
+		// 优先尝试 WebSocket
 		if (token) {
 			try {
 				await sendWithWS(messages, token);
+				return;
 			} catch (wsErr) {
-				// WebSocket 失败，回退到 HTTP
-				await sendWithHttp(messages);
+				console.warn('WebSocket 连接失败，尝试回退到 HTTP', wsErr);
+				// 仅在非生产环境提示 WS 错误，避免干扰用户
+				// panel.appendAssistant(`(WS连接失败: ${wsErr.message || '未知'}, 转为HTTP)`, 'error');
 			}
-		} else {
+		}
+
+		// 回退方案
+		// #ifdef H5
+		// H5 环境下尝试使用 fetch 实现流式
+		try {
+			await sendWithHttpStream(messages);
+		} catch (e) {
+			console.warn('HTTP 流式失败，回退到普通请求', e);
 			await sendWithHttp(messages);
 		}
+		// #endif
+
+		// #ifndef H5
+		// 非 H5 环境（如小程序）不支持 fetch 流式，只能回退到普通请求
+		await sendWithHttp(messages);
+		// #endif
+
 	} catch (err: any) {
 		console.error('调用大模型接口失败', err);
 		// 检查是否是额度错误
@@ -177,6 +228,108 @@ async function sendWithHttp(messages: Array<{ role: string; content: string }>) 
 		loadQuotaInfo();
 	}, 300);
 }
+
+// #ifdef H5
+async function sendWithHttpStream(messages: Array<{ role: string; content: string }>) {
+	const token = getAccessToken();
+	const headers: Record<string, string> = {
+		'Content-Type': 'application/json'
+	};
+	if (token) {
+		headers['Authorization'] = `Bearer ${token}`;
+	}
+
+	const response = await fetch(`${API_BASE_URL}/api/llm/chat`, {
+		method: 'POST',
+		headers,
+		body: JSON.stringify({
+			stream: true,
+			messages
+		})
+	});
+
+	if (!response.ok) {
+		const text = await response.text();
+		let errorMsg = text;
+		try {
+			const json = JSON.parse(text);
+			errorMsg = json.error || text;
+		} catch {
+			errorMsg = text;
+		}
+		throw new Error(errorMsg || `HTTP error ${response.status}`);
+	}
+
+	if (!response.body) {
+		throw new Error('ReadableStream not supported');
+	}
+
+	const reader = response.body.getReader();
+	const decoder = new TextDecoder();
+	const panel = panelRef.value;
+	if (!panel) return;
+
+	let buffer = '';
+	
+	let done = false;
+	while (!done) {
+		const result = await reader.read();
+		done = result.done;
+		const value = result.value;
+		if (done) break;
+		
+		const chunk = decoder.decode(value, { stream: true });
+		buffer += chunk;
+		
+		const lines = buffer.split('\n');
+		buffer = lines.pop() || ''; // 保留最后一个可能不完整的行
+		
+		for (const line of lines) {
+			if (!line.trim()) continue;
+			if (line.trim() === 'data: [DONE]') continue;
+			
+			// 解析 SSE 格式
+			if (line.startsWith('data: ')) {
+				const dataStr = line.slice(6);
+				try {
+					const data = JSON.parse(dataStr);
+					// 处理错误
+					if (data.error) {
+						panel.appendAssistant(`错误：${data.error}`, 'error');
+						continue;
+					}
+					
+					// 兼容 OpenAI 格式
+					let text = '';
+					if (data.choices && data.choices[0]?.delta?.content) {
+						text = data.choices[0].delta.content;
+					} else if (data.choices && data.choices[0]?.text) {
+						text = data.choices[0].text;
+					} else if (data.content) { // Anthropic
+						text = data.content;
+					} else if (data.candidates) { // Gemini
+						text = data.candidates[0]?.content?.parts?.[0]?.text || '';
+					}
+
+					if (text) {
+						const cleaned = cleanHtml(text);
+						if (cleaned) {
+							panel.appendAssistant(cleaned, 'stream');
+						}
+					}
+				} catch (e) {
+					// 忽略解析错误
+				}
+			}
+		}
+	}
+	
+	panel.finishStreaming();
+	setTimeout(() => {
+		loadQuotaInfo();
+	}, 300);
+}
+// #endif
 
 function getWsUrl() {
 	// 将 HTTP/HTTPS 转换为 WS/WSS
@@ -475,14 +628,39 @@ function extractReply(provider: string, data: any) {
 </script>
 
 <style scoped>
-.chat-page-shell {
-	min-height: 100vh;
-	background: #f3f4f6;
-	display: flex;
-	flex-direction: column;
+.chat-panel-wrapper {
+	width: 100%;
+	/* max-width: var(--page-max); 移除最大宽度限制，填满屏幕 */
+	flex: 1;
+	height: 100%;
 }
 
-.chat-panel-wrapper {
-	flex: 1;
+.chat-page-container {
+	height: 100vh;
+	overflow: hidden;
+}
+
+.chat-main-layout {
+	/* header-height: 48px (small) + safe-top */
+	/* bottom-nav-height: 64px + safe-bottom */
+	padding-top: calc(48px + var(--safe-top)) !important;
+	padding-bottom: calc(64px + var(--safe-bottom)) !important;
+	height: 100%;
+	width: 100vw;
+	display: flex;
+	flex-direction: column;
+	box-sizing: border-box;
+}
+
+@media (min-width: 640px) {
+	.chat-main-layout {
+		padding-top: calc(64px + var(--safe-top)) !important;
+	}
+}
+
+@media (min-width: 900px) {
+	.chat-main-layout {
+		padding-bottom: calc(72px + var(--safe-bottom)) !important;
+	}
 }
 </style>

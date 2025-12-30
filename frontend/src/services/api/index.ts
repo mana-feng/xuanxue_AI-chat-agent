@@ -85,12 +85,9 @@ async function refreshAccessToken(): Promise<void> {
 				device_id: deviceId,
 			};
 
-			// 只有非 H5 平台才传 refresh_token
-			// #ifndef H5
 			if (refreshToken) {
 				requestData.refresh_token = refreshToken;
 			}
-			// #endif
 
 			const res = await new Promise<any>((resolve, reject) => {
 				uni.request({

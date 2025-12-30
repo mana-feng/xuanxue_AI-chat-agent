@@ -42,23 +42,32 @@ export function timeQiGua(date?: Date) {
 	const d = date || new Date();
 	const solar = Solar.fromDate(d);
 	const lunar = solar.getLunar();
+	const mod = (value: number, base: number) => ((value % base) + base) % base;
 
 	const zhiMap: Record<string, number> = {
 		'子': 1, '丑': 2, '寅': 3, '卯': 4, '辰': 5, '巳': 6,
 		'午': 7, '未': 8, '申': 9, '酉': 10, '戌': 11, '亥': 12
 	};
 
-	const yearZhi = lunar.getEightChar().getYearZhi();
+	const yearZhi = String(
+		typeof (lunar as any).getEightChar === 'function'
+			? (lunar as any).getEightChar().getYearZhi()
+			: (lunar as any).getYearZhi?.()
+	);
 	const yearNum = zhiMap[yearZhi] || 1;
-	const monthNum = lunar.getMonth();
+	const rawMonth = lunar.getMonth();
+	const isLeapMonth = typeof (lunar as any).isLeap === 'function' ? (lunar as any).isLeap() : rawMonth < 0;
+	const monthNum = isLeapMonth ? Math.abs(rawMonth) + 12 : Math.abs(rawMonth);
 	const dayNum = lunar.getDay();
 
 	const hourZhi = lunar.getTimeZhi();
 	const hourNum = zhiMap[hourZhi] || 1;
 
-	const shangGua = (yearNum + monthNum + dayNum) % 8 || 8;
-	const xiaGua = (yearNum + monthNum + dayNum + hourNum) % 8 || 8;
-	const dongYao = (yearNum + monthNum + dayNum + hourNum) % 6 || 6;
+	const sumBase = yearNum + monthNum + dayNum;
+	const sumWithHour = sumBase + hourNum;
+	const shangGua = mod(sumBase, 8) || 8;
+	const xiaGua = mod(sumWithHour, 8) || 8;
+	const dongYao = mod(sumWithHour, 6) || 6;
 
 	const guaMap: Record<number, string> = {
 		1: '111',
@@ -104,4 +113,3 @@ export function autoQiGua() {
 	}
 	return params;
 }
-

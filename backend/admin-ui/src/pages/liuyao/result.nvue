@@ -10,7 +10,6 @@
 								<h1 class="page-title">六爻排盘结果</h1>
 								<p class="page-subtitle">查看已生成的卦象、六爻明细与卦辞</p>
 							</view>
-							<tm-tag type="primary" :round="8" label="结果页"></tm-tag>
 						</view>
 
 						<view v-if="!compiled || !display" class="section empty-state">
@@ -191,8 +190,6 @@ const summaryTiles = computed(() => {
 	const xkong = compiled.value?.lunar?.xkong || '';
 	return [
 		{ label: '起卦主题', value: p.title || '—' },
-		{ label: '问卦人', value: p.questioner || '—' },
-		{ label: '所在位置', value: p.location || '—' },
 		{ label: '性别', value: p.gender || '—' },
 		{ label: '起卦时间', value: p.timeLabel || '—' },
 		{ label: '年干支', value: gz.year || '—' },
@@ -324,10 +321,8 @@ function buildExportPayload() {
 	const p = profile.value;
 	const basic: Record<string, any> = {
 		title: p?.title || '',
-		questioner: p?.questioner || '',
 		method: p?.method || '',
 		gender: p?.gender || '',
-		location: p?.location || '',
 		dayGanZhi: p?.dayGanZhi || '',
 		timeLabel: p?.timeLabel || '',
 		focus: p?.focus || '',

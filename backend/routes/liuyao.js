@@ -35,7 +35,7 @@ router.post('/', authMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	}
 
 	if (!rawPayload) {
-		console.warn('保存六爻记录失败: 缺少 rawPayload', JSON.stringify(req.body));
+		console.warn('保存六爻记录失败: 缺少 rawPayload');
 		return res.status(400).json({ error: '缺少排盘数据 rawPayload' });
 	}
 

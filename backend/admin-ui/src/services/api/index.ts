@@ -85,12 +85,9 @@ async function refreshAccessToken(): Promise<void> {
 				device_id: deviceId,
 			};
 
-			// 只有非 H5 平台才传 refresh_token
-			// #ifndef H5
 			if (refreshToken) {
 				requestData.refresh_token = refreshToken;
 			}
-			// #endif
 
 			const res = await new Promise<any>((resolve, reject) => {
 				uni.request({
@@ -193,7 +190,9 @@ export function request<T = any>(
 			};
 			
 			// 为需要认证的请求添加签名（POST/PUT/DELETE）
-			if (needAuth && (method === 'POST' || method === 'PUT' || method === 'DELETE')) {
+            // 注意：登录接口 (/api/auth/login) 虽然不需要 Authorization，但也需要签名来防止重放攻击
+            // 如果后端开启了强制签名，那么所有 POST 请求都必须签名
+			if (method === 'POST' || method === 'PUT' || method === 'DELETE') {
 				try {
 					const signed = await signRequest(sanitizedData, requestHeaders);
 					Object.assign(requestHeaders, signed.headers);

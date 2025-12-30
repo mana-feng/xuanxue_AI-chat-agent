@@ -34,14 +34,15 @@
 				</view>
 				
 				<!-- 记录列表 -->
-				<view class="record-list">
+				<view class="responsive-list-container" style="margin-bottom: 40rpx;">
 					<tm-sheet
 						v-for="record in recordList"
 						:key="record.id"
 						:round="4"
 						:shadow="2"
 						:padding="[20, 20]"
-						:margin="[0, 0, 20, 0]"
+						:margin="[0, 0, 0, 0]"
+						class="responsive-list-item"
 					>
 						<view class="record-header">
 							<view class="record-info">
@@ -580,6 +581,10 @@ async function handleViewDetail(recordId: number) {
 	padding: 20rpx;
 }
 
+@media (min-width: 900px) {
+	/* .form-grid is replaced by responsive-form-grid-md-2 in global css */
+}
+
 .form-item {
 	margin-bottom: 20rpx;
 }
@@ -609,10 +614,6 @@ async function handleViewDetail(recordId: number) {
 	border-radius: 8rpx;
 	max-height: 400rpx;
 	overflow-y: auto;
-}
-
-.record-list {
-	margin-bottom: 40rpx;
 }
 
 .record-header {

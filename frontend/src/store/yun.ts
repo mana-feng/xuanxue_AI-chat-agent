@@ -321,9 +321,13 @@ export const useYunStore = defineStore('yun', {
 
 				const lunar = currentSolar.getLunar();
 				const ganzhi = lunar.getDayInGanZhi();
+				const dayInChinese = lunar.getDayInChinese();
+				const lunarAny = lunar as unknown as { getMonthInChinese?: () => string };
+				const monthInChinese =
+					typeof lunarAny.getMonthInChinese === 'function' ? lunarAny.getMonthInChinese() : '';
 				const params = {
 					date: currentSolar.toYmd().replace(/-/g, '/'),
-					nongli: lunar.getDayInChinese(),
+					nongli: dayInChinese === '初一' && monthInChinese ? `${monthInChinese}月` : dayInChinese,
 					gan: lunar.getDayGan(),
 					zhi: lunar.getDayZhi(),
 					ganzhi: ganzhi,

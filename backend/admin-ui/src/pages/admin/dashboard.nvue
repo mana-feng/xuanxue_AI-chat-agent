@@ -39,12 +39,12 @@
 				</view>
 				
 				<!-- 统计卡片 -->
-				<view class="stats-grid" v-if="stats">
+				<view class="responsive-list-container" style="margin-bottom: 40rpx;" v-if="stats">
 					<tm-sheet
 						:round="16"
 						:shadow="4"
 						:padding="[32, 28]"
-						class="stat-card stat-card-primary"
+						class="stat-card stat-card-primary responsive-grid-item-stat"
 					>
 						<tm-text
 							:font-size="26"
@@ -64,7 +64,7 @@
 						:round="16"
 						:shadow="4"
 						:padding="[32, 28]"
-						class="stat-card stat-card-success"
+						class="stat-card stat-card-success responsive-grid-item-stat"
 					>
 						<tm-text
 							:font-size="26"
@@ -84,7 +84,7 @@
 						:round="16"
 						:shadow="4"
 						:padding="[32, 28]"
-						class="stat-card stat-card-warning"
+						class="stat-card stat-card-warning responsive-grid-item-stat"
 					>
 						<tm-text
 							:font-size="26"
@@ -104,7 +104,7 @@
 						:round="16"
 						:shadow="4"
 						:padding="[32, 28]"
-						class="stat-card stat-card-info"
+						class="stat-card stat-card-info stat-item"
 					>
 						<tm-text
 							:font-size="26"
@@ -130,166 +130,199 @@
 						:margin="[0, 0, 20, 0]"
 					></tm-text>
 					
-					<tm-sheet
-						:round="4"
-						:shadow="2"
-						:padding="[20, 20]"
-						:margin="[0, 0, 20, 0]"
-						@tap="goToUsers"
-					>
-						<view class="menu-item">
+					<view class="responsive-list-container">
+						<tm-sheet
+							:round="4"
+							:shadow="2"
+							:padding="[20, 20]"
+							:margin="[0, 0, 0, 0]"
+							class="menu-item-card responsive-grid-item-dense"
+							@tap="goToUsers"
+						>
+							<view class="menu-item">
+								<tm-text
+									:font-size="28"
+									:bold="true"
+									label="用户管理"
+								></tm-text>
+								<tm-icon name="chevron-right" :font-size="24"></tm-icon>
+							</view>
 							<tm-text
-								:font-size="28"
-								:bold="true"
-								label="用户管理"
+								class="mt-8"
+								:font-size="22"
+								color="#999"
+								label="查看和管理所有用户账号"
 							></tm-text>
-							<tm-icon name="chevron-right" :font-size="24"></tm-icon>
-						</view>
-						<tm-text
-							class="mt-8"
-							:font-size="22"
-							color="#999"
-							label="查看和管理所有用户账号"
-						></tm-text>
-					</tm-sheet>
-					
-					<tm-sheet
-						:round="4"
-						:shadow="2"
-						:padding="[20, 20]"
-						:margin="[0, 0, 20, 0]"
-						@tap="goToRecords"
-					>
-						<view class="menu-item">
+						</tm-sheet>
+						
+						<tm-sheet
+							:round="4"
+							:shadow="2"
+							:padding="[20, 20]"
+							:margin="[0, 0, 0, 0]"
+							class="menu-item-card responsive-grid-item-dense"
+							@tap="goToRecords"
+						>
+							<view class="menu-item">
+								<tm-text
+									:font-size="28"
+									:bold="true"
+									label="八字记录管理"
+								></tm-text>
+								<tm-icon name="chevron-right" :font-size="24"></tm-icon>
+							</view>
 							<tm-text
-								:font-size="28"
-								:bold="true"
-								label="八字记录管理"
+								class="mt-8"
+								:font-size="22"
+								color="#999"
+								label="查看和管理所有八字排盘记录"
 							></tm-text>
-							<tm-icon name="chevron-right" :font-size="24"></tm-icon>
-						</view>
-						<tm-text
-							class="mt-8"
-							:font-size="22"
-							color="#999"
-							label="查看和管理所有八字排盘记录"
-						></tm-text>
-					</tm-sheet>
+						</tm-sheet>
 
-					<tm-sheet
-						:round="4"
-						:shadow="2"
-						:padding="[20, 20]"
-						:margin="[0, 0, 20, 0]"
-						@tap="goToLiuyaoRecords"
-					>
-						<view class="menu-item">
+						<tm-sheet
+							:round="4"
+							:shadow="2"
+							:padding="[20, 20]"
+							:margin="[0, 0, 0, 0]"
+							class="menu-item-card"
+							@tap="goToLiuyaoRecords"
+						>
+							<view class="menu-item">
+								<tm-text
+									:font-size="28"
+									:bold="true"
+									label="六爻记录管理"
+								></tm-text>
+								<tm-icon name="chevron-right" :font-size="24"></tm-icon>
+							</view>
 							<tm-text
-								:font-size="28"
-								:bold="true"
-								label="六爻记录管理"
+								class="mt-8"
+								:font-size="22"
+								color="#999"
+								label="查看和管理所有六爻排盘记录"
 							></tm-text>
-							<tm-icon name="chevron-right" :font-size="24"></tm-icon>
-						</view>
-						<tm-text
-							class="mt-8"
-							:font-size="22"
-							color="#999"
-							label="查看和管理所有六爻排盘记录"
-						></tm-text>
-					</tm-sheet>
+						</tm-sheet>
 
-					<tm-sheet
-						:round="4"
-						:shadow="2"
-						:padding="[20, 20]"
-						:margin="[0, 0, 20, 0]"
-						@tap="goToAnnouncements"
-					>
-						<view class="menu-item">
+						<tm-sheet
+							:round="4"
+							:shadow="2"
+							:padding="[20, 20]"
+							:margin="[0, 0, 0, 0]"
+							class="menu-item-card"
+							@tap="goToAnnouncements"
+						>
+							<view class="menu-item">
+								<tm-text
+									:font-size="28"
+									:bold="true"
+									label="公告管理"
+								></tm-text>
+								<tm-icon name="chevron-right" :font-size="24"></tm-icon>
+							</view>
 							<tm-text
-								:font-size="28"
-								:bold="true"
-								label="公告管理"
+								class="mt-8"
+								:font-size="22"
+								color="#999"
+								label="配置前端公告（标题/内容/到期）"
 							></tm-text>
-							<tm-icon name="chevron-right" :font-size="24"></tm-icon>
-						</view>
-						<tm-text
-							class="mt-8"
-							:font-size="22"
-							color="#999"
-							label="配置前端公告（标题/内容/到期）"
-						></tm-text>
-					</tm-sheet>
+						</tm-sheet>
 
-					<tm-sheet
-						:round="4"
-						:shadow="2"
-						:padding="[20, 20]"
-						:margin="[0, 0, 20, 0]"
-						@tap="goToEmailConfig"
-					>
-						<view class="menu-item">
+						<tm-sheet
+							:round="4"
+							:shadow="2"
+							:padding="[20, 20]"
+							:margin="[0, 0, 0, 0]"
+							class="menu-item-card"
+							@tap="goToEmailConfig"
+						>
+							<view class="menu-item">
+								<tm-text
+									:font-size="28"
+									:bold="true"
+									label="邮箱服务配置"
+								></tm-text>
+								<tm-icon name="chevron-right" :font-size="24"></tm-icon>
+							</view>
 							<tm-text
-								:font-size="28"
-								:bold="true"
-								label="邮箱服务配置"
+								class="mt-8"
+								:font-size="22"
+								color="#999"
+								label="后台设置验证码邮箱服务（仅管理员）"
 							></tm-text>
-							<tm-icon name="chevron-right" :font-size="24"></tm-icon>
-						</view>
-						<tm-text
-							class="mt-8"
-							:font-size="22"
-							color="#999"
-							label="后台设置验证码邮箱服务（仅管理员）"
-						></tm-text>
-					</tm-sheet>
+						</tm-sheet>
 
-					<tm-sheet
-						:round="4"
-						:shadow="2"
-						:padding="[20, 20]"
-						:margin="[0, 0, 20, 0]"
-						@tap="goToLLMConfig"
-					>
-						<view class="menu-item">
+						<tm-sheet
+							:round="4"
+							:shadow="2"
+							:padding="[20, 20]"
+							:margin="[0, 0, 0, 0]"
+							class="menu-item-card"
+							@tap="goToAnalyticsSnippet"
+						>
+							<view class="menu-item">
+								<tm-text
+									:font-size="28"
+									:bold="true"
+									label="统计代码管理"
+								></tm-text>
+								<tm-icon name="chevron-right" :font-size="24"></tm-icon>
+							</view>
 							<tm-text
-								:font-size="28"
-								:bold="true"
-								label="大模型管理"
+								class="mt-8"
+								:font-size="22"
+								color="#999"
+								label="配置全站的浏览统计脚本"
 							></tm-text>
-							<tm-icon name="chevron-right" :font-size="24"></tm-icon>
-						</view>
-						<tm-text
-							class="mt-8"
-							:font-size="22"
-							color="#999"
-							label="配置聊天界面对接的 API 信息"
-						></tm-text>
-					</tm-sheet>
+						</tm-sheet>
 
-					<tm-sheet
-						:round="4"
-						:shadow="2"
-						:padding="[20, 20]"
-						:margin="[0, 0, 20, 0]"
-						@tap="goToLLMQuota"
-					>
-						<view class="menu-item">
+						<tm-sheet
+							:round="4"
+							:shadow="2"
+							:padding="[20, 20]"
+							:margin="[0, 0, 0, 0]"
+							class="menu-item-card"
+							@tap="goToLLMConfig"
+						>
+							<view class="menu-item">
+								<tm-text
+									:font-size="28"
+									:bold="true"
+									label="大模型管理"
+								></tm-text>
+								<tm-icon name="chevron-right" :font-size="24"></tm-icon>
+							</view>
 							<tm-text
-								:font-size="28"
-								:bold="true"
-								label="AI额度管理"
+								class="mt-8"
+								:font-size="22"
+								color="#999"
+								label="配置聊天界面对接的 API 信息"
 							></tm-text>
-							<tm-icon name="chevron-right" :font-size="24"></tm-icon>
-						</view>
-						<tm-text
-							class="mt-8"
-							:font-size="22"
-							color="#999"
-							label="管理每个用户的AI解答额度"
-						></tm-text>
-					</tm-sheet>
+						</tm-sheet>
+
+						<tm-sheet
+							:round="4"
+							:shadow="2"
+							:padding="[20, 20]"
+							:margin="[0, 0, 0, 0]"
+							class="menu-item-card responsive-grid-item-dense"
+							@tap="goToLLMQuota"
+						>
+							<view class="menu-item">
+								<tm-text
+									:font-size="28"
+									:bold="true"
+									label="AI额度管理"
+								></tm-text>
+								<tm-icon name="chevron-right" :font-size="24"></tm-icon>
+							</view>
+							<tm-text
+								class="mt-8"
+								:font-size="22"
+								color="#999"
+								label="管理每个用户的AI解答额度"
+							></tm-text>
+						</tm-sheet>
+					</view>
 				</view>
 				</view>
 			</view>
@@ -392,6 +425,12 @@ function goToEmailConfig() {
 	});
 }
 
+function goToAnalyticsSnippet() {
+	uni.navigateTo({
+		url: '/pages/admin/analytics-snippet'
+	});
+}
+
 function goToHome() {
 	uni.reLaunch({
 		url: '/pages/admin/dashboard'
@@ -432,19 +471,6 @@ function handleLogout() {
 	flex-direction: row;
 	align-items: center;
 	gap: 12rpx;
-}
-
-.stats-grid {
-	display: flex;
-	flex-direction: row;
-	flex-wrap: wrap;
-	margin-bottom: 40rpx;
-	gap: 20rpx;
-}
-
-.stats-grid > view {
-	flex: 1 1 calc(50% - 20rpx);
-	min-width: 320rpx;
 }
 
 .stat-card {

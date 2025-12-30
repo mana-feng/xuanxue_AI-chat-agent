@@ -1,15 +1,43 @@
 import { defineConfig, loadEnv } from "vite";
 import path from "path";
+import fs from "fs";
 import uni from "@dcloudio/vite-plugin-uni";
 import progress from "vite-plugin-progress";
 
 export default defineConfig(({ mode }) => {
 	const env = loadEnv(mode, __dirname);
-	const devPort = Number(env.VITE_DEV_PORT) || 3000;
+	const devPort = Number(process.env.VITE_DEV_PORT || env.VITE_DEV_PORT) || 3000;
+	const apiTarget = env.VITE_API_PROXY_TARGET || "https://localhost:3001";
+	const httpsKeyPath = path.resolve(__dirname, "../cert/localhost-key.pem");
+	const httpsCertPath = path.resolve(__dirname, "../cert/localhost.pem");
+	const viteDevHttps = process.env.VITE_DEV_HTTPS || env.VITE_DEV_HTTPS;
+	const httpsEnabled =
+		fs.existsSync(httpsKeyPath) && fs.existsSync(httpsCertPath) && viteDevHttps !== "false";
 
 	return {
 		server: {
 			port: devPort,
+			strictPort: true,
+			https: httpsEnabled
+				? {
+						key: fs.readFileSync(httpsKeyPath),
+						cert: fs.readFileSync(httpsCertPath),
+					}
+				: undefined,
+			proxy: {
+				"/api": {
+					target: apiTarget,
+					changeOrigin: true,
+					secure: false,
+					ws: true,
+				},
+			},
+			hmr: {
+				overlay: false,
+				protocol: "wss",
+				clientHost: "localhost",
+				clientPort: 3000,
+			},
 		},
 		resolve: {
 			alias: {

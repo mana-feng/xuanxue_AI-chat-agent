@@ -123,7 +123,7 @@
 					<view v-else-if="list.length === 0" class="py-10">
 						<tm-text label="暂无公告" color="#999"></tm-text>
 					</view>
-					<view v-else>
+					<view v-else class="announcement-list">
 						<tm-sheet
 							v-for="item in list"
 							:key="item.id"
@@ -131,6 +131,7 @@
 							:padding="[18, 16]"
 							:margin="[0, 0, 16, 0]"
 							:shadow="1"
+							class="list-item"
 						>
 							<view class="item-header">
 								<tm-text :font-size="28" bold :label="item.title"></tm-text>

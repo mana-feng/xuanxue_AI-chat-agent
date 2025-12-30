@@ -10,7 +10,6 @@
 								<h1 class="page-title">六爻排盘结果</h1>
 								<p class="page-subtitle">查看已生成的卦象、六爻明细与卦辞</p>
 							</view>
-							<tm-tag type="primary" :round="8" label="结果页"></tm-tag>
 						</view>
 
 						<view v-if="!compiled || !display" class="section empty-state">
@@ -33,32 +32,41 @@
 								</view>
 							</view>
 
-							<view class="actions-row">
+							<view class="actions-bar">
 								<tm-button
-									type="primary"
 									:round="12"
-									:padding="[24, 18]"
-									icon="tmicon-md-cloud-upload"
-									label="保存排盘"
+									:margin="[0, 0]"
+									:padding="[24, 20]"
+									:font-size="28"
+									:bold="true"
+									type="primary"
+									label="保存到账号"
+									icon="tmicon-md-save"
 									@tap="handleAction('save')"
 								></tm-button>
 								<tm-button
-									type="grey"
 									:round="12"
-									:padding="[24, 18]"
-									icon="tmicon-md-copy"
+									:margin="[0, 0]"
+									:padding="[24, 20]"
+									:font-size="28"
+									type="primary"
 									label="复制排盘"
+									icon="tmicon-md-copy"
 									@tap="handleAction('copy')"
 								></tm-button>
 								<tm-button
-									type="primary"
 									:round="12"
-									:padding="[24, 18]"
-									icon="tmicon-md-create"
-									label="AI 解读"
+									:margin="[0, 0]"
+									:padding="[24, 20]"
+									:font-size="28"
+									type="primary"
+									label="AI解读"
+									icon="tmicon-md-bulb"
 									@tap="handleAction('ai')"
 								></tm-button>
 							</view>
+
+
 
 							<view class="section gua-overview">
 								<header class="section__header">
@@ -194,6 +202,7 @@ import ParamPreview from '@/components/liuyao/ParamPreview.vue';
 import { getGuaName as getGuaciGuaName, getCanonicalNameByName } from '@/features/liuyao/guaci';
 import { SYMBOL } from '@/features/liuyao/najiaConst';
 import { setShiYao } from '@/features/liuyao/najiaCore';
+import { buildLiuyaoExportPayload } from '@/utils/liuyaoExport';
 
 type ActionType = 'save' | 'copy' | 'ai';
 const liuyaoStore = useLiuyaoStore();
@@ -209,8 +218,6 @@ const summaryTiles = computed(() => {
 	if (!p) return [];
 	return [
 		{ label: '起卦主题', value: p.title || '—' },
-		{ label: '问卦人', value: p.questioner || '—' },
-		{ label: '所在位置', value: p.location || '—' },
 		{ label: '性别', value: p.gender || '—' },
 		{ label: '起卦时间', value: p.timeLabel || '—' }
 	];
@@ -380,96 +387,16 @@ const bianParams = computed(() => {
 	return mark.split('').map((ch: string) => parseInt(ch, 10) || 0);
 });
 
-function buildCopyText() {
-	const p = profile.value;
-	const c = compiled.value;
-	if (!p || !c) return '';
-
-	const lines: string[] = [];
-	
-	let timeStr = p.timeLabel || '';
-	if (timeStr.includes('-')) {
-		const parts = timeStr.split(/[- :]/);
-		if (parts.length >= 5) {
-			timeStr = `${parts[0]}年${parts[1]}月${parts[2]}日 ${parts[3]}:${parts[4]}`;
-		}
-	}
-	lines.push(timeStr);
-	lines.push(` 占问： ${p.title || '—'}`);
-	
-	const gz = c.lunar?.gz;
-	const xkong = c.lunar?.xkong || '—';
-	lines.push(` ${gz?.year}年 ${gz?.month}月 ${gz?.day}日 ${gz?.hour}时 (旬空：${xkong})`);
-	
-	const mainType = guaOverview.value.main.type !== '—' ? `(${guaOverview.value.main.type})` : '';
-	lines.push(` 本卦：${guaOverview.value.main.name}/${guaOverview.value.main.palace}${mainType}`);
-	
-	if (c.bian) {
-		const bianType = guaOverview.value.changed.type !== '—' ? `(${guaOverview.value.changed.type})` : '';
-		lines.push(` 变卦：${guaOverview.value.changed.name}/${guaOverview.value.changed.palace}${bianType}`);
-	}
-	
-	yaoRows.value.forEach((row, index) => {
-		const paramIndex = 5 - index;
-		const param = c.params?.[paramIndex];
-		
-		let symbol = '— '; 
-		let marker = ' ';
-		
-		if (String(param) === '0') { 
-			symbol = '--';
-			marker = ' ';
-		} else if (String(param) === '1') { 
-			symbol = '— ';
-			marker = ' ';
-		} else if (String(param) === '3') { 
-			symbol = '— ';
-			marker = 'o';
-		} else if (String(param) === '4') { 
-			symbol = '--';
-			marker = 'x';
-		}
-		
-		const god = row.liushen || '　';
-		
-		let hidden = row.hidden || '　　';
-		if (hidden === '—') hidden = '　　';
-		if (!hidden.trim()) hidden = '　　';
-		
-		// Ensure relation is not '—'
-		let relation = row.relation || '　　';
-		if (relation === '—') relation = '　　';
-		
-		const role = row.mainRole || '　';
-		
-		let bianStr = '';
-		if (c.bian) {
-			// Re-fetch binary relation directly to avoid '—' from formatDisplay in yaoRows
-			const bQin = c.bian.qin6?.[paramIndex]?.trim() || '';
-			const bDz = c.bian.qinx?.[paramIndex]?.trim() || '';
-			const bRel = bQin || bDz ? `${bQin}${bDz}` : '　　';
-			
-			let bSym = '　 ';
-			// Check binary symbol from row data (which is derived from bian mark)
-			if (row.bianSymbol && row.bianSymbol.includes('━ ━')) bSym = '--';
-			else if (row.bianSymbol && row.bianSymbol.includes('━━━')) bSym = '— ';
-			
-			const bRole = row.bianRole || '　';
-			bianStr = ` ${bRel} ${bSym} ${bRole}`;
-		}
-		
-		lines.push(` ${god} ${hidden} ${relation} ${symbol} ${marker} ${role}${bianStr}`);
-	});
-	
-	return lines.join('\n');
-}
-
 function copyLiuyaoInfo() {
 	if (!compiled.value) {
 		uni.showToast({ title: '暂无数据', icon: 'none' });
 		return;
 	}
-	const text = buildCopyText();
+	const text = buildLiuyaoExportPayload(liuyaoStore);
+	if (!text) {
+		uni.showToast({ title: '复制失败', icon: 'none' });
+		return;
+	}
 	uni.setClipboardData({
 		data: text,
 		success: () => uni.showToast({ title: '排盘信息已复制', icon: 'none' })
@@ -501,11 +428,45 @@ async function saveLiuyao() {
 		
 		try {
 			const recordTime = liuyaoStore.createdAt || Date.now();
+			
+			// 尝试获取或重构 params
+			let params = c.params;
+			if ((!params || !Array.isArray(params)) && c.mark) {
+				// 如果没有 params，尝试从 mark 和 dong 重构
+				// mark 是二进制字符串（如 '111000'），dong 是动爻索引数组
+				const markArr = c.mark.split('');
+				const dongArr = c.dong || [];
+				
+				params = markArr.map((bit, index) => {
+					const isYang = bit === '1';
+					const isDong = dongArr.includes(index);
+					
+					if (isDong) {
+						// 动爻：原为阳(1)则为老阳(3)，原为阴(0)则为老阴(4)
+						// 注意：这里需要确认 najiaCore 的定义
+						// 根据 najiaCore.ts:
+						// 3: Old Yang (starts Yang, becomes Yin) -> 3%2=1 (Yang)
+						// 4: Old Yin (starts Yin, becomes Yang) -> 4%2=0 (Yin)
+						// 所以如果 mark 是 '1' (Yang) 且动，则是 3
+						// 如果 mark 是 '0' (Yin) 且动，则是 4
+						return isYang ? 3 : 4;
+					} else {
+						// 静爻：阳(1)则为1，阴(0)则为0
+						return isYang ? 1 : 0;
+					}
+				});
+			}
+
+			if (!params || !Array.isArray(params) || params.length !== 6) {
+				throw new Error('无法获取有效的卦爻参数');
+			}
+
 			// 构造精简版数据（Lite Mode）
-			// 只保存用于重新计算的参数，不保存完整的计算结果
+			// 仅保存原卦和变卦的编号（通过 params 隐含），以及其他基础信息
+			// 倒回时由前端进行计算
 			rawPayload = {
 				lite: true,
-				params: c.params,
+				params: params,
 				options: {
 					gender: c.gender || p.gender,
 					title: c.title || p.title,
@@ -516,19 +477,16 @@ async function saveLiuyao() {
 				ts: recordTime
 			};
 		} catch (e) {
-			console.warn('构造精简数据失败，降级为完整数据', e);
-			rawPayload = {
-				profile: p,
-				compiled: c,
-				ts: liuyaoStore.createdAt,
-				p: c.params
-			};
+			console.error('构造精简数据失败', e);
+			uni.showToast({ title: '数据处理失败，无法保存', icon: 'none' });
+			saving.value = false;
+			return;
 		}
 
 		const requestData = {
 			title: p.title || '六爻排盘',
 			type: 'liuyao',
-			name: p.questioner || p.title || '佚名',
+			name: p.title || '佚名',
 			gender: p.gender === '男' ? '0' : (p.gender === '女' ? '1' : null),
 			birthDatetime: new Date(liuyaoStore.createdAt || Date.now()).toISOString(),
 			calendarType: 'solar',
@@ -560,8 +518,17 @@ function handleAction(action: ActionType) {
 		saveLiuyao();
 		return;
 	}
+	if (action === 'ai') {
+		if (!liuyaoStore.compiled) {
+			uni.showToast({ title: '暂无排盘数据', icon: 'none' });
+			return;
+		}
+		uni.navigateTo({
+			url: '/pages/chat/index?from=liuyao'
+		});
+		return;
+	}
 	const messageMap: Partial<Record<ActionType, string>> = {
-		ai: 'AI 解读将复用聊天页，敬请期待'
 	};
 	uni.showToast({
 		title: messageMap[action] || '功能待接入',
@@ -575,8 +542,8 @@ function goStart() {
 }
 
 onShow(() => {
-	if (!liuyaoStore.compiled) {
-		// 若无数据，保持空状态
+	if (!liuyaoStore.compiled || !liuyaoStore.display || !liuyaoStore.profile) {
+		liuyaoStore.restoreLastResult();
 	}
 });
 </script>
@@ -632,14 +599,11 @@ onShow(() => {
 	flex-direction: column;
 }
 
-.page-liuyao-result .detail-card .page-title-wrapper {
-	margin-bottom: 6px;
-	padding-bottom: 8px;
-	gap: 8px;
-	align-items: flex-start;
-	flex-direction: column;
-	border-bottom: 1px dashed #e5e7eb;
-}
+/* 
+	底部操作栏样式
+	移动到顶部标题栏右侧
+*/
+
 
 .page-liuyao-result .section {
 	background: #ffffff;
@@ -696,67 +660,15 @@ onShow(() => {
 	background: #f8fafc;
 }
 
-.page-liuyao-result .actions-row {
+.page-liuyao-result .actions-bar {
 	display: flex;
-	gap: 12px;
-	flex-direction: column;
-	align-items: stretch;
-	justify-content: center;
-}
-
-.page-liuyao-result .actions-row :deep(.tm-button) {
-	display: inline-flex !important;
-	width: 100% !important;
-	min-width: 0 !important;
-	flex: 1 1 auto !important;
-}
-
-.page-liuyao-result .actions-row :deep(.tm-button__body) {
-	display: inline-flex !important;
-	width: 100% !important;
-}
-
-@media (min-width: 720px) {
-	.page-liuyao-result .actions-row {
-		flex-direction: row;
-		flex-wrap: nowrap;
-		align-items: center;
-		justify-content: flex-start;
-		overflow-x: auto;
-	}
-
-	.page-liuyao-result .actions-row :deep(.tm-button) {
-		width: auto !important;
-		flex: 0 0 auto !important;
-		max-width: none !important;
-		white-space: nowrap;
-	}
-
-	.page-liuyao-result .actions-row :deep(.tm-button__body) {
-		width: auto !important;
-	}
-}
-
-.layout-medium .page-liuyao-result .actions-row,
-.layout-wide .page-liuyao-result .actions-row {
 	flex-direction: row;
-	flex-wrap: nowrap;
+	gap: 12px;
 	align-items: center;
 	justify-content: flex-start;
-	overflow-x: auto;
-}
-
-.layout-medium .page-liuyao-result .actions-row :deep(.tm-button),
-.layout-wide .page-liuyao-result .actions-row :deep(.tm-button) {
-	width: auto !important;
-	flex: 0 0 auto !important;
-	max-width: none !important;
-	white-space: nowrap;
-}
-
-.layout-medium .page-liuyao-result .actions-row :deep(.tm-button__body),
-.layout-wide .page-liuyao-result .actions-row :deep(.tm-button__body) {
-	width: auto !important;
+	flex-wrap: wrap;
+	margin-bottom: 12px;
+	padding: 0 4px;
 }
 
 .page-liuyao-result .gua-grid {
@@ -879,6 +791,12 @@ onShow(() => {
 .page-liuyao-result .yao-symbol {
 	font-weight: 700;
 	color: #111827;
+	display: inline-block;
+	min-width: 88px;
+	text-align: center;
+	white-space: pre;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+	letter-spacing: 1px;
 }
 
 .page-liuyao-result .yao-meta {
@@ -890,6 +808,7 @@ onShow(() => {
 .page-liuyao-result .main-cell,
 .page-liuyao-result .bian-cell {
 	display: flex;
+	flex-direction: row;
 	align-items: center;
 	gap: 6px;
 	flex-wrap: wrap;
@@ -960,6 +879,15 @@ onShow(() => {
 
 .page-liuyao-result .draggable-scroll:active {
 	cursor: grabbing;
+}
+
+.page-liuyao-result .detail-card .page-title-wrapper {
+	margin-bottom: 6px;
+	padding-bottom: 8px;
+	gap: 8px;
+	align-items: flex-start;
+	flex-direction: column;
+	border-bottom: 1px dashed #e5e7eb;
 }
 
 @media (min-width: 900px) {

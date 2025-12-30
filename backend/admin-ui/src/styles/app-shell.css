@@ -90,12 +90,31 @@ ad-custom {
 	}
 }
 
+@media (min-width: 1280px) {
+	:root {
+		--page-max: 1200px;
+	}
+}
+
+@media (min-width: 1600px) {
+	:root {
+		--page-max: 1520px;
+	}
+}
+
 .layout-wide {
 	--page-pad-x: 32px;
 	--page-pad-y: 28px;
-	--page-max: 980px;
+	--page-max: 1200px;
 	--header-height: 60px;
-	--container-max-width: 980px;
+	--container-max-width: 1200px;
+}
+
+@media (min-width: 1600px) {
+	.layout-wide {
+		--page-max: 1520px;
+		--container-max-width: 1520px;
+	}
 }
 
 /* ==================== App Shell 布局 ==================== */

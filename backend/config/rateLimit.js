@@ -37,9 +37,18 @@ const refreshLimiter = rateLimit({
 	keyGenerator: rateKey,
 });
 
+const llmLimiter = rateLimit({
+	windowMs: 60 * 1000,
+	max: 10,
+	standardHeaders: true,
+	legacyHeaders: false,
+	keyGenerator: rateKey,
+});
+
 module.exports = {
 	authLimiter,
 	strictLimiter,
 	refreshLimiter,
+	llmLimiter,
 };
 

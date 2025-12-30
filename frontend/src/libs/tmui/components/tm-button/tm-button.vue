@@ -1,18 +1,18 @@
 <template>
 	<tm-sheet 
 	no-level
-	:_style="[{opacity:isclickOn||_disabled?0.7:1}]" 
+	:_style="sheetStyle" 
 	hover-class="bhover"
 	:round="btnSizeObj.round" 
 	:width="btnSizeObj.w" 
 	:height="btnSizeObj.h" 
 	:padding="props.padding" 
 	:margin="props.margin"
-	:color="props.color" 
+	:color="effectiveColor" 
 	:shadow="props.shadow"
 	:transprent="props.transprent"
-	:linear="props.linear"
-	:linear-deep="props.linearDeep"
+	:linear="effectiveLinear"
+	:linear-deep="effectiveLinearDeep"
 	:text="props.text"
 	:outlined="props.outlined"
 	:dark="props.dark"
@@ -71,7 +71,10 @@ import tmSheet from "../tm-sheet/tm-sheet.vue"
 import tmText from "../tm-text/tm-text.vue"
 import tmIcon from "../tm-icon/tm-icon.vue";
 import {custom_props,computedClass,computedStyle} from "../../tool/lib/minxs";
-import { useUiScale } from '@/utils/viewport';
+import { useUiScale } from '../../../../utils/viewport';
+// #ifdef APP-PLUS || H5 || MP-WEIXIN
+declare var uni: any;
+// #endif
 /**
  * 事件说明
  * @description 事件属性与原生 一 致
@@ -97,6 +100,10 @@ const emits = defineEmits<{
 const {proxy} = <ComponentInternalInstance>getCurrentInstance();
 const props = defineProps({
 	...custom_props,
+	type:{
+		type:String,
+		default:''
+	},
 	transprent:{
 		type:Boolean,
 		default:false
@@ -237,13 +244,48 @@ const _load = computed(()=>props.loading)
 const _disabled = computed(()=>props.disabled)
 const _label = computed(()=>props.label)
 const _icon = computed(()=>props.icon)
+const effectiveColor = computed(() => {
+	if (typeof props.type === 'string' && props.type.trim() !== '') return props.type.trim();
+	return props.color;
+})
+const isNeutralThemeColor = (value: string) => {
+	const v = (value || '').trim().toLowerCase();
+	if (!v) return false;
+	if (v === 'white' || v === 'black') return true;
+	if (v.startsWith('grey')) return true;
+	if (v.startsWith('gray')) return true;
+	return false;
+}
+const effectiveLinear = computed(() => {
+	if (typeof props.linear === 'string' && props.linear !== '') return props.linear;
+	if (props.text || props.outlined || props.transprent) return props.linear;
+	if (isNeutralThemeColor(effectiveColor.value)) return '';
+	return 'right';
+})
+const effectiveLinearDeep = computed(() => {
+	if (typeof props.linear === 'string' && props.linear !== '') return props.linearDeep;
+	if (props.text || props.outlined || props.transprent) return props.linearDeep;
+	return 'accent';
+})
+const sheetStyle = computed(() => {
+	const pressed = isclickOn.value && !_disabled.value;
+	const baseOpacity = pressed || _disabled.value ? 0.82 : 1;
+	return [
+		{
+			opacity: baseOpacity,
+			transform: pressed ? 'scale(0.98)' : 'scale(1)',
+			transition: 'transform 0.08s ease, opacity 0.08s ease, filter 0.08s ease',
+			filter: pressed ? 'brightness(0.985)' : 'brightness(1)'
+		}
+	];
+})
 const sizeObj = {
-	block:{w:0,h:80,fontSize:28,round:3},
-	mini:{w:88,h:36,fontSize:20,round:2},
-	small:{w:120,h:56,fontSize:22,round:3},
-	normal:{w:220,h:80,fontSize:28,round:3},
-	middle:{w:360,h:80,fontSize:30,round:3},
-	large:{w:535,h:88,fontSize:32,round:4},
+	block:{w:0,h:80,fontSize:28,round:14},
+	mini:{w:88,h:36,fontSize:20,round:10},
+	small:{w:120,h:56,fontSize:22,round:12},
+	normal:{w:220,h:80,fontSize:28,round:14},
+	middle:{w:360,h:80,fontSize:30,round:14},
+	large:{w:535,h:88,fontSize:32,round:16},
 }
 const uiScale = useUiScale();
 const scaleNumber = (value: number) => Math.round(value * uiScale.value * 100) / 100;
@@ -284,6 +326,7 @@ function onclick(e:Event){
 			FormParent[formtype.value]();
 		}
 		emits('click', e);
+		emits('tap', e);
 		if (props.url !== '' && typeof props.url === 'string') {
 			let url = props.url;
 			if (url[0] !== '/') url = '/' + url;
@@ -296,7 +339,7 @@ function onclick(e:Event){
 			// #ifdef MP-WEIXIN
 			uni.getUserProfile({
 				desc: '用于完善会员资料',
-				success: function (userProfile) {
+				success: function (userProfile: any) {
 					if(userProfile.errMsg !='getUserProfile:ok'){
 						uni.showToast({
 							title:userProfile.errMsg,icon:'error',mask:true
@@ -306,7 +349,7 @@ function onclick(e:Event){
 					emits('getUserInfo', userProfile);
 					emits('getUserProfile', userProfile);
 				},
-				fail: (error) => {
+				fail: (error: any) => {
 					console.log(error)
 					uni.showToast({
 						icon:"none",

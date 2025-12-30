@@ -79,7 +79,7 @@ router.post('/send-code', strictLimiter, async (req, res) => {
 /**
  * 验证邮箱验证码
  */
-router.post('/verify-code', async (req, res) => {
+router.post('/verify-code', strictLimiter, async (req, res) => {
 	const { email, code, type = 'register' } = req.body || {};
 
 	if (!email || !code) {

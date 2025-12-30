@@ -52,8 +52,8 @@
 						:round="12"
 						:shadow="2"
 						:padding="[24, 24]"
-						:margin="[0, 0, 20, 0]"
-						class="quota-card"
+						:margin="[0, 0, 0, 0]"
+						class="quota-card list-item"
 					>
 						<view class="quota-row">
 							<!-- 左侧：用户信息 -->
@@ -354,10 +354,6 @@ function goBack() {
 }
 
 .search-section {
-	margin-bottom: 30rpx;
-}
-
-.quota-list {
 	margin-bottom: 30rpx;
 }
 

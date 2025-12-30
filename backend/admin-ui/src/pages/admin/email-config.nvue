@@ -32,56 +32,119 @@
 						></tm-tag>
 					</view>
 
-					<tm-input 
-						v-model="form.host" 
-						label="SMTP 主机" 
-						placeholder="如 smtp.qq.com" 
-						:margin="[24, 0, 0, 0]"
-						:round="12"
-						:border="1"
-					/>
-					<tm-input
-						v-model.number="form.port"
-						label="SMTP 端口"
-						type="number"
-						placeholder="如 465"
-						:margin="[24, 0, 0, 0]"
-						:round="12"
-						:border="1"
-					/>
-					<tm-input
-						v-model="form.user"
-						label="SMTP 账号"
-						placeholder="邮箱账号"
-						:margin="[24, 0, 0, 0]"
-						:round="12"
-						:border="1"
-					/>
-					<tm-input
-						v-model="form.pass"
-						label="SMTP 密码/授权码"
-						type="password"
-						placeholder="请输入密码或授权码"
-						:margin="[24, 0, 0, 0]"
-						:round="12"
-						:border="1"
-					/>
-					<tm-input
-						v-model="form.from"
-						label="发件邮箱地址"
-						placeholder="用于邮件 From 邮箱"
-						:margin="[24, 0, 0, 0]"
-						:round="12"
-						:border="1"
-					/>
-					<tm-input
-						v-model="form.fromName"
-						label="发件人名称（可选，用于显示）"
-						placeholder="如：Ai八字 或 你的姓名"
-						:margin="[24, 0, 0, 0]"
-						:round="12"
-						:border="1"
-					/>
+					<view class="history-section">
+						<view class="history-header">
+							<tm-text :font-size="28" :bold="true" color="#4b5563" label="历史配置"></tm-text>
+							<tm-text :font-size="22" color="#9ca3af" label="编辑、删除或切换以往记录"></tm-text>
+						</view>
+						<view v-if="historyLoading" class="history-hint">
+							<tm-text :font-size="24" color="#9ca3af" label="加载中..."></tm-text>
+						</view>
+						<view v-else-if="historyList.length > 0" class="history-list">
+							<view
+								v-for="item in historyList"
+								:key="item.id"
+								class="history-item"
+								:class="{ active: item.is_active === 1 }"
+							>
+								<view class="history-info">
+									<tm-text :font-size="26" :bold="item.is_active === 1" :label="item.from || item.user"></tm-text>
+									<tm-text :font-size="22" color="#6b7280" :label="`${item.host}:${item.port} / ${item.user}`"></tm-text>
+									<tm-text
+										v-if="item.created_at"
+										:font-size="20"
+										color="#9ca3af"
+										:label="`创建时间: ${formatDate(item.created_at)}`"
+									></tm-text>
+								</view>
+								<view class="history-actions">
+									<tm-button
+										v-if="item.is_active !== 1"
+										size="small"
+										type="primary"
+										label="切换"
+										:loading="activatingId === item.id"
+										:disabled="activatingId === item.id || deletingId === item.id"
+										:margin="[0, 8, 0, 0]"
+										@tap="activateFromHistory(item.id)"
+									></tm-button>
+									<tm-button
+										size="small"
+										color="orange"
+										label="编辑"
+										@tap="editFromHistory(item)"
+										:margin="[0, 8, 0, 0]"
+									></tm-button>
+									<tm-button
+										v-if="item.is_active !== 1"
+										size="small"
+										color="red"
+										label="删除"
+										:loading="deletingId === item.id"
+										:disabled="activatingId === item.id || deletingId === item.id"
+										@tap="deleteFromHistory(item.id)"
+									></tm-button>
+									<tm-text v-else :font-size="22" color="#10b981" label="当前使用"></tm-text>
+								</view>
+							</view>
+						</view>
+						<view v-else class="history-hint">
+							<tm-text :font-size="24" color="#9ca3af" label="暂无历史配置，保存后会出现在这里"></tm-text>
+						</view>
+					</view>
+
+					<view class="responsive-form-grid-md-2">
+						<tm-input 
+							v-model="form.host" 
+							label="SMTP 主机" 
+							placeholder="如 smtp.qq.com" 
+							:margin="[0, 0, 0, 0]"
+							:round="12"
+							:border="1"
+						/>
+						<tm-input
+							v-model.number="form.port"
+							label="SMTP 端口"
+							type="number"
+							placeholder="如 465"
+							:margin="[0, 0, 0, 0]"
+							:round="12"
+							:border="1"
+						/>
+						<tm-input
+							v-model="form.user"
+							label="SMTP 账号"
+							placeholder="邮箱账号"
+							:margin="[0, 0, 0, 0]"
+							:round="12"
+							:border="1"
+						/>
+						<tm-input
+							v-model="form.pass"
+							label="SMTP 密码/授权码"
+							type="password"
+							placeholder="请输入密码或授权码"
+							:margin="[0, 0, 0, 0]"
+							:round="12"
+							:border="1"
+						/>
+						<tm-input
+							v-model="form.from"
+							label="发件邮箱地址"
+							placeholder="用于邮件 From 邮箱"
+							:margin="[0, 0, 0, 0]"
+							:round="12"
+							:border="1"
+						/>
+						<tm-input
+							v-model="form.fromName"
+							label="发件人名称（可选，用于显示）"
+							placeholder="如：Ai八字 或 你的姓名"
+							:margin="[0, 0, 0, 0]"
+							:round="12"
+							:border="1"
+						/>
+					</view>
 
 					<view class="tip-container">
 						<tm-icon name="information-circle" :font-size="24" color="#667eea" :margin="[0, 12, 0, 0]"></tm-icon>
@@ -113,7 +176,14 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, computed } from 'vue';
 import { useUserStore } from '@/store/user';
-import { getAdminEmailConfig, updateAdminEmailConfig } from '@/services/api/admin';
+import {
+	getAdminEmailConfig,
+	updateAdminEmailConfig,
+	getAdminEmailConfigHistory,
+	activateAdminEmailConfig,
+	deleteAdminEmailConfig,
+	EmailConfigHistoryItem
+} from '@/services/api/admin';
 
 const userStore = useUserStore();
 
@@ -129,6 +199,10 @@ const form = reactive({
 
 const loading = ref(false);
 const saving = ref(false);
+const historyList = ref<EmailConfigHistoryItem[]>([]);
+const historyLoading = ref(false);
+const activatingId = ref<number | null>(null);
+const deletingId = ref<number | null>(null);
 
 // navbar 高度（rpx），与 yx-nav-header 中的 navbarHeight 保持一致
 const navbarHeight = 40;
@@ -140,6 +214,11 @@ const pageContentStyle = computed(() => {
 	};
 });
 
+function formatDate(dateStr: string) {
+	const date = new Date(dateStr);
+	return isNaN(date.getTime()) ? dateStr : date.toLocaleString('zh-CN');
+}
+
 onMounted(() => {
 	userStore.restoreAuth();
 	if (!userStore.isAdmin) {
@@ -149,6 +228,7 @@ onMounted(() => {
 		return;
 	}
 	loadConfig();
+	loadHistory();
 });
 
 async function loadConfig() {
@@ -173,6 +253,75 @@ async function loadConfig() {
 	}
 }
 
+async function loadHistory() {
+	historyLoading.value = true;
+	try {
+		const res = await getAdminEmailConfigHistory();
+		if (res?.success && Array.isArray(res.data)) {
+			historyList.value = res.data;
+		} else {
+			historyList.value = [];
+		}
+	} catch (err) {
+		console.error('加载邮箱配置历史失败', err);
+		uni.showToast({ title: '加载历史失败', icon: 'none' });
+		historyList.value = [];
+	} finally {
+		historyLoading.value = false;
+	}
+}
+
+function editFromHistory(item: EmailConfigHistoryItem) {
+	form.host = item.host || '';
+	form.port = Number(item.port) || 0;
+	form.user = item.user || '';
+	form.from = item.from || '';
+	form.fromName = item.fromName || '';
+	form.pass = item.pass || '';
+	uni.pageScrollTo({ scrollTop: 0, duration: 300 });
+	uni.showToast({ title: '已加载配置到表单', icon: 'none' });
+}
+
+async function activateFromHistory(id: number) {
+	if (!id || activatingId.value !== null) return;
+	activatingId.value = id;
+	try {
+		await activateAdminEmailConfig(id);
+		uni.showToast({ title: '已切换', icon: 'success' });
+		await loadConfig();
+		await loadHistory();
+	} catch (err: any) {
+		console.error('切换邮箱配置失败', err);
+		const msg = err?.error || err?.message || '切换失败';
+		uni.showToast({ title: msg, icon: 'none' });
+	} finally {
+		activatingId.value = null;
+	}
+}
+
+async function deleteFromHistory(id: number) {
+	if (!id || deletingId.value !== null) return;
+	const modal = await uni.showModal({
+		title: '确认删除',
+		content: '确认要删除该邮箱配置吗？此操作不可恢复',
+		confirmText: '删除',
+		confirmColor: '#ef4444'
+	});
+	if (!modal.confirm) return;
+	deletingId.value = id;
+	try {
+		await deleteAdminEmailConfig(id);
+		uni.showToast({ title: '已删除', icon: 'success' });
+		await loadHistory();
+	} catch (err: any) {
+		console.error('删除邮箱配置失败', err);
+		const msg = err?.error || err?.message || '删除失败';
+		uni.showToast({ title: msg, icon: 'none' });
+	} finally {
+		deletingId.value = null;
+	}
+}
+
 async function handleSave() {
 	if (!form.host || !form.port || !form.user || !form.from) {
 		uni.showToast({ title: '请填写完整配置', icon: 'none' });
@@ -194,6 +343,7 @@ async function handleSave() {
 		});
 		uni.showToast({ title: '保存成功', icon: 'success' });
 		await loadConfig();
+		await loadHistory();
 	} catch (err) {
 		console.error('保存邮箱配置失败', err);
 		const msg = err?.error || '保存失败';
@@ -244,6 +394,64 @@ function goBack() {
 	flex-direction: row;
 	align-items: center;
 	justify-content: space-between;
+	margin-bottom: 24rpx;
+}
+
+.history-section {
+	display: flex;
+	flex-direction: column;
+	gap: 12rpx;
+	margin-bottom: 24rpx;
+}
+
+.history-header {
+	display: flex;
+	flex-direction: column;
+	gap: 4rpx;
+}
+
+.history-list {
+	display: flex;
+	flex-direction: column;
+	gap: 12rpx;
+}
+
+.history-item {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	padding: 16rpx 18rpx;
+	border: 1px solid #e5e7eb;
+	border-radius: 12rpx;
+	background: #f9fafb;
+}
+
+.history-item.active {
+	border-color: #10b981;
+	background: #ecfdf3;
+}
+
+.history-info {
+	display: flex;
+	flex-direction: column;
+	gap: 6rpx;
+	flex: 1;
+}
+
+.history-actions {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	margin-left: 12rpx;
+}
+
+.history-hint {
+	padding: 16rpx;
+	text-align: center;
+	color: #9ca3af;
+	border: 1px dashed #e5e7eb;
+	border-radius: 12rpx;
 }
 
 .tip-text {

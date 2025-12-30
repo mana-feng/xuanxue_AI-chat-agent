@@ -58,7 +58,7 @@
 									<view class="filter-block">
 										<tm-text :font-size="22" color="#666666" label="性别：" class="mb-6"></tm-text>
 										<tm-radio-group v-model="genderFilter">
-											<tm-radio label="全部" :value="''"></tm-radio>
+											<tm-radio label="全部" :value="'all'"></tm-radio>
 											<tm-radio label="男" :value="'0'"></tm-radio>
 											<tm-radio label="女" :value="'1'"></tm-radio>
 										</tm-radio-group>
@@ -84,7 +84,7 @@
 											@tap="toggleSortOrder"
 										></yx-teal-button>
 										<yx-teal-button
-											v-if="searchKeyword || genderFilter"
+											v-if="searchKeyword || (genderFilter && genderFilter !== 'all')"
 											size="small"
 											:padding="[16, 14]"
 											:round="12"
@@ -107,7 +107,7 @@
 							</view>
 							<view v-else-if="charts.length === 0" class="py-20 text-center">
 								<tm-text 
-									:label="searchKeyword || genderFilter ? '未找到符合条件的记录' : '暂无保存记录，可在排盘结果页点击「保存到账号」哦'" 
+									:label="searchKeyword || (genderFilter && genderFilter !== 'all') ? '未找到符合条件的记录' : '暂无保存记录，可在排盘结果页点击「保存到账号」哦'" 
 									color="#999999"
 								></tm-text>
 							</view>
@@ -274,7 +274,7 @@ const annError = ref('');
 
 const searchKeyword = ref('');
 const typeIndex = ref(0); // 0: 八字, 1: 六爻
-const genderFilter = ref('');
+const genderFilter = ref('all');
 const sortByIndex = ref(0); // 0: 时间, 1: 姓名
 const sortBy = computed(() => (sortByIndex.value === 0 ? 'created_at' : 'name'));
 const sortOrder = ref<'ASC' | 'DESC'>('DESC');
@@ -339,7 +339,7 @@ function toggleSortOrder() {
 
 function clearFilters() {
 	searchKeyword.value = '';
-	genderFilter.value = '';
+	genderFilter.value = 'all';
 	sortByIndex.value = 0;
 	sortOrder.value = 'DESC';
 	fetchCharts();
@@ -367,7 +367,7 @@ async function fetchCharts() {
 		if (searchKeyword.value) {
 			params.keyword = searchKeyword.value;
 		}
-		if (genderFilter.value) {
+		if (genderFilter.value && genderFilter.value !== 'all') {
 			params.gender = genderFilter.value;
 		}
 		if (sortBy.value) {
@@ -926,6 +926,7 @@ function goToHome() {
 	align-items: center;
 	flex-wrap: wrap;
 	justify-content: flex-start;
+	margin-left: auto;
 	width: 100%;
 }
 
@@ -1136,7 +1137,7 @@ function goToHome() {
 	.history-header {
 		flex-direction: row;
 		align-items: center;
-		justify-content: space-between;
+		justify-content: flex-start;
 	}
 
 	.header-actions {
@@ -1177,7 +1178,7 @@ function goToHome() {
 :global(.layout-wide) .history-header {
 	flex-direction: row;
 	align-items: center;
-	justify-content: space-between;
+	justify-content: flex-start;
 }
 
 :global(.layout-wide) .header-actions {

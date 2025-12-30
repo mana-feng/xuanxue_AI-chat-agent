@@ -36,9 +36,7 @@ export function useLiuyaoForm() {
 
 	const form = ref({
 		title: '',
-		questioner: '',
 		gender: '',
-		location: '',
 		timeLabel: '',
 		num1: '',
 		num2: '',
@@ -404,10 +402,8 @@ watch(methodIndex, (newIdx, oldIdx) => {
 
 			const profilePayload = {
 				title: form.value.title || '起卦记录',
-				questioner: form.value.questioner || '未填写',
 				method: currentMethod.value.text,
 				gender: form.value.gender === '' ? '未填写' : (String(form.value.gender) === '0' ? '男' : '女'),
-				location: form.value.location || '未填写',
 				dayGanZhi: dayGz,
 				timeLabel,
 				focus: form.value.title || '未填写',

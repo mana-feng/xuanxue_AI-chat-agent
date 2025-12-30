@@ -10,6 +10,8 @@ import { cssStyleConfig, cssstyle, colorThemeType, cssDirection , linearDirectio
 //导入用户自定义的主题色值。
 import { theme } from '@/config/constants';
 var colors: Array<colorThemeType> = [];
+const themeAny = (theme as any) ?? {};
+const { primary: themePrimary, ...restTheme } = themeAny;
 var colorObj: any = {
 	red: '#ff2414',
 	pink: '#ea2a6a',
@@ -32,7 +34,7 @@ var colorObj: any = {
 	grey: '#9E9E9E',
 	black: '#000000',
 	white: '#FFFFFF',
-	primary: '#3B5CF0',
+	primary: themePrimary ?? '#3B5CF0',
 	'grey-5': '#fafafa',
 	'grey-4': '#f5f5f5',
 	'grey-3': '#eeeeee',
@@ -50,7 +52,7 @@ var colorObj: any = {
 		danger: '#f56565',
 		info: '#3b82f6',
 		accent: '#667eea',
-		...theme
+		...restTheme
 	};
 for (const key in colorObj) {
 	if (Object.prototype.hasOwnProperty.call(colorObj, key)) {

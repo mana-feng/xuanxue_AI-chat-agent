@@ -1,7 +1,7 @@
 <template>
 	<tm-app>
 		<PageScaffold class="page-bazi-input" title="排盘信息" subtitle="请填写以下信息进行八字排盘">
-			<SectionBlock icon="tmicon-md-person" title="基本信息">
+			<SectionBlock icon="tmicon-md-person" title="基础信息">
 				<view class="card-stack">
 					<tm-input
 						v-model="realname"
@@ -18,9 +18,9 @@
 							<tm-text :font-size="26" color="#718096" label="性别"></tm-text>
 						</view>
 						<view class="form-control">
-							<tm-radio-group v-model="gender">
-								<tm-radio label="男" :value="0" :margin="[0, 16, 0, 0]"></tm-radio>
-								<tm-radio label="女" :value="1"></tm-radio>
+							<tm-radio-group v-model="gender" model="button">
+								<tm-radio label="男" :value="0" :round="24" :border="1" :padding="[18, 12]" :margin="[0, 16, 0, 0]"></tm-radio>
+								<tm-radio label="女" :value="1" :round="24" :border="1" :padding="[18, 12]"></tm-radio>
 							</tm-radio-group>
 						</view>
 					</view>
@@ -46,10 +46,12 @@
 					</view>
 
 					<tm-button
-						type="grey"
+						type="primary"
+						linear="right"
+						linear-deep="accent"
 						:block="true"
 						:round="12"
-						:padding="[18, 20]"
+						:padding="[24, 24]"
 						icon="tmicon-calendar-alt"
 						icon-pos="left"
 						class="birth-time-btn"
@@ -115,10 +117,10 @@
 			v-model:show="solar_select_show"
 			:round="6"
 			:default-value="solar_default_value"
-			:start="time_pick.start"
-			:end="time_pick.end"
-			:format="time_pick.format"
-			:show-detail="time_pick.detail"
+			:start="solar_time_pick.start"
+			:end="solar_time_pick.end"
+			:format="solar_time_pick.format"
+			:show-detail="solar_time_pick.detail"
 			:show-suffix="time_suffix.solar"
 			@confirm="SolarConfirm"
 		></tm-time-picker>
@@ -126,11 +128,12 @@
 			v-model:show="lunar_select_show"
 			:round="6"
 			:default-value="lunar_default_value"
-			:start="time_pick.start"
-			:end="time_pick.end"
-			:format="time_pick.format"
-			:show-detail="time_pick.detail"
+			:start="lunar_time_pick.start"
+			:end="lunar_time_pick.end"
+			:format="lunar_time_pick.format"
+			:show-detail="lunar_time_pick.detail"
 			:show-suffix="time_suffix.lunar"
+			:column-flex="lunar_time_column_flex"
 			@confirm="LunarConfirm"
 		></tm-time-picker>
 
@@ -212,7 +215,7 @@ const lunar_select_show = ref(false);
 const solar_default_value = ref('');
 const lunar_default_value = ref('');
 
-const time_pick = {
+const solar_time_pick = {
 	start: '1900/01/01 00:00',
 	end: '2099/12/30 00:00',
 	format: 'YYYY/MM/DD HH:mm',
@@ -224,6 +227,27 @@ const time_pick = {
 		minute: true,
 		second: false,
 	},
+};
+
+const lunar_time_pick = {
+	start: '1900/01/01 00',
+	end: '2099/12/30 00',
+	format: 'YYYY/MM/DD HH',
+	detail: {
+		year: true,
+		month: true,
+		day: true,
+		hour: true,
+		minute: false,
+		second: false,
+	},
+};
+
+const lunar_time_column_flex = {
+	year: 1.15,
+	month: 0.75,
+	day: 0.75,
+	hour: 2.35,
 };
 
 const time_suffix = {
@@ -257,7 +281,7 @@ onLoad((options: any) => {
 			const editData = JSON.parse(editDataStr);
 
 			if (editData.isEdit && editData.timestamp) {
-				realname.value = editData.realname || '';
+				realname.value = editData.realname === '佚名' ? '' : (editData.realname || '');
 				gender.value = editData.gender !== undefined && editData.gender !== null ? editData.gender : 0;
 				timestamp.value = editData.timestamp;
 
@@ -288,7 +312,6 @@ onLoad((options: any) => {
 	realname.value = '';
 	gender.value = 0;
 	user_store.recordId = null;
-
 	initCurrentTime();
 
 	if (options && options.showAnnouncements === '1') {
@@ -309,7 +332,7 @@ onShow(() => {
 		try {
 			const editData = JSON.parse(editDataStr);
 			if (editData.isEdit && editData.timestamp) {
-				realname.value = editData.realname || '';
+				realname.value = editData.realname === '佚名' ? '' : (editData.realname || '');
 				gender.value = editData.gender !== undefined && editData.gender !== null ? editData.gender : 0;
 				timestamp.value = editData.timestamp;
 				if (editData.recordId) {
@@ -327,9 +350,7 @@ onShow(() => {
 		}
 	}
 
-	if (!editDataStr) {
-		user_store.recordId = null;
-	}
+	if (!editDataStr) user_store.recordId = null;
 });
 
 function SelectTime() {
@@ -337,7 +358,7 @@ function SelectTime() {
 	const timeToUse = timestamp.value || new Date().getTime();
 	const timeStr = utils.HideSecond(timeToUse);
 	solar_default_value.value = timeStr;
-	lunar_default_value.value = timeStr;
+	lunar_default_value.value = timeStr.replace(/:\d{2}$/, '');
 
 	setTimeout(() => {
 		if (model.value === 0) {
@@ -348,11 +369,39 @@ function SelectTime() {
 	}, 400);
 }
 
+function parsePickerTimeToTimestamp(time: string): number | null {
+	const raw = (time || '').trim();
+	if (!raw) return null;
+	const full = raw.match(/^(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})$/);
+	if (full) {
+		const y = Number(full[1]);
+		const mo = Number(full[2]);
+		const d = Number(full[3]);
+		const h = Number(full[4]);
+		const mi = Number(full[5]);
+		const dt = new Date(y, mo - 1, d, h, mi, 0);
+		return Number.isFinite(dt.getTime()) ? dt.getTime() : null;
+	}
+	const hourOnly = raw.match(/^(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2})$/);
+	if (hourOnly) {
+		const y = Number(hourOnly[1]);
+		const mo = Number(hourOnly[2]);
+		const d = Number(hourOnly[3]);
+		const h = Number(hourOnly[4]);
+		const dt = new Date(y, mo - 1, d, h, 0, 0);
+		return Number.isFinite(dt.getTime()) ? dt.getTime() : null;
+	}
+	const parsed = Date.parse(raw);
+	return Number.isFinite(parsed) ? parsed : null;
+}
+
 const SolarConfirm = (time: string) => {
-	timestamp.value = new Date(time).getTime();
+	const ts = parsePickerTimeToTimestamp(time);
+	if (ts !== null) timestamp.value = ts;
 };
 const LunarConfirm = (time: string) => {
-	timestamp.value = new Date(time).getTime();
+	const ts = parsePickerTimeToTimestamp(time);
+	if (ts !== null) timestamp.value = ts;
 };
 
 function PullDatatimeLabel() {
@@ -370,19 +419,19 @@ function PullDatatimeLabel() {
 		const date = utils.HideSecond(time);
 		datetime_label.value = date;
 		solar_default_value.value = date;
-		lunar_default_value.value = date;
+		lunar_default_value.value = date.replace(/:\d{2}$/, '');
 		lunar_label.value = `${lunar.toString()} ${lunar.getTimeZhi()}时`;
 	} else {
 		const lunarStr = `${lunar.toString()} ${lunar.getTimeZhi()}时`;
 		datetime_label.value = lunarStr;
 		const date = utils.HideSecond(time);
 		solar_default_value.value = date;
-		lunar_default_value.value = date;
+		lunar_default_value.value = date.replace(/:\d{2}$/, '');
 		lunar_label.value = date;
 	}
 }
 
-function Sumbit() {
+	function Sumbit() {
 	const datetime = timestamp.value;
 	if (datetime === null) {
 		uni.showToast({
@@ -394,17 +443,16 @@ function Sumbit() {
 		return;
 	}
 
-	const params = {
-		realname: (realname.value || '').trim() || '佚名',
-		timestamp: datetime,
-		gender: Number(gender.value),
-	};
+		const params = {
+			realname: (realname.value || '').trim(),
+			timestamp: datetime,
+			gender: Number(gender.value),
+		};
 	uni.showLoading({
 		title: '排盘中，请稍后！',
 	});
 
 	try {
-		uni.setStorageSync('info', JSON.stringify(params));
 		const currentRecordId = user_store.recordId;
 		user_store.set(params);
 		if (currentRecordId) {

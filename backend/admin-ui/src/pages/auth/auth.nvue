@@ -227,6 +227,10 @@ async function logout() {
 .page-wrapper {
 	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 	position: relative;
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
 }
 
 .page-content-scale {
@@ -250,6 +254,14 @@ async function logout() {
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
+	width: 100%;
+}
+
+@media (min-width: 600px) {
+	.login-container {
+		max-width: 500px;
+		margin: 0 auto;
+	}
 }
 
 .header-section {

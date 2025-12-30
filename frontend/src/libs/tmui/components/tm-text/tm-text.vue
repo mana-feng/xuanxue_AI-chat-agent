@@ -3,25 +3,12 @@
     <!-- #ifdef APP-PLUS-NVUE -->
     <text
 :render-whole="true" :selectable="selectable" :user-select="selectable" :class="[_fontSize ? '' : 'text-size-m', customClass]"
-      :style="[
-        {
-          lineHeight:
-            (_fontSize ? _fontSize * 1.3 : 42) + props.unit, color: textColor
-        },
-        _fontSize ? { fontSize: _fontSize + props.unit } : '',
-        customCSSStyle,
-      ]" @click="emits('click', $event)">{{ _label }}</text>
+      :style="textStyle" @click="emits('click', $event)">{{ _label }}</text>
     <!-- #endif -->
     <!-- #ifndef APP-PLUS-NVUE -->
     <view><text
 :selectable="selectable" :user-select="selectable" :class="[fontSize ? '' : 'text-size-m', customClass]"
-        :style="[
-          {
-            lineHeight: (_fontSize ? _fontSize * 1.3 : 42) + props.unit, color: textColor
-          },
-          _fontSize ? { fontSize: _fontSize + props.unit } : '',
-          customCSSStyle,
-        ]" @click="emits('click', $event)">
+        :style="textStyle" @click="emits('click', $event)">
         <slot>{{ _label }}</slot>
       </text>
     </view>
@@ -80,6 +67,14 @@ const _label = computed(() => props.label)
 const uiScale = useUiScale();
 const scaleNumber = (value: number) => Math.round(value * uiScale.value * 100) / 100;
 const _fontSize = computed(() => scaleNumber(Number(props.fontSize)))
+const textStyle = computed<any>(() => [
+  {
+    lineHeight: (_fontSize.value ? _fontSize.value * 1.3 : 42) + props.unit,
+    color: textColor.value
+  },
+  _fontSize.value ? { fontSize: _fontSize.value + props.unit } : '',
+  customCSSStyle.value,
+])
 //从父应用组件中获取自动文字色。
 const appTextColor = inject("appTextColor", computed(() => undefined));
 const textColor = computed(() => {

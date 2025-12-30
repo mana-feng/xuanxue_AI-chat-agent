@@ -41,6 +41,21 @@
                     type="primary"
                     label="切换"
                     @tap="activateModel(model.id)"
+                    :margin="[0, 10, 0, 0]"
+                  ></tm-button>
+                  <tm-button
+                    size="small"
+                    color="orange"
+                    label="编辑"
+                    @tap="editModel(model)"
+                    :margin="[0, 10, 0, 0]"
+                  ></tm-button>
+                  <tm-button
+                    v-if="model.is_active !== 1"
+                    size="small"
+                    color="red"
+                    label="删除"
+                    @tap="deleteModel(model.id)"
                   ></tm-button>
                   <tm-text v-else :font-size="22" color="#10b981" label="当前使用"></tm-text>
                 </view>
@@ -51,6 +66,7 @@
             </view>
           </view>
 
+          <view class="responsive-form-grid-md-2">
           <view class="form-group">
             <tm-text :font-size="26" color="#4b5563" label="供应商"></tm-text>
             <picker
@@ -69,7 +85,7 @@
 
           <view class="form-group">
             <tm-text :font-size="26" color="#4b5563" label="API Base URL"></tm-text>
-            <tm-input v-model="form.baseUrl" placeholder="https://api.example.com" :margin="[0, 12, 0, 0]" :round="10"></tm-input>
+            <tm-input v-model="form.baseUrl" placeholder="https://api.example.com" :margin="[0, 0, 0, 0]" :round="10"></tm-input>
           </view>
 
           <view class="form-group">
@@ -78,19 +94,20 @@
               v-model="form.apiKey"
               placeholder="输入密钥"
               :password="true"
-              :margin="[0, 12, 0, 0]"
+              :margin="[0, 0, 0, 0]"
               :round="10"
             ></tm-input>
           </view>
 
           <view class="form-group">
             <tm-text :font-size="26" color="#4b5563" label="模型名称"></tm-text>
-            <tm-input v-model="form.model" placeholder="如 gpt-4o, claude-3.5" :margin="[0, 12, 0, 0]" :round="10"></tm-input>
+            <tm-input v-model="form.model" placeholder="如 gpt-4o, claude-3.5" :margin="[0, 0, 0, 0]" :round="10"></tm-input>
           </view>
 
           <view class="form-group">
             <tm-text :font-size="26" color="#4b5563" label="配置名称（可选）"></tm-text>
-            <tm-input v-model="form.name" placeholder="如：生产环境-GPT-4" :margin="[0, 12, 0, 0]" :round="10"></tm-input>
+            <tm-input v-model="form.name" placeholder="如：生产环境-GPT-4" :margin="[0, 0, 0, 0]" :round="10"></tm-input>
+          </view>
           </view>
 
           <view class="form-group">
@@ -100,7 +117,7 @@
               type="textarea"
               placeholder='如：{ "temperature": 0.7 }'
               :height="120"
-              :margin="[0, 12, 0, 0]"
+              :margin="[0, 0, 0, 0]"
               :round="10"
             ></tm-input>
           </view>
@@ -245,6 +262,47 @@ async function activateModel(modelId: number) {
   }
 }
 
+async function deleteModel(modelId: number) {
+  try {
+    const res = await uni.showModal({
+      title: '确认删除',
+      content: '确定要删除该模型配置吗？此操作无法撤销。',
+      confirmText: '删除',
+      confirmColor: '#ef4444'
+    });
+    if (res.confirm) {
+      await request(`/api/admin/llm-models/${modelId}`, {
+        method: 'DELETE',
+        needAuth: true
+      });
+      uni.showToast({ title: '已删除', icon: 'success' });
+      await loadModelHistory();
+    }
+  } catch (err) {
+    console.error('删除模型失败:', err);
+    uni.showToast({ title: '删除失败', icon: 'none' });
+  }
+}
+
+function editModel(model: any) {
+  form.provider = model.provider;
+  form.baseUrl = model.base_url || model.baseUrl;
+  form.apiKey = model.api_key || model.apiKey;
+  form.model = model.model;
+  form.name = model.name;
+  form.extra = model.extra || '';
+
+  // 更新供应商选择器
+  const idx = providerOptions.findIndex(opt => opt.value === model.provider);
+  if (idx >= 0) {
+    providerIndex.value = idx;
+  }
+  
+  // 滚动到表单顶部
+  uni.pageScrollTo({ scrollTop: 0, duration: 300 });
+  uni.showToast({ title: '已加载配置到表单', icon: 'none' });
+}
+
 onMounted(() => {
   loadConfig();
 });
@@ -355,6 +413,7 @@ function onProviderChange(e: any) {
 
 .model-actions {
   display: flex;
+  flex-direction: row;
   align-items: center;
   margin-left: 12px;
 }

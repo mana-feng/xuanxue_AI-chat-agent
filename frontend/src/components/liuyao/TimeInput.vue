@@ -9,13 +9,15 @@
     ></tm-text>
     <tm-button
       class="time-picker-btn"
-      type="grey"
+      type="primary"
+      linear="right"
+      linear-deep="accent"
       :block="true"
       :round="12"
-      icon="tmicon-md-time"
+      icon="tmicon-calendar-alt"
       icon-pos="left"
       :label="innerValue || placeholder"
-      :padding="[16, 18]"
+      :padding="[24, 24]"
       :shadow="0"
       @tap="$emit('open')"
     ></tm-button>
@@ -67,7 +69,6 @@ function onUseNow() {
   font-size: 20px;
   text-align: left;
   min-height: 70px;
-  padding: 20px 22px !important;
 }
 .time-picker-btn :deep(.tm-button__content) {
   gap: 12px;

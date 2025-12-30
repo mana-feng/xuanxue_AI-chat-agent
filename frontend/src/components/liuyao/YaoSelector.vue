@@ -4,7 +4,8 @@
 		<picker mode="selector" :range="options" range-key="label" :value="selectedIndex" @change="onChange">
 			<view class="picker-trigger">
 				<view class="picker-content">
-					<tm-text :font-size="28" :label="displayLabel" class="picker-label" _class="font-weight-b"></tm-text>
+					<text v-if="displaySymbol" class="yao-symbol">{{ displaySymbol }}</text>
+					<text v-if="displayName" class="yao-name">{{ displayName }}</text>
 				</view>
 				<tm-icon name="tmicon-angle-down" :font-size="20" color="#94a3b8"></tm-icon>
 			</view>
@@ -14,6 +15,7 @@
 
 <script lang="ts" setup>
 import { computed } from 'vue';
+import { getYaoName } from '@/features/liuyao/uiHelpers';
 
 const props = defineProps({
 	modelValue: { type: [String, Number], default: '' },
@@ -28,9 +30,18 @@ const selectedIndex = computed(() => {
 	return idx >= 0 ? idx : 0;
 });
 
-const displayLabel = computed(() => {
+const displaySymbol = computed(() => {
 	const opt = props.options[selectedIndex.value];
-	return opt ? opt.label : '请选择';
+	if (!opt) return '';
+	return opt.symbol || opt.label || '';
+});
+
+const displayName = computed(() => {
+	const opt = props.options[selectedIndex.value];
+	if (!opt) return '';
+	const v = opt.value;
+	if (v === '' || v === null || v === undefined) return '';
+	return opt.name || getYaoName(v);
 });
 
 function onChange(e: any) {
@@ -56,10 +67,23 @@ function onChange(e: any) {
 	display: flex;
 	align-items: center;
 	gap: 8px;
+	flex-direction: row;
+	flex-wrap: nowrap;
 }
 .yao-symbol {
 	color: #94a3b8;
+	font-weight: 700;
+	min-width: 72px;
+	text-align: center;
+	white-space: pre;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+	letter-spacing: 1px;
+}
+
+.yao-name {
+	color: #334155;
+	font-size: 16px;
+	white-space: nowrap;
 }
 </style>
-
 

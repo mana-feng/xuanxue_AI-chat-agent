@@ -176,13 +176,16 @@
 			<view class="scroll-container">
 				<scroll-view
 					ref="scrollView_2"
-					class="scroll-view"
+					class="scroll-view scroll-view-liuyue"
 					scroll-x="true"
 					:show-scrollbar="true"
 					:enable-flex="true"
+					:scroll-left="liuyueScrollLeft"
+					:scroll-with-animation="true"
 				>
 					<view
 						v-for="(ditem, dindex) in (yun_store as any)[map_list[2].list]"
+						:id="'liuyue-item-' + dindex"
 						:key="dindex"
 						class="scroll-view-item"
 					>
@@ -250,13 +253,16 @@
 			<view class="scroll-container scroll-container-liuri">
 				<scroll-view
 					ref="scrollView_3"
-					class="scroll-view scroll-view-liuri draggable-scroll"
+					class="scroll-view scroll-view-liuri"
 					scroll-x="true"
 					:show-scrollbar="true"
 					:enable-flex="true"
+					:scroll-left="liuriScrollLeft"
+					:scroll-with-animation="true"
 				>
 					<view
 						v-for="(ditem, dindex) in limitedDayList"
+						:id="'liuri-item-' + dindex"
 						:key="dindex"
 						class="scroll-view-item"
 					>
@@ -314,14 +320,18 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, watch, nextTick, computed, onUnmounted } from 'vue';
+import { onMounted, watch, nextTick, computed, ref, getCurrentInstance } from 'vue';
 import { useYunStore } from '@/store/yun';
 import { useBaziStore } from '@/store/bazi';
 import { calculateShenShaForGanZhi, calculateGanZhiRelations } from '@/libs/utils/bazi-enhanced';
 
 const yun_store = useYunStore();
 const bazi_store = useBaziStore();
-const dragCleanups: Array<() => void> = [];
+const liuriScrollLeft = ref(0);
+const liuyueScrollLeft = ref(0);
+const didCenterLiuri = ref(false);
+const didCenterLiuyue = ref(false);
+const manualSelected = ref(false);
 
 // 限制流日显示数量，只显示当前流月中的每一天
 const limitedDayList = computed(() => {
@@ -584,6 +594,7 @@ function ScrollItemClick(e: number, index: number | string) {
 	if (e < 3) {
 		(yun_store as any)[key_list[e + 1]] = 0;
 	}
+	manualSelected.value = true;
 	// 标记用户已手动选择时间，禁用自动定位
 	yun_store.markManualSelection();
 	
@@ -593,6 +604,77 @@ function ScrollItemClick(e: number, index: number | string) {
 			(yun_store as any)[methods_list[e]]();
 		});
 	}
+}
+
+function getDisplayDayIndexForOriginalIndex(originalIndex: number): number {
+	const limitedList = limitedDayList.value;
+	if (!limitedList.length) return -1;
+	for (let i = 0; i < limitedList.length; i++) {
+		if (getOriginalDayIndex(i) === originalIndex) return i;
+	}
+	return -1;
+}
+
+function centerLiuriToIndex(originalIndex: number) {
+	const displayIndex = getDisplayDayIndexForOriginalIndex(originalIndex);
+	if (displayIndex < 0) return;
+	nextTick(() => {
+		const instance = getCurrentInstance();
+		const proxy = instance?.proxy as any;
+		const query = uni.createSelectorQuery().in(proxy);
+		query.select('.scroll-view-liuri').boundingClientRect();
+		query.select(`#liuri-item-${displayIndex}`).boundingClientRect();
+		query.exec((res: any[]) => {
+			const container = res?.[0];
+			const item = res?.[1];
+			if (!container || !item) return;
+			const target = (item.left - container.left) - (container.width - item.width) / 2;
+			liuriScrollLeft.value = Math.max(0, Math.floor(target));
+		});
+	});
+}
+
+function isTodayInMonthIndex(monthIndex: number): boolean {
+	const list = yun_store.month_list || [];
+	if (!list.length || monthIndex < 0 || monthIndex >= list.length) return false;
+	const item = list[monthIndex] as any;
+	if (!item?.date || !item?.next_jieqi_date) return false;
+	const yearList = yun_store.year_list || [];
+	const yearIndex = yun_store.year_index;
+	if (!yearList.length || yearIndex < 0 || yearIndex >= yearList.length) return false;
+	const year = (yearList[yearIndex] as any).year;
+	const now = new Date();
+	const currentDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+	const [startMonth, startDay] = String(item.date).split('/').map(Number);
+	const [endMonth, endDay] = String(item.next_jieqi_date).split('/').map(Number);
+	if (!Number.isFinite(startMonth) || !Number.isFinite(startDay) || !Number.isFinite(endMonth) || !Number.isFinite(endDay)) return false;
+
+	const startYear = monthIndex === 11 ? year + 1 : year;
+	const endYear = monthIndex >= 10 ? year + 1 : year;
+	const startDate = new Date(startYear, startMonth - 1, startDay);
+	const endDate = new Date(endYear, endMonth - 1, endDay);
+	if (monthIndex === 11) {
+		return currentDate >= startDate && currentDate <= endDate;
+	}
+	return currentDate >= startDate && currentDate < endDate;
+}
+
+function centerLiuyueToIndex(monthIndex: number) {
+	nextTick(() => {
+		const instance = getCurrentInstance();
+		const proxy = instance?.proxy as any;
+		const query = uni.createSelectorQuery().in(proxy);
+		query.select('.scroll-view-liuyue').boundingClientRect();
+		query.select(`#liuyue-item-${monthIndex}`).boundingClientRect();
+		query.exec((res: any[]) => {
+			const container = res?.[0];
+			const item = res?.[1];
+			if (!container || !item) return;
+			const target = (item.left - container.left) - (container.width - item.width) / 2;
+			liuyueScrollLeft.value = Math.max(0, Math.floor(target));
+		});
+	});
 }
 
 function getSelectedShenSha(indexKey: string, listKey: string): string[] {
@@ -815,68 +897,44 @@ watch(
 	{ immediate: true }
 );
 
-// 仅针对流日行（mindex===3）的滚动区域启用指针拖动
-// 拖动手感与排盘详情中的拖动逻辑保持一致：按下变抓手、跟随指针位移滚动
-function enableLiuriDrag(el: HTMLElement | null) {
-	if (!el) return;
-	if (typeof (el as any).addEventListener !== 'function') return;
-
-	let isDown = false;
-	let startX = 0;
-	let startY = 0;
-	let scrollLeft = 0;
-	let scrollTop = 0;
-
-	const onPointerDown = (e: PointerEvent) => {
-		if (e.pointerType === 'mouse' || e.pointerType === 'pen' || e.pointerType === 'touch') {
-			isDown = true;
-			el.classList?.add('dragging');
-			const rect = el.getBoundingClientRect();
-			startX = e.clientX - rect.left;
-			startY = e.clientY - rect.top;
-			scrollLeft = el.scrollLeft || 0;
-			scrollTop = el.scrollTop || 0;
-			el.setPointerCapture?.(e.pointerId);
+watch(
+	[() => yun_store.day_index, () => limitedDayList.value.length],
+	([dayIndex]) => {
+		if (didCenterLiuri.value) return;
+		if (manualSelected.value) return;
+		if (typeof dayIndex !== 'number' || dayIndex < 0) return;
+		if (!limitedDayList.value.length) return;
+		const today = new Date();
+		const y = today.getFullYear();
+		const m = today.getMonth() + 1;
+		const d = today.getDate();
+		const dateStr = (yun_store.day_list?.[dayIndex] as any)?.date;
+		const normalized = String(dateStr || '').replace(/-/g, '/').split('T')[0].split(' ')[0];
+		const todayStr1 = `${y}/${m}/${d}`;
+		const todayStr2 = `${y}/${m.toString().padStart(2, '0')}/${d.toString().padStart(2, '0')}`;
+		if (!normalized) return;
+		if (!(normalized === todayStr1 || normalized === todayStr2 || normalized.startsWith(todayStr1) || normalized.startsWith(todayStr2))) {
+			return;
 		}
-	};
+		didCenterLiuri.value = true;
+		centerLiuriToIndex(dayIndex);
+	},
+	{ immediate: true }
+);
 
-	const onPointerMove = (e: PointerEvent) => {
-		if (!isDown) return;
-		e.preventDefault();
-		const x = e.clientX - el.getBoundingClientRect().left;
-		const y = e.clientY - el.getBoundingClientRect().top;
-		const walkX = x - startX;
-		const walkY = y - startY;
-		if (el.scrollLeft !== undefined) {
-			el.scrollLeft = scrollLeft - walkX;
-		}
-		if (el.scrollTop !== undefined) {
-			el.scrollTop = scrollTop - walkY;
-		}
-	};
-
-	const endDrag = (e?: PointerEvent) => {
-		if (!isDown) return;
-		isDown = false;
-		el.classList?.remove('dragging');
-		if (e) el.releasePointerCapture?.(e.pointerId);
-	};
-
-	el.addEventListener('pointerdown', onPointerDown);
-	el.addEventListener('pointermove', onPointerMove);
-	el.addEventListener('pointerup', endDrag);
-	el.addEventListener('pointercancel', endDrag);
-	el.addEventListener('pointerleave', endDrag);
-
-	dragCleanups.push(() => {
-		el.removeEventListener('pointerdown', onPointerDown);
-		el.removeEventListener('pointermove', onPointerMove);
-		el.removeEventListener('pointerup', endDrag);
-		el.removeEventListener('pointercancel', endDrag);
-		el.removeEventListener('pointerleave', endDrag);
-		el.classList?.remove('dragging');
-	});
-}
+watch(
+	[() => yun_store.month_index, () => yun_store.month_list.length, () => yun_store.year_index],
+	([monthIndex]) => {
+		if (didCenterLiuyue.value) return;
+		if (manualSelected.value) return;
+		if (typeof monthIndex !== 'number' || monthIndex < 0) return;
+		if (!yun_store.month_list?.length) return;
+		if (!isTodayInMonthIndex(monthIndex)) return;
+		didCenterLiuyue.value = true;
+		centerLiuyueToIndex(monthIndex);
+	},
+	{ immediate: true }
+);
 
 // 组件挂载时也尝试定位（只在首次加载时执行）
 onMounted(() => {
@@ -889,20 +947,11 @@ onMounted(() => {
 		hasAutoLocated = true;
 		autoLocateToCurrentTime();
 	}
-	
-	// 只对流日一栏启用拖动
-	nextTick(() => {
-		setTimeout(() => {
-			if (typeof document === 'undefined') return;
-			const liuriEl = document.querySelector?.('.scroll-view-liuri') as any;
-			enableLiuriDrag(liuriEl);
-		}, 100);
-	});
 });
 
-onUnmounted(() => {
-	dragCleanups.forEach(fn => fn());
-});
+// onUnmounted(() => {
+// 	// No cleanups needed
+// });
 </script>
 
 <style lang="scss" scoped>
@@ -913,8 +962,8 @@ onUnmounted(() => {
 	box-sizing: border-box;
 
 	&.scroll-container-liuri {
-		max-height: 400rpx;
-		overflow: hidden;
+		max-height: none;
+		overflow: visible;
 	}
 }
 
@@ -971,7 +1020,7 @@ onUnmounted(() => {
 			padding: 10rpx;
 		}
 		&-active {
-			background-color: #6768ab;
+			background-color: #dbeafe;
 			border-radius: 12rpx;
 		}
 	}
@@ -1008,7 +1057,7 @@ onUnmounted(() => {
 
 <style lang="scss">
 .yx-yun-scroll-list .scroll-view-item-active .yun-text {
-	color: #f8f8f8 !important;
+	color: #1e3a8a !important;
 }
 
 .yx-yun-scroll-list .yun-sheet {

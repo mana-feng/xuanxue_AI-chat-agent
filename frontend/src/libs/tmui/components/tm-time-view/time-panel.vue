@@ -31,10 +31,28 @@
 	</view>
 </template>
 <script lang="ts" setup>
+declare module 'lunar-javascript' {
+	export class Solar {
+		static fromDate(date: Date): Solar;
+		getYear(): number;
+		getMonth(): number;
+		getDay(): number;
+		getLunar(): Lunar;
+	}
+
+	export class Lunar {
+		static fromYmd(year: number, month: number, day: number): Lunar;
+		getYear(): number;
+		getMonth(): number;
+		getDay(): number;
+		getSolar(): Solar;
+	}
+}
+
 import { useTmpiniaStore } from '../../tool/lib/tmpinia';
 import { computed, PropType, Ref,onUpdated, watchEffect,ref,getCurrentInstance,nextTick,onMounted,watch, toRaw } from 'vue';
 import { showDetail,coltimeData,timeDetailType } from './interface'
-import * as dayjs from "../../tool/dayjs/esm/index"
+import dayjs from "../../tool/dayjs/esm/index"
 import isSameOrBefore from '../../tool/dayjs/esm/plugin/isSameOrBefore/index';
 import isSameOrAfter from '../../tool/dayjs/esm/plugin/isSameOrAfter/index';
 import isBetween from '../../tool/dayjs/esm/plugin/isBetween/index';
@@ -43,11 +61,12 @@ import { Solar, Lunar } from 'lunar-javascript';
 // #ifdef APP-PLUS-NVUE
 const dom = uni.requireNativePlugin('dom')
 // #endif
-dayjs.default.extend(isBetween)
-dayjs.default.extend(isSameOrBefore)
-dayjs.default.extend(isSameOrAfter)
-const DayJs = dayjs.default;
-const { proxy } = getCurrentInstance();
+dayjs.extend(isBetween)
+dayjs.extend(isSameOrBefore)
+dayjs.extend(isSameOrAfter)
+const DayJs = dayjs;
+const instance = getCurrentInstance();
+const proxy = instance?.proxy as any;
 const store = useTmpiniaStore();
 const toSafeDate = (value: ReturnType<typeof DayJs>) =>
 	new Date(value.year(), value.month(), value.date(), value.hour(), value.minute(), value.second());
@@ -131,6 +150,10 @@ watch([()=>props.start,()=>props.end],()=>{
 })
 watch([()=>props.nowtime],(newval,oldval)=>{
     //前面相册的时间段不需要更新。
+	if (isLunarMode.value && (props.timeType === 'year' || props.timeType === 'month' || props.timeType === 'date')) {
+		rangeTimeArray();
+		return;
+	}
     if( DayJs(String(oldval)).isSame(String(newval),props.timeType)){
         return;
     }
@@ -147,12 +170,17 @@ onMounted(()=>{
 onUpdated(()=>nvuegetClientRect())
 function getIndexNow(){
 	let currentValue = 0;
-	if(isLunarMode.value && (props.timeType === 'month' || props.timeType === 'date')){
+	if(isLunarMode.value && (props.timeType === 'year' || props.timeType === 'month' || props.timeType === 'date')){
 		// 阴历模式下，需要获取阴历的月份或日期
 		const solar = Solar.fromDate(toSafeDate(_nowtimeValue.value));
 		const lunar = solar.getLunar();
+		if(props.timeType === 'year'){
+			currentValue = lunar.getYear();
+		}
 		if(props.timeType === 'month'){
 			currentValue = lunar.getMonth(); // 阴历月份（1-12）
+			if (currentValue < 1) currentValue = 1;
+			if (currentValue > 12) currentValue = 12;
 		}else if(props.timeType === 'date'){
 			currentValue = lunar.getDay(); // 阴历日期（1-30）
 		}
@@ -164,8 +192,19 @@ function getIndexNow(){
 			currentValue = _nowtimeValue.value[props.timeType]();
 		}
 	}
+
+	if (isLunarMode.value && props.timeType === 'hour' && props.suffix === '时辰') {
+		const idx = currentValue === 23 || currentValue === 0 ? 0 : Math.floor((currentValue + 1) / 2);
+		const pickValues = [23, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21];
+		const mapped = pickValues[idx] ?? 23;
+		currentValue = mapped;
+	}
+
 	let index = tmArray.value.findIndex(el=>el==currentValue);
-    if(index==-1) index=0;
+    if(index==-1){
+		if (tmArray.value.length > 0 && currentValue > tmArray.value[tmArray.value.length - 1]) index = tmArray.value.length - 1;
+		else index = 0;
+	}
     if(index>=tmArray.value.length) index = tmArray.value.length-1
 	// #ifdef H5
 	colIndex.value = -1
@@ -285,6 +324,26 @@ function rangeTimeArray(){
     let _end = DayJs(props.end);
     let intdate = 0
     
+	// 阴历模式下的时辰：只展示 12 个时辰，避免重复项
+	if (isLunarMode.value && props.timeType === 'hour' && props.suffix === '时辰') {
+		tmArray.value = [23, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21];
+		nextTick(() => getIndexNow());
+		return;
+	}
+
+	// 阴历模式下的年份：展示阴历年范围
+	if (isLunarMode.value && props.timeType === 'year') {
+		const startDate = toSafeDate(_start.isValid() ? _start : DayJs('1900/01/01 00:00:00'));
+		const endDate = toSafeDate(_end.isValid() ? _end : DayJs());
+		const startLunarYear = Solar.fromDate(startDate).getLunar().getYear();
+		const endLunarYear = Solar.fromDate(endDate).getLunar().getYear();
+		const from = Math.min(startLunarYear, endLunarYear);
+		const to = Math.max(startLunarYear, endLunarYear);
+		tmArray.value = rangeNumber(from, to);
+		nextTick(() => getIndexNow());
+		return;
+	}
+
     // 如果是阴历模式且是月份或日期类型，需要特殊处理
     if(isLunarMode.value && (props.timeType === 'month' || props.timeType === 'date')){
         rangeLunarTimeArray();
@@ -342,33 +401,7 @@ function rangeLunarTimeArray(){
     const lunar = solar.getLunar();
     
     if(props.timeType === 'month'){
-        // 阴历月份：1-12，但需要考虑闰月
-        // 获取当前年份的所有月份（包括闰月）
-        const year = lunar.getYear();
-        // 通过尝试创建每个月的日期来判断月份是否存在
-        // 阴历月份范围通常是1-12，但有些年份有闰月（13个月）
-        const months: number[] = [];
-        // 先尝试1-12月
-        for(let m = 1; m <= 12; m++){
-            try {
-                const testLunar = Lunar.fromYmd(year, m, 1);
-                months.push(m);
-            } catch (e) {
-                // 如果创建失败，说明该月不存在（不应该发生）
-            }
-        }
-        // 检查是否有闰月（闰月通常用负数表示，如-5表示闰五月）
-        // 但 lunar-javascript 可能用其他方式表示闰月
-        // 为了简化，我们先使用1-12，如果有闰月再扩展
-        // 实际上，我们需要检查当前年份是否有闰月
-        // 通过尝试创建13个月来判断
-        try {
-            const testLunar13 = Lunar.fromYmd(year, 13, 1);
-            months.push(13);
-        } catch (e) {
-            // 没有第13个月
-        }
-        tmArray.value = months.length > 0 ? months : rangeNumber(1, 12);
+        tmArray.value = rangeNumber(1, 12);
     }else if(props.timeType === 'date'){
         // 阴历日期：根据月份不同，可能是29或30天
         const year = lunar.getYear();
@@ -392,7 +425,7 @@ function rangeLunarTimeArray(){
     nextTick(()=>getIndexNow())
 }
 
-function getEndNumber(d,isno=true){
+function getEndNumber(d:any,isno=true){
     let _start = DayJs(props.start);
     let _end = DayJs(props.end);
     let jh = {
@@ -423,42 +456,41 @@ function colchange(e:any){
     let selectedValue = tmArray.value[e.detail.value[0]];
     
     // 如果是阴历模式且是月份或日期类型，需要将阴历值转换为阳历时间
-    if(isLunarMode.value && (props.timeType === 'month' || props.timeType === 'date')){
+    if(isLunarMode.value && (props.timeType === 'year' || props.timeType === 'month' || props.timeType === 'date')){
         const currentDate = toSafeDate(_nowtimeValue.value);
         const solar = Solar.fromDate(currentDate);
         const lunar = solar.getLunar();
         
-        let newLunarYear = lunar.getYear();
+        let newLunarYear = props.timeType === 'year' ? selectedValue : lunar.getYear();
         let newLunarMonth = props.timeType === 'month' ? selectedValue : lunar.getMonth();
+		if (newLunarMonth < 1) newLunarMonth = 1;
+		if (newLunarMonth > 12) newLunarMonth = 12;
         let newLunarDay = props.timeType === 'date' ? selectedValue : lunar.getDay();
-        
-        // 如果是月份变化，日期需要重置为1（因为不同月份的天数不同）
-        if(props.timeType === 'month'){
-            newLunarDay = 1;
-        }
         
         // 将阴历日期转换为阳历日期
         try {
+			let maxDay = 30;
+			for (let d = 30; d >= 1; d--) {
+				try {
+					Lunar.fromYmd(newLunarYear, newLunarMonth, d);
+					maxDay = d;
+					break;
+				} catch (e) {
+					void e;
+				}
+			}
+			if (newLunarDay > maxDay) newLunarDay = maxDay;
+
             const newLunar = Lunar.fromYmd(newLunarYear, newLunarMonth, newLunarDay);
             const newSolar = newLunar.getSolar();
-            const newDate = new Date(newSolar.getYear(), newSolar.getMonth() - 1, newSolar.getDay(), 
-                                    currentDate.getHours(), currentDate.getMinutes(), currentDate.getSeconds());
-            
-            // 构造新的时间字符串并直接更新nowtime
-            const newTimeStr = DayJs(newDate).format('YYYY-MM-DD HH:mm:ss');
-            
-            // 由于parent.setNowtime只能设置单个字段，我们需要分别设置月份和日期
-            // 先设置月份
-            if(props.timeType === 'month'){
-                parent?.setNowtime(newSolar.getMonth() - 1, 'month');
-                // 然后在下一个tick中设置日期
-                nextTick(() => {
-                    parent?.setNowtime(newSolar.getDay(), 'date');
-                });
-            }else if(props.timeType === 'date'){
-                // 设置阳历日期（1-31）
-                parent?.setNowtime(newSolar.getDay(), props.timeType);
-            }
+
+			parent?.setNowtime(newSolar.getYear(), 'year');
+			nextTick(() => {
+				parent?.setNowtime(newSolar.getMonth(), 'month');
+				nextTick(() => {
+					parent?.setNowtime(newSolar.getDay(), 'date');
+				});
+			});
         } catch (error) {
             console.error('阴历日期转换失败:', error);
             // 如果转换失败，使用原来的逻辑
@@ -473,7 +505,7 @@ function colchange(e:any){
 function nvuegetClientRect() {
     nextTick(function () {
         // #ifdef APP-PLUS-NVUE
-        dom.getComponentRect(proxy.$refs.picker, function (res) {
+        dom.getComponentRect(proxy.$refs.picker, function (res:any) {
             if (res?.size) {
                 maskWidth.value = res.size.width;
 				

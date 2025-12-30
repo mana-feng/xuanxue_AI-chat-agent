@@ -1,18 +1,14 @@
 <template>
 	<tm-app>
-		<PageScaffold class="page-liuyao-input" title="六爻排盘" subtitle="与八字排盘统一的样式与体验" tag="Beta 体验">
-			<SectionBlock icon="tmicon-md-person" title="基础信息" subtitle="填写排盘主体、地点与时间，方便记录">
+		<PageScaffold class="page-liuyao-input" title="六爻排盘" subtitle="与八字排盘统一的样式与体验">
+			<SectionBlock icon="tmicon-md-person" title="基础信息">
 				<LiuyaoBasicInfo
 					:title="form.title"
 					:time-label="form.timeLabel"
-					:questioner="form.questioner"
 					:gender="form.gender"
-					:location="form.location"
 					@update:title="val => (form.title = val)"
 					@update:time-label="val => (form.timeLabel = val)"
-					@update:questioner="val => (form.questioner = val)"
 					@update:gender="val => (form.gender = val)"
-					@update:location="val => (form.location = val)"
 					@open-time-picker="openTimePicker"
 					@use-now-time="useNowTime"
 				/>
@@ -32,13 +28,13 @@
 				<tm-text v-if="methodDesc" class="method-desc" :font-size="20" color="#4b5563" :label="methodDesc"></tm-text>
 
 				<view v-if="currentMethod.key === 'computer'" class="method-panel">
-					<tm-text :font-size="22" color="#334155" label="电脑自动：快速生成整套六爻" />
 					<view class="online-shake-wrapper">
 						<tm-icon name="tmicon-md-cpu" :font-size="44" color="#667eea"></tm-icon>
 						<tm-button
 							type="primary"
+							size="small"
 							:round="12"
-							:padding="[24, 18]"
+							:padding="[18, 14]"
 							icon="tmicon-md-flash"
 							:label="'生成卦象'"
 							@tap="generateAuto"
@@ -61,8 +57,10 @@
 						></tm-icon>
 						<tm-button
 							type="primary"
+							size="small"
+							:width="200"
 							:round="12"
-							:padding="[24, 18]"
+							:padding="[18, 14]"
 							icon="tmicon-md-play"
 							:label="'开始在线摇卦'"
 							@tap="startOnlineShake"
@@ -76,13 +74,6 @@
 				</view>
 
 				<view v-else-if="currentMethod.key === 'time'" class="method-panel">
-					<view class="picker-trigger" @tap="openTimePicker">
-						<view class="time-info">
-							<tm-text :font-size="24" color="#94a3b8" label="起卦时间"></tm-text>
-							<tm-text :font-size="30" _class="font-weight-b" color="#334155" :label="form.timeLabel || '请选择或使用当前时间'"></tm-text>
-						</view>
-						<tm-icon name="tmicon-md-time" :font-size="40" color="#94a3b8"></tm-icon>
-					</view>
 					<view class="helper-row">
 						<tm-text :font-size="20" color="#94a3b8" label="时间起卦会依据所选时间生成参数"></tm-text>
 					</view>
@@ -90,14 +81,7 @@
 						<tm-button
 							class="helper-btn"
 							type="primary"
-							:round="10"
-							:padding="[22, 0]"
-							label="使用当前时间"
-							@tap="useNowTime"
-						></tm-button>
-						<tm-button
-							class="helper-btn"
-							type="primary"
+							size="small"
 							:round="10"
 							:padding="[22, 0]"
 							label="生成参数"
@@ -224,35 +208,17 @@
 			</SectionBlock>
 
 			<template #footer>
-				<view class="footer-actions">
-					<view class="action-reset">
-						<tm-button
-							:round="24"
-							type="grey"
-							text
-							:shadow="0"
-							:border="1"
-							label="重置"
-							block
-							icon="tmicon-md-refresh"
-							@tap="resetForm"
-						></tm-button>
-					</view>
-					<view class="action-start">
-						<tm-button
-							:round="24"
-							:type="canStart ? 'primary' : 'grey'"
-							:label="'开始排盘'"
-							block
-							:bold="true"
-							:linear="canStart ? 'right' : ''"
-							:linear-deep="'accent'"
-							:shadow="canStart ? 10 : 0"
-							icon="tmicon-md-play"
-							@tap="startLiuyao"
-						></tm-button>
-					</view>
-				</view>
+				<tm-button
+					:label="'开始排盘'"
+					type="primary"
+					:round="999"
+					:bold="true"
+					:disabled="!canStart"
+					icon="tmicon-calendar-alt"
+					block
+					:class="['primary-btn', !canStart ? 'disabled' : '']"
+					@tap="startLiuyao"
+				></tm-button>
 			</template>
 		</PageScaffold>
 
@@ -444,34 +410,18 @@ onLoad(() => {
 	justify-content: center;
 }
 
-.footer-actions {
-	display: flex;
-	flex-direction: row;
-	gap: 16px;
-	padding: 12px 0;
-	padding-bottom: calc(12px + var(--safe-bottom));
-}
-
-.action-reset {
-	width: 30%;
-}
-
-.action-start {
-	flex: 1;
-}
-
 .primary-btn {
 	width: 100%;
+}
+
+.primary-btn.disabled {
+	opacity: 0.6;
 }
 
 .time-info {
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
-}
-
-.primary-btn.disabled {
-	opacity: 0.6;
 }
 
 @media (min-width: 900px) {

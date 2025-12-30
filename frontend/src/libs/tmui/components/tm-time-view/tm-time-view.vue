@@ -1,11 +1,23 @@
 <template>
 	<view class="flex flex-row" >
-		<timePanelVue v-if="showCol.year" :suffix="props.showSuffix.year" :show-suffix="props.showSuffix" :height="props.height" :disabled-date="props.disabledDate" :time-type="timeDetailType.year" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
-		<timePanelVue v-if="showCol.month" :suffix="props.showSuffix.month" :show-suffix="props.showSuffix" :height="props.height" :disabled-date="props.disabledDate" :time-type="timeDetailType.month" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
-		<timePanelVue v-if="showCol.day" :suffix="props.showSuffix.day" :show-suffix="props.showSuffix" :height="props.height" :disabled-date="props.disabledDate" :time-type="timeDetailType.day" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
-		<timePanelVue v-if="showCol.hour" :suffix="props.showSuffix.hour" :show-suffix="props.showSuffix" :height="props.height" :disabled-date="props.disabledDate" :time-type="timeDetailType.hour" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
-		<timePanelVue v-if="showCol.minute" :suffix="props.showSuffix.minute" :show-suffix="props.showSuffix" :height="props.height" :disabled-date="props.disabledDate" :time-type="timeDetailType.minute" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
-		<timePanelVue v-if="showCol.second" :suffix="props.showSuffix.second" :show-suffix="props.showSuffix" :height="props.height" :disabled-date="props.disabledDate" :time-type="timeDetailType.second" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue" class="flex-1"></timePanelVue>
+		<view v-if="showCol.year" :style="panelStyle('year')">
+			<timePanelVue :suffix="props.showSuffix.year" :show-suffix="props.showSuffix" :height="props.height" :disabled-date="props.disabledDate" :time-type="timeDetailType.year" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue"></timePanelVue>
+		</view>
+		<view v-if="showCol.month" :style="panelStyle('month')">
+			<timePanelVue :suffix="props.showSuffix.month" :show-suffix="props.showSuffix" :height="props.height" :disabled-date="props.disabledDate" :time-type="timeDetailType.month" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue"></timePanelVue>
+		</view>
+		<view v-if="showCol.day" :style="panelStyle('day')">
+			<timePanelVue :suffix="props.showSuffix.day" :show-suffix="props.showSuffix" :height="props.height" :disabled-date="props.disabledDate" :time-type="timeDetailType.day" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue"></timePanelVue>
+		</view>
+		<view v-if="showCol.hour" :style="panelStyle('hour')">
+			<timePanelVue :suffix="props.showSuffix.hour" :show-suffix="props.showSuffix" :height="props.height" :disabled-date="props.disabledDate" :time-type="timeDetailType.hour" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue"></timePanelVue>
+		</view>
+		<view v-if="showCol.minute" :style="panelStyle('minute')">
+			<timePanelVue :suffix="props.showSuffix.minute" :show-suffix="props.showSuffix" :height="props.height" :disabled-date="props.disabledDate" :time-type="timeDetailType.minute" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue"></timePanelVue>
+		</view>
+		<view v-if="showCol.second" :style="panelStyle('second')">
+			<timePanelVue :suffix="props.showSuffix.second" :show-suffix="props.showSuffix" :height="props.height" :disabled-date="props.disabledDate" :time-type="timeDetailType.second" :start="_startTime" :end="_endTime" :nowtime="_nowtimeValue"></timePanelVue>
+		</view>
 	</view>
 </template>
 
@@ -16,12 +28,13 @@
  */
 import { computed, PropType, watchEffect,ref, toRaw,onMounted,nextTick, watch } from 'vue';
 import { showDetail,coltimeData,timeDetailType } from './interface'
-import * as dayjs from "../../tool/dayjs/esm/index"
+import dayjs from "../../tool/dayjs/esm/index"
 import timePanelVue from './time-panel.vue';
 
 const emits = defineEmits(['update:modelValue','update:modelStr','change'])
 const tmTimeViewName = "tmTimeViewName"
-const DayJs = dayjs.default;
+const DayJs = dayjs;
+type ColumnFlex = Partial<Record<'year' | 'month' | 'day' | 'hour' | 'minute' | 'second', number>>;
 const props = defineProps({
 	//这里是动态返回时间戳。这是一个标准的时间，不管showDetail是如何设置都将不影响这里的输出。
 	modelValue:{
@@ -82,6 +95,10 @@ const props = defineProps({
 			}
 		}
 	},
+	columnFlex: {
+		type: Object as PropType<ColumnFlex>,
+		default: () => ({})
+	},
 	start:{
 		type:[Number,String,Date],
 		default:'2008/01/01 00:00:00'
@@ -107,6 +124,29 @@ const _endTime = computed(()=>{
 })
 
 const showCol = computed(()=>props.showDetail)
+
+const normalizedColumnFlex = computed(() => {
+	return {
+		year: 1,
+		month: 1,
+		day: 1,
+		hour: 1,
+		minute: 1,
+		second: 1,
+		...(props.columnFlex || {})
+	};
+});
+
+function panelStyle(key: keyof ColumnFlex) {
+	const flex = normalizedColumnFlex.value[key] ?? 1;
+	return {
+		flex,
+		flexGrow: flex,
+		flexShrink: 1,
+		flexBasis: '0%',
+		minWidth: '0'
+	};
+}
 
 function setNowtime(data:number,type:timeDetailType){
 	 let d= DayJs(toRaw(_nowtime.value));

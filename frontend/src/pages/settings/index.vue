@@ -164,13 +164,22 @@ const onLogout = () => {
 .page-settings .action-btn {
 	padding: 8px 14px;
 	border-radius: 999px;
-	background: #4f46e5;
+	background: linear-gradient(90deg, #06b6d4, #60a5fa);
 	color: #ffffff;
 	font-size: 13px;
+	box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+	border: 1px solid rgba(255, 255, 255, 0.35);
+	transition: transform 0.08s ease, filter 0.08s ease, box-shadow 0.08s ease;
+}
+
+.page-settings .action-btn:active {
+	transform: translateY(1px);
+	filter: brightness(0.985);
+	box-shadow: 0 8px 18px rgba(15, 23, 42, 0.1);
 }
 
 .page-settings .action-btn.danger {
-	background: #ef4444;
+	background: linear-gradient(90deg, #fb7185, #f43f5e);
 }
 
 .page-settings .settings-row {
