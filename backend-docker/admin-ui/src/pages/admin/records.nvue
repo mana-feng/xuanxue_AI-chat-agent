@@ -1,0 +1,670 @@
+<template>
+	<tm-app>
+		<view class="page-wrapper theme-page-bg">
+			<yx-nav-header></yx-nav-header>
+
+			<view class="page-content theme-container" :style="pageContentStyle">
+				<view class="theme-card theme-card-glass">
+					<view class="top-bar">
+						<view class="search-bar">
+							<tm-input
+								v-model="searchKeyword"
+								placeholder="搜索姓名/邮箱/用户名"
+								prefix="search"
+								clearable
+							></tm-input>
+						</view>
+						<view class="filter-user">
+							<tm-input
+								v-model="userIdKeyword"
+								placeholder="用户ID"
+								type="number"
+								clearable
+							></tm-input>
+						</view>
+					</view>
+
+					<view class="type-filter">
+						<tm-text :font-size="24" :margin="[0, 0, 10, 0]" label="排盘类型"></tm-text>
+						<tm-radio-group v-model="chartTypeFilter" model="button">
+							<tm-radio label="全部" value="all"></tm-radio>
+							<tm-radio label="八字" value="bazi"></tm-radio>
+							<tm-radio label="六爻" value="liuyao"></tm-radio>
+							<tm-radio label="紫微" value="ziwei"></tm-radio>
+						</tm-radio-group>
+					</view>
+
+					<view class="top-bar-buttons">
+						<yx-teal-button size="small" label="筛选" @tap="handleApplyFilters"></yx-teal-button>
+						<yx-teal-button size="small" label="重置" @tap="handleResetFilters"></yx-teal-button>
+						<yx-teal-button size="small" label="创建记录" @tap="handleCreateRecord"></yx-teal-button>
+						<yx-teal-button
+							size="small"
+							label="返回主页"
+							icon="tmicon-md-home"
+							@tap="goToHome"
+						></yx-teal-button>
+					</view>
+
+					<view class="responsive-list-container" style="margin-bottom: 40rpx;">
+						<tm-sheet
+							v-for="record in recordList"
+							:key="`${record.chartType}-${record.id}`"
+							:round="4"
+							:shadow="2"
+							:padding="[20, 20]"
+							:margin="[0, 0, 0, 0]"
+							class="responsive-list-item"
+						>
+							<view class="record-header">
+								<view class="record-info">
+									<tm-text
+										:font-size="28"
+										:bold="true"
+										:label="record.name || '未命名排盘'"
+									></tm-text>
+									<tm-text
+										class="mt-8"
+										:font-size="22"
+										color="#666"
+										:label="'用户：' + (record.userUsername || record.userEmail || ('ID:' + record.userId))"
+									></tm-text>
+									<tm-text
+										class="mt-8"
+										:font-size="22"
+										color="#666"
+										:label="'类型：' + getChartTypeLabel(record.chartType)"
+									></tm-text>
+								</view>
+								<view class="record-actions">
+									<yx-teal-button
+										size="mini"
+										label="详情"
+										:margin="[0, 10, 0, 0]"
+										@tap="() => handleViewDetail(record)"
+									></yx-teal-button>
+									<yx-teal-button
+										size="mini"
+										label="编辑"
+										:margin="[0, 10, 0, 0]"
+										@tap="() => handleEditRecord(record)"
+									></yx-teal-button>
+									<yx-teal-button
+										size="mini"
+										label="删除"
+										@tap="() => handleDeleteRecord(record)"
+									></yx-teal-button>
+								</view>
+							</view>
+
+							<view class="record-details">
+								<tm-text
+									:font-size="22"
+									color="#666"
+									:label="'性别：' + getGenderLabel(record.gender)"
+								></tm-text>
+								<tm-text
+									class="mt-8"
+									:font-size="22"
+									color="#666"
+									:label="'时间：' + (record.birthDatetime || '-')"
+								></tm-text>
+								<tm-text
+									class="mt-8"
+									:font-size="22"
+									color="#666"
+									:label="'历法：' + getCalendarTypeLabel(record.calendarType)"
+								></tm-text>
+								<tm-text
+									class="mt-8"
+									:font-size="22"
+									color="#666"
+									:label="'创建时间：' + formatDate(record.createdAt)"
+								></tm-text>
+							</view>
+						</tm-sheet>
+
+						<tm-text
+							v-if="recordList.length === 0 && !loading"
+							class="empty-text"
+							:font-size="24"
+							color="#999"
+							label="暂无排盘记录"
+						></tm-text>
+					</view>
+
+					<view class="pagination" v-if="totalPages > 1">
+						<yx-teal-button
+							size="small"
+							:disabled="currentPage === 1"
+							label="上一页"
+							@tap="handlePrevPage"
+						></yx-teal-button>
+						<tm-text :margin="[0, 20]" :label="`${currentPage} / ${totalPages}`"></tm-text>
+						<yx-teal-button
+							size="small"
+							:disabled="currentPage === totalPages"
+							label="下一页"
+							@tap="handleNextPage"
+						></yx-teal-button>
+					</view>
+				</view>
+			</view>
+
+			<tm-drawer
+				v-model:show="showRecordDialog"
+				:title="editingRecord ? '编辑记录' : '创建记录'"
+				:height="760"
+			>
+				<view class="record-form">
+					<view class="form-item">
+						<tm-text :font-size="24" :margin="[0, 0, 10, 0]" label="排盘类型"></tm-text>
+						<tm-radio-group v-model="recordForm.type" model="button">
+							<tm-radio label="八字" value="bazi"></tm-radio>
+							<tm-radio label="六爻" value="liuyao"></tm-radio>
+							<tm-radio label="紫微" value="ziwei"></tm-radio>
+						</tm-radio-group>
+					</view>
+
+					<tm-input
+						v-model.number="recordForm.userId"
+						label="用户ID"
+						placeholder="请输入用户ID"
+						type="number"
+						:margin="[0, 0, 20, 0]"
+						required
+					></tm-input>
+
+					<tm-input
+						v-model="recordForm.name"
+						label="姓名（可选）"
+						placeholder="请输入姓名"
+						:margin="[0, 0, 20, 0]"
+					></tm-input>
+
+					<view class="form-item">
+						<tm-text :font-size="24" :margin="[0, 0, 10, 0]" label="性别"></tm-text>
+						<tm-radio-group v-model="recordForm.gender" model="button">
+							<tm-radio label="男" value="0"></tm-radio>
+							<tm-radio label="女" value="1"></tm-radio>
+						</tm-radio-group>
+					</view>
+
+					<tm-input
+						v-model="recordForm.birthDatetime"
+						label="时间"
+						placeholder="格式：YYYY-MM-DD HH:mm:ss"
+						:margin="[0, 0, 20, 0]"
+						required
+					></tm-input>
+
+					<view class="form-item">
+						<tm-text :font-size="24" :margin="[0, 0, 10, 0]" label="历法类型"></tm-text>
+						<tm-radio-group v-model="recordForm.calendarType" model="button">
+							<tm-radio label="阳历" value="solar"></tm-radio>
+							<tm-radio label="阴历" value="lunar"></tm-radio>
+						</tm-radio-group>
+					</view>
+
+					<view v-if="recordFormError" class="error-text">
+						<tm-text :label="recordFormError" color="#ff4d4f"></tm-text>
+					</view>
+
+					<view class="form-actions">
+						<tm-button
+							block
+							type="primary"
+							:loading="recordFormLoading"
+							:label="editingRecord ? '保存' : '创建'"
+							@tap="handleSubmitRecord"
+							:margin="[20, 0, 0, 0]"
+						></tm-button>
+						<tm-button
+							block
+							type="default"
+							label="取消"
+							@tap="handleCancelRecord"
+							:margin="[20, 0, 0, 0]"
+						></tm-button>
+					</view>
+				</view>
+			</tm-drawer>
+
+			<tm-drawer v-model:show="showDetailDialog" title="记录详情" :height="760">
+				<view class="record-detail" v-if="recordDetail">
+					<view class="detail-item">
+						<tm-text :font-size="24" color="#666" label="ID"></tm-text>
+						<tm-text :label="recordDetail.id.toString()"></tm-text>
+					</view>
+					<view class="detail-item">
+						<tm-text :font-size="24" color="#666" label="排盘类型"></tm-text>
+						<tm-text :label="getChartTypeLabel(recordDetail.chartType)"></tm-text>
+					</view>
+					<view class="detail-item">
+						<tm-text :font-size="24" color="#666" label="姓名"></tm-text>
+						<tm-text :label="recordDetail.name || '未命名'"></tm-text>
+					</view>
+					<view class="detail-item">
+						<tm-text :font-size="24" color="#666" label="性别"></tm-text>
+						<tm-text :label="getGenderLabel(recordDetail.gender)"></tm-text>
+					</view>
+					<view class="detail-item">
+						<tm-text :font-size="24" color="#666" label="时间"></tm-text>
+						<tm-text :label="recordDetail.birthDatetime || '-'"></tm-text>
+					</view>
+					<view class="detail-item">
+						<tm-text :font-size="24" color="#666" label="历法类型"></tm-text>
+						<tm-text :label="getCalendarTypeLabel(recordDetail.calendarType)"></tm-text>
+					</view>
+					<view class="detail-item">
+						<tm-text :font-size="24" color="#666" label="用户"></tm-text>
+						<tm-text
+							:label="(recordDetail.userUsername || recordDetail.userEmail || '未知用户') + ' (ID: ' + recordDetail.userId + ')'"
+						></tm-text>
+					</view>
+					<view class="detail-item">
+						<tm-text :font-size="24" color="#666" label="创建时间"></tm-text>
+						<tm-text :label="formatDate(recordDetail.createdAt)"></tm-text>
+					</view>
+					<view class="detail-item" v-if="recordDetail.rawPayload">
+						<tm-text :font-size="24" color="#666" label="原始数据"></tm-text>
+						<view class="raw-payload">
+							<tm-text :label="JSON.stringify(recordDetail.rawPayload, null, 2)" :font-size="20"></tm-text>
+						</view>
+					</view>
+				</view>
+			</tm-drawer>
+		</view>
+	</tm-app>
+</template>
+
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue';
+import { useUserStore } from '@/store/user';
+import {
+	createChartRecord,
+	deleteChartRecord,
+	getChartRecordDetail,
+	getChartRecordList,
+	updateChartRecord,
+	type AdminChartRecordInfo,
+	type ChartType,
+	type ChartTypeFilter,
+} from '@/services/api/admin';
+
+const userStore = useUserStore();
+const loading = ref(false);
+const recordList = ref<AdminChartRecordInfo[]>([]);
+const searchKeyword = ref('');
+const userIdKeyword = ref('');
+const chartTypeFilter = ref<ChartTypeFilter>('all');
+const currentPage = ref(1);
+const pageSize = ref(20);
+const totalPages = ref(0);
+
+const showRecordDialog = ref(false);
+const editingRecord = ref<AdminChartRecordInfo | null>(null);
+const recordForm = ref({
+	type: 'bazi' as ChartType,
+	userId: null as number | null,
+	name: '',
+	gender: '0',
+	birthDatetime: '',
+	calendarType: 'solar',
+});
+const recordFormError = ref('');
+const recordFormLoading = ref(false);
+
+const showDetailDialog = ref(false);
+const recordDetail = ref<(AdminChartRecordInfo & { rawPayload?: any }) | null>(null);
+
+const navbarHeight = 40;
+const pageContentStyle = computed(() => ({
+	paddingTop: `${navbarHeight + 20}rpx`,
+}));
+
+onMounted(() => {
+	if (!userStore.isAdmin) {
+		uni.reLaunch({ url: '/pages/auth/auth' });
+		return;
+	}
+	loadRecords();
+});
+
+async function loadRecords() {
+	loading.value = true;
+	try {
+		const parsedUserId = Number.parseInt(userIdKeyword.value, 10);
+		const userId = Number.isFinite(parsedUserId) && parsedUserId > 0 ? parsedUserId : undefined;
+
+		const res = await getChartRecordList({
+			page: currentPage.value,
+			pageSize: pageSize.value,
+			search: searchKeyword.value || undefined,
+			userId,
+			type: chartTypeFilter.value,
+		});
+
+		if (res.success && res.data) {
+			recordList.value = res.data.list || [];
+			totalPages.value = res.data.totalPages || 0;
+		}
+	} catch (err) {
+		console.error('加载统一记录列表失败:', err);
+		uni.showToast({
+			title: '加载失败',
+			icon: 'none',
+		});
+	} finally {
+		loading.value = false;
+	}
+}
+
+function handleApplyFilters() {
+	currentPage.value = 1;
+	loadRecords();
+}
+
+function handleResetFilters() {
+	searchKeyword.value = '';
+	userIdKeyword.value = '';
+	chartTypeFilter.value = 'all';
+	currentPage.value = 1;
+	loadRecords();
+}
+
+function handlePrevPage() {
+	if (currentPage.value > 1) {
+		currentPage.value -= 1;
+		loadRecords();
+	}
+}
+
+function handleNextPage() {
+	if (currentPage.value < totalPages.value) {
+		currentPage.value += 1;
+		loadRecords();
+	}
+}
+
+function handleCreateRecord() {
+	editingRecord.value = null;
+	recordForm.value = {
+		type: chartTypeFilter.value === 'all' ? 'bazi' : (chartTypeFilter.value as ChartType),
+		userId: null,
+		name: '',
+		gender: '0',
+		birthDatetime: '',
+		calendarType: 'solar',
+	};
+	recordFormError.value = '';
+	showRecordDialog.value = true;
+}
+
+function handleEditRecord(record: AdminChartRecordInfo) {
+	editingRecord.value = record;
+	recordForm.value = {
+		type: record.chartType,
+		userId: record.userId,
+		name: record.name || '',
+		gender: record.gender || '0',
+		birthDatetime: record.birthDatetime || '',
+		calendarType: record.calendarType || 'solar',
+	};
+	recordFormError.value = '';
+	showRecordDialog.value = true;
+}
+
+function handleCancelRecord() {
+	showRecordDialog.value = false;
+	editingRecord.value = null;
+	recordFormError.value = '';
+}
+
+async function handleSubmitRecord() {
+	recordFormError.value = '';
+
+	if (!recordForm.value.userId || recordForm.value.userId <= 0) {
+		recordFormError.value = '请输入正确的用户ID';
+		return;
+	}
+	if (!recordForm.value.birthDatetime) {
+		recordFormError.value = '请输入时间';
+		return;
+	}
+
+	recordFormLoading.value = true;
+	try {
+		if (editingRecord.value) {
+			const shouldClearRawPayload =
+				editingRecord.value.birthDatetime !== recordForm.value.birthDatetime ||
+				editingRecord.value.gender !== recordForm.value.gender ||
+				editingRecord.value.calendarType !== recordForm.value.calendarType;
+
+			const result = await updateChartRecord(editingRecord.value.id, {
+				type: recordForm.value.type,
+				userId: recordForm.value.userId,
+				name: recordForm.value.name || null,
+				gender: recordForm.value.gender,
+				birthDatetime: recordForm.value.birthDatetime,
+				calendarType: recordForm.value.calendarType || null,
+				rawPayload: shouldClearRawPayload ? null : undefined,
+			});
+			if (result.success) {
+				uni.showToast({ title: '保存成功', icon: 'success' });
+				showRecordDialog.value = false;
+				loadRecords();
+			} else {
+				recordFormError.value = result.error || '保存失败';
+			}
+			return;
+		}
+
+		const result = await createChartRecord({
+			type: recordForm.value.type,
+			userId: recordForm.value.userId,
+			name: recordForm.value.name || undefined,
+			gender: recordForm.value.gender,
+			birthDatetime: recordForm.value.birthDatetime,
+			calendarType: recordForm.value.calendarType,
+		});
+		if (result.success) {
+			uni.showToast({ title: '创建成功', icon: 'success' });
+			showRecordDialog.value = false;
+			loadRecords();
+		} else {
+			recordFormError.value = result.error || '创建失败';
+		}
+	} catch (err: any) {
+		recordFormError.value = err?.error || '操作失败';
+	} finally {
+		recordFormLoading.value = false;
+	}
+}
+
+async function handleDeleteRecord(record: AdminChartRecordInfo) {
+	uni.showModal({
+		title: '确认删除',
+		content: `确定要删除这条${getChartTypeLabel(record.chartType)}记录吗？此操作不可恢复。`,
+		success: async (result) => {
+			if (!result.confirm) {
+				return;
+			}
+			try {
+				const res = await deleteChartRecord(record.id, record.chartType);
+				if (res.success) {
+					uni.showToast({ title: '删除成功', icon: 'success' });
+					loadRecords();
+				} else {
+					uni.showToast({ title: res.error || '删除失败', icon: 'none' });
+				}
+			} catch (err: any) {
+				uni.showToast({ title: err?.error || '删除失败', icon: 'none' });
+			}
+		},
+	});
+}
+
+async function handleViewDetail(record: AdminChartRecordInfo) {
+	try {
+		const res = await getChartRecordDetail(record.id, record.chartType);
+		if (res.success && res.data) {
+			recordDetail.value = res.data;
+			showDetailDialog.value = true;
+		} else {
+			uni.showToast({ title: res.error || '加载失败', icon: 'none' });
+		}
+	} catch (err: any) {
+		uni.showToast({ title: err?.error || '加载失败', icon: 'none' });
+	}
+}
+
+function getGenderLabel(gender: string | number | null | undefined) {
+	if (gender === '0' || gender === 0) return '男';
+	if (gender === '1' || gender === 1) return '女';
+	return '未知';
+}
+
+function getCalendarTypeLabel(calendarType: string | null | undefined) {
+	if (calendarType === 'solar') return '阳历';
+	if (calendarType === 'lunar') return '阴历';
+	return '-';
+}
+
+function getChartTypeLabel(type: ChartType) {
+	if (type === 'bazi') return '八字';
+	if (type === 'liuyao') return '六爻';
+	return '紫微';
+}
+
+function formatDate(dateStr: string) {
+	if (!dateStr) return '-';
+	const date = new Date(dateStr);
+	if (Number.isNaN(date.getTime())) return String(dateStr);
+	return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+		date.getDate()
+	).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(
+		date.getMinutes()
+	).padStart(2, '0')}`;
+}
+
+function goToHome() {
+	uni.reLaunch({
+		url: '/pages/admin/dashboard',
+	});
+}
+</script>
+
+<style scoped>
+.page-wrapper {
+	min-height: 100vh;
+	background-color: #f5f5f5;
+}
+
+.page-content {
+	padding: 20rpx;
+}
+
+.top-bar {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 12rpx;
+	margin-bottom: 16rpx;
+}
+
+.search-bar {
+	flex: 1;
+	min-width: 240rpx;
+}
+
+.filter-user {
+	width: 220rpx;
+	min-width: 220rpx;
+}
+
+.type-filter {
+	margin-bottom: 16rpx;
+}
+
+.top-bar-buttons {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 12rpx;
+	margin-bottom: 20rpx;
+}
+
+.record-actions {
+	display: flex;
+	flex-direction: row;
+}
+
+.record-form {
+	padding: 20rpx;
+}
+
+.form-item {
+	margin-bottom: 20rpx;
+}
+
+.error-text {
+	margin-top: 20rpx;
+}
+
+.form-actions {
+	margin-top: 40rpx;
+}
+
+.record-detail {
+	padding: 20rpx;
+}
+
+.detail-item {
+	margin-bottom: 30rpx;
+	padding-bottom: 20rpx;
+	border-bottom: 1px solid #eee;
+}
+
+.raw-payload {
+	margin-top: 10rpx;
+	padding: 20rpx;
+	background-color: #f5f5f5;
+	border-radius: 8rpx;
+	max-height: 400rpx;
+	overflow-y: auto;
+}
+
+.record-header {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: flex-start;
+	margin-bottom: 16rpx;
+}
+
+.record-info {
+	flex: 1;
+}
+
+.record-details {
+	margin-top: 16rpx;
+	padding-top: 16rpx;
+	border-top: 1px solid #eee;
+}
+
+.empty-text {
+	text-align: center;
+	padding: 60rpx 0;
+}
+
+.pagination {
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+	align-items: center;
+	padding: 20rpx 0;
+}
+</style>

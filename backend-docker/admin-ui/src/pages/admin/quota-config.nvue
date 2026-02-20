@@ -1,0 +1,202 @@
+<template>
+	<tm-app>
+		<view class="page-wrapper theme-page-bg">
+			<yx-nav-header></yx-nav-header>
+			<view class="page-content theme-container">
+				<view class="theme-card theme-card-glass">
+					<view class="header">
+						<tm-text :font-size="36" :bold="true" color="#2d3748" label="额度自动重置配置"></tm-text>
+						<tm-text :font-size="24" color="#6b7280" label="设置每日自动重置用户额度的规则"></tm-text>
+					</view>
+
+					<tm-sheet :round="12" :shadow="2" :padding="[32, 32]" class="form-card">
+						
+						<!-- 开启开关 -->
+						<view class="form-group flex flex-row flex-row-center-between">
+							<view>
+								<tm-text :font-size="28" :bold="true" color="#2d3748" label="开启每日重置"></tm-text>
+								<tm-text :font-size="22" color="#718096" label="开启后，将在指定时间自动执行额度重置"></tm-text>
+							</view>
+							<switch :checked="form.enabled" @change="onEnabledChange" color="#48bb78" />
+						</view>
+
+						<view class="divider"></view>
+
+						<!-- 时间设置 -->
+						<view class="form-group">
+							<tm-text :font-size="26" color="#4b5563" label="重置时间 (24小时制)"></tm-text>
+							<picker mode="time" :value="form.time" start="00:00" end="23:59" @change="onTimeChange">
+								<view class="picker-trigger">
+									<tm-text :font-size="28" color="#2d3748" :label="form.time || '00:00'"></tm-text>
+									<tm-icon name="tmicon-clock" :font-size="28" color="#a0aec0"></tm-icon>
+								</view>
+							</picker>
+							<tm-text :font-size="22" color="#a0aec0" class="mt-8" label="例如：00:00 表示每天凌晨零点"></tm-text>
+						</view>
+
+						<!-- 时区设置 -->
+						<view class="form-group mt-24">
+							<tm-text :font-size="26" color="#4b5563" label="时区"></tm-text>
+							<tm-input 
+								v-model="form.timezone" 
+								placeholder="例如: Asia/Shanghai" 
+								:border="true" 
+								:round="8"
+							></tm-input>
+							<tm-text :font-size="22" color="#a0aec0" class="mt-8" label="服务器所在时区，通常为 Asia/Shanghai"></tm-text>
+						</view>
+
+						<!-- 目标次数 -->
+						<view class="form-group mt-24">
+							<tm-text :font-size="26" color="#4b5563" label="重置目标次数"></tm-text>
+							<tm-input 
+								v-model="form.target" 
+								type="number" 
+								placeholder="2" 
+								:border="true" 
+								:round="8"
+							></tm-input>
+							<tm-text :font-size="22" color="#a0aec0" class="mt-8" label="当用户剩余次数小于等于此数值时，将被重置为此数值"></tm-text>
+						</view>
+
+						<view class="flex flex-row flex-center mt-48">
+							<tm-button 
+								:label="saving ? '保存中...' : '保存配置'" 
+								:disabled="saving"
+								@tap="submitForm" 
+								block
+								class="w-full"
+								color="primary"
+							></tm-button>
+						</view>
+
+					</tm-sheet>
+				</view>
+			</view>
+		</view>
+	</tm-app>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue';
+import { getQuotaResetConfig, setQuotaResetConfig, type QuotaResetConfig } from '@/services/api/admin';
+
+const saving = ref(false);
+
+const form = ref<QuotaResetConfig>({
+	enabled: false,
+	time: '00:00',
+	timezone: 'Asia/Shanghai',
+	target: 2
+});
+
+onMounted(() => {
+	loadConfig();
+});
+
+async function loadConfig() {
+	try {
+		const config = await getQuotaResetConfig();
+		if (config) {
+			form.value = {
+				enabled: config.enabled,
+				time: config.time || '00:00',
+				timezone: config.timezone || 'Asia/Shanghai',
+				target: config.target ?? 2
+			};
+		}
+	} catch (error) {
+		console.error('加载配置失败:', error);
+		uni.showToast({ title: '加载配置失败', icon: 'none' });
+	}
+}
+
+function onEnabledChange(e: any) {
+	form.value.enabled = e.detail.value;
+}
+
+function onTimeChange(e: any) {
+	form.value.time = e.detail.value;
+}
+
+async function submitForm() {
+	if (saving.value) return;
+	
+	// Basic validation
+	const targetNum = parseInt(String(form.value.target), 10);
+	if (isNaN(targetNum) || targetNum < 0) {
+		uni.showToast({ title: '目标次数必须为有效的正整数', icon: 'none' });
+		return;
+	}
+	
+	saving.value = true;
+	try {
+		await setQuotaResetConfig({
+			...form.value,
+			target: targetNum
+		});
+		uni.showToast({ title: '配置已保存并生效', icon: 'success' });
+	} catch (error: any) {
+		console.error('保存配置失败:', error);
+		uni.showToast({ title: error.message || '保存失败', icon: 'none' });
+	} finally {
+		saving.value = false;
+	}
+}
+</script>
+
+<style scoped>
+.page-wrapper {
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
+}
+
+.page-content {
+	flex: 1;
+	padding: 30rpx;
+}
+
+.header {
+	margin-bottom: 30rpx;
+}
+
+.form-card {
+	background-color: #fff;
+}
+
+.form-group {
+	margin-bottom: 32rpx;
+}
+
+.divider {
+	height: 1px;
+	background-color: #e2e8f0;
+	margin: 24rpx 0;
+}
+
+.picker-trigger {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	padding: 24rpx;
+	background-color: #f7fafc;
+	border-radius: 8rpx;
+	margin-top: 12rpx;
+	border: 1px solid #e2e8f0;
+}
+
+.mt-8 {
+	margin-top: 8rpx;
+}
+.mt-24 {
+	margin-top: 24rpx;
+}
+.mt-48 {
+	margin-top: 48rpx;
+}
+.w-full {
+	width: 100%;
+}
+</style>

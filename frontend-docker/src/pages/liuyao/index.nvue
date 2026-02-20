@@ -1,0 +1,436 @@
+<template>
+	<tm-app>
+		<PageScaffold class="page-liuyao-input" title="六爻排盘" subtitle="与八字排盘统一的样式与体验">
+			<SectionBlock icon="tmicon-md-person" title="基础信息">
+				<LiuyaoBasicInfo
+					:title="form.title"
+					:time-label="form.timeLabel"
+					:gender="form.gender"
+					@update:title="val => (form.title = val)"
+					@update:time-label="val => (form.timeLabel = val)"
+					@update:gender="val => (form.gender = val)"
+					@open-time-picker="openTimePicker"
+					@use-now-time="useNowTime"
+				/>
+			</SectionBlock>
+
+			<SectionBlock icon="tmicon-md-grid" title="起卦方式" subtitle="多种方式，选择最熟悉的即可">
+				<picker mode="selector" :range="methodTabs" range-key="text" :value="methodIndex" @change="onMethodChange">
+					<view class="picker-trigger method-picker-trigger">
+						<view class="method-picker-left">
+							<tm-icon :name="methodInfo[currentMethod.key]?.icon || 'tmicon-md-grid'" :font-size="30" color="#667eea"></tm-icon>
+							<tm-text :font-size="22" color="#1f2937" :label="currentMethod.text || '请选择起卦方式'"></tm-text>
+						</view>
+						<tm-icon name="tmicon-angle-down" :font-size="20" color="#94a3b8"></tm-icon>
+					</view>
+				</picker>
+
+				<tm-text v-if="methodDesc" class="method-desc" :font-size="20" color="#4b5563" :label="methodDesc"></tm-text>
+
+				<view v-if="currentMethod.key === 'computer'" class="method-panel">
+					<view class="online-shake-wrapper">
+						<tm-icon name="tmicon-md-cpu" :font-size="44" color="#667eea"></tm-icon>
+						<tm-button
+							type="primary"
+							size="small"
+							:round="12"
+							:padding="[18, 14]"
+							icon="tmicon-md-flash"
+							:label="'生成卦象'"
+							@tap="generateAuto"
+						></tm-button>
+					</view>
+					<view v-if="form.autoParams.length" class="auto-preview">
+						<tm-text :font-size="20" color="#1f2937" label="生成的卦象（自下而上 6 爻）" />
+						<ParamPreview :params="form.autoParams" />
+					</view>
+				</view>
+
+				<view v-else-if="currentMethod.key === 'online'" class="method-panel">
+					<tm-text :font-size="22" color="#334155" label="在线起卦：平静心念后摇卦" />
+					<view class="online-shake-wrapper">
+						<tm-icon
+							name="tmicon-md-hand"
+							:font-size="44"
+							color="#f59e0b"
+							:class="{ 'online-active': onlineActive }"
+						></tm-icon>
+						<tm-button
+							type="primary"
+							size="small"
+							:width="200"
+							:round="12"
+							:padding="[18, 14]"
+							icon="tmicon-md-play"
+							:label="'开始在线摇卦'"
+							@tap="startOnlineShake"
+						></tm-button>
+					</view>
+					<tm-text v-if="onlineMsg" :font-size="18" color="#6b7280" :label="onlineMsg"></tm-text>
+					<view v-if="form.autoParams.length" class="auto-preview">
+						<tm-text :font-size="20" color="#1f2937" label="在线起卦结果（自下而上 6 爻）" />
+						<ParamPreview :params="form.autoParams" />
+					</view>
+				</view>
+
+				<view v-else-if="currentMethod.key === 'time'" class="method-panel">
+					<view class="helper-row">
+						<tm-text :font-size="20" color="#94a3b8" label="时间起卦会依据所选时间生成参数"></tm-text>
+					</view>
+					<view class="helper-actions">
+						<tm-button
+							class="helper-btn"
+							type="primary"
+							size="small"
+							:round="10"
+							:padding="[22, 0]"
+							label="生成参数"
+							@tap="generateTime"
+						></tm-button>
+					</view>
+					<view v-if="form.timeParams.length" class="auto-preview">
+						<tm-text :font-size="20" color="#1f2937" label="时间起卦参数（自下而上 6 爻）" />
+						<ParamPreview :params="form.timeParams" />
+					</view>
+				</view>
+
+				<view v-else-if="currentMethod.key === 'single'" class="method-panel">
+					<tm-text :font-size="22" color="#334155" label="单数起卦：数字转卦象" />
+					<tm-input
+						v-model="form.singleInput"
+						label="输入数字"
+						placeholder="例如 2652"
+						:round="12"
+						:border="1"
+						:padding="[18, 16]"
+						:maxlength="12"
+						type="number"
+					></tm-input>
+					<view class="helper-row">
+						<tm-button size="small" type="primary" :round="10" :padding="[18, 14]" label="生成参数" @tap="generateSingle"></tm-button>
+					</view>
+					<view v-if="form.singleParams.length" class="auto-preview">
+						<tm-text :font-size="20" color="#1f2937" label="单数起卦参数（自下而上 6 爻）" />
+						<ParamPreview :params="form.singleParams" />
+					</view>
+				</view>
+
+				<view v-else-if="currentMethod.key === 'double'" class="method-panel">
+					<tm-text :font-size="22" color="#334155" label="双数起卦：两组数字组合生成" />
+					<view class="form-grid two">
+						<tm-input
+							v-model="form.double1"
+							label="数字组 1"
+							placeholder="第一组数字"
+							:round="12"
+							:border="1"
+							:padding="[18, 16]"
+							:maxlength="12"
+							type="number"
+						></tm-input>
+						<tm-input
+							v-model="form.double2"
+							label="数字组 2"
+							placeholder="第二组数字"
+							:round="12"
+							:border="1"
+							:padding="[18, 16]"
+							:maxlength="12"
+							type="number"
+						></tm-input>
+					</view>
+					<view class="helper-row">
+						<tm-button size="small" type="primary" :round="10" :padding="[18, 14]" label="生成参数" @tap="generateDouble"></tm-button>
+					</view>
+					<view v-if="form.doubleParams.length" class="auto-preview">
+						<tm-text :font-size="20" color="#1f2937" label="双数起卦参数（自下而上 6 爻）" />
+						<ParamPreview :params="form.doubleParams" />
+					</view>
+				</view>
+
+				<view v-else-if="currentMethod.key === 'chars'" class="method-panel">
+					<tm-text :font-size="22" color="#334155" label="汉字起卦：依据字形转卦" />
+					<tm-input
+						v-model="form.charsInput"
+						label="输入汉字"
+						placeholder="请输入 2-5 个汉字"
+						:round="12"
+						:border="1"
+						:padding="[18, 16]"
+						:maxlength="10"
+					></tm-input>
+					<view class="helper-row">
+						<tm-button size="small" type="primary" :round="10" :padding="[18, 14]" label="生成参数" @tap="generateChars"></tm-button>
+					</view>
+					<view v-if="form.charsParams.length" class="auto-preview">
+						<tm-text :font-size="20" color="#1f2937" label="汉字起卦参数（自下而上 6 爻）" />
+						<ParamPreview :params="form.charsParams" />
+					</view>
+				</view>
+
+				<view v-else-if="currentMethod.key === 'gua'" class="method-panel">
+					<tm-text :font-size="22" color="#334155" label="卦名起卦：选卦码即可" />
+					<view class="form-grid two">
+						<picker mode="selector" :range="guaMarks" range-key="label" :value="guaMainIndex" @change="onGuaMainChange">
+							<view class="picker-trigger">
+								<tm-text :font-size="20" color="#1f2937" :label="guaMainLabel || '请选择本卦'"></tm-text>
+								<tm-icon name="tmicon-angle-down" :font-size="20" color="#94a3b8"></tm-icon>
+							</view>
+						</picker>
+						<picker mode="selector" :range="guaMarks" range-key="label" :value="guaBianIndex" @change="onGuaBianChange">
+							<view class="picker-trigger">
+								<tm-text :font-size="20" color="#1f2937" :label="guaBianLabel || '请选择变卦（可选）'"></tm-text>
+								<tm-icon name="tmicon-angle-down" :font-size="20" color="#94a3b8"></tm-icon>
+							</view>
+						</picker>
+					</view>
+					<view class="helper-row">
+						<tm-button size="small" type="primary" :round="10" :padding="[18, 14]" label="生成参数" @tap="generateGua"></tm-button>
+					</view>
+					<view v-if="form.guaParams.length" class="auto-preview">
+						<tm-text :font-size="20" color="#1f2937" label="卦名起卦参数（自下而上 6 爻）" />
+						<ParamPreview :params="form.guaParams" />
+					</view>
+				</view>
+
+				<view v-else class="method-panel">
+					<tm-text :font-size="22" color="#334155" label="手工起卦：逐爻选择" />
+					<view class="yao-selector-grid">
+						<YaoSelector
+							v-for="i in 6"
+							:key="6 - i"
+							v-model="form.manualParams[6 - i]"
+							:options="yaoOptions"
+							:label="getYaoLabel(6 - i)"
+						/>
+					</view>
+				</view>
+			</SectionBlock>
+
+			<template #footer>
+				<tm-button
+					:label="'开始排盘'"
+					type="primary"
+					:round="999"
+					:bold="true"
+					:disabled="!canStart"
+					icon="tmicon-calendar-alt"
+					block
+					:class="['primary-btn', !canStart ? 'disabled' : '']"
+					@tap="startLiuyao"
+				></tm-button>
+			</template>
+		</PageScaffold>
+
+		<tm-time-picker
+			v-model:show="timePickerShow"
+			:round="10"
+			:default-value="timePickerDefault"
+			:start="timePick.start"
+			:end="timePick.end"
+			:format="timePick.format"
+			:show-detail="timePick.detail"
+			:show-suffix="timeSuffix"
+			@confirm="onTimeConfirm"
+		></tm-time-picker>
+	</tm-app>
+</template>
+
+<script lang="ts" setup>
+import { onLoad } from '@dcloudio/uni-app';
+import PageScaffold from '@/components/layout/PageScaffold.vue';
+import SectionBlock from '@/components/layout/SectionBlock.vue';
+import ParamPreview from '@/components/liuyao/ParamPreview.vue';
+import YaoSelector from '@/components/liuyao/YaoSelector.vue';
+import LiuyaoBasicInfo from '@/components/liuyao/LiuyaoBasicInfo.vue';
+import { useLiuyaoForm } from '@/features/liuyao/useLiuyaoForm';
+import { formatDateTime } from '@/features/liuyao/uiHelpers';
+
+const {
+	form,
+	methodTabs,
+	methodIndex,
+	currentMethod,
+	methodInfo,
+	methodDesc,
+	setMethod,
+	yaoOptions,
+	getYaoLabel,
+	timePickerShow,
+	timePickerDefault,
+	timePick,
+	timeSuffix,
+	openTimePicker,
+	onTimeConfirm,
+	useNowTime,
+	generateAuto,
+	generateTime,
+	startOnlineShake,
+	onlineActive,
+	onlineMsg,
+	generateSingle,
+	generateDouble,
+	generateChars,
+	generateGua,
+	startLiuyao,
+	resetForm,
+	canStart,
+	guaMarks,
+	guaMainIndex,
+	guaBianIndex,
+	guaMainLabel,
+	guaBianLabel,
+	onGuaMainChange,
+	onGuaBianChange
+} = useLiuyaoForm();
+
+function onMethodChange(e: any) {
+	const nextIndex = Number(e?.detail?.value ?? 0);
+	setMethod(nextIndex);
+}
+
+onLoad(() => {
+	const now = new Date();
+	form.value.timeLabel = formatDateTime(now);
+	timePickerDefault.value = formatDateTime(now).replace(/-/g, '/');
+});
+</script>
+
+<style scoped>
+.page-liuyao-input .page-card__body {
+	gap: 18px;
+}
+
+.method-desc {
+	line-height: 1.4;
+}
+
+.method-picker-trigger {
+	margin-top: 4px;
+}
+
+.method-picker-left {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.method-panel {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 18px;
+	border: 1px solid rgba(226, 232, 240, 0.9);
+	border-radius: 14px;
+	background: #ffffff;
+	box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
+}
+
+.form-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	gap: 12px;
+	width: 100%;
+}
+
+.form-grid.two {
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.helper-row {
+	display: flex;
+	width: 100%;
+	flex-wrap: wrap;
+	gap: 12px;
+	align-items: center;
+	margin-bottom: 12px;
+}
+
+.online-shake-wrapper {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	flex-wrap: wrap;
+}
+
+.online-active {
+	animation: pulse 1.5s linear infinite;
+}
+
+@keyframes pulse {
+	0% {
+		transform: scale(1);
+	}
+
+	50% {
+		transform: scale(1.05);
+	}
+
+	100% {
+		transform: scale(1);
+	}
+}
+
+.auto-preview {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding-top: 8px;
+}
+
+.yao-selector-grid {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.picker-trigger {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 14px 16px;
+	background: #f8fafc;
+	border-radius: 10px;
+	border: 1px solid #e5e7eb;
+}
+
+.picker-trigger:active {
+	background: #edf2fb;
+}
+
+.helper-actions {
+	display: flex;
+	gap: 16px;
+	flex-wrap: wrap;
+	width: 100%;
+}
+
+.helper-btn {
+	flex: 1 1 140px;
+	justify-content: center;
+}
+
+.primary-btn {
+	width: 100%;
+}
+
+.primary-btn.disabled {
+	opacity: 0.6;
+}
+
+.time-info {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+@media (min-width: 900px) {
+	.page-liuyao-input .page-card__body {
+		gap: 22px;
+	}
+
+	.method-panel {
+		padding: 22px;
+	}
+}
+</style>

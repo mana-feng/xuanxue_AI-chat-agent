@@ -1,0 +1,351 @@
+<template>
+	<tm-app>
+		<view class="page-wrapper">
+			<view class="page-content-scale">
+				<!-- 已登录 -->
+				<view v-if="isLoggedIn" class="login-container">
+					<tm-sheet :round="12" :shadow="8" :padding="[50, 40]" class="user-info-card" :follow-dark="true">
+						<view class="user-header">
+							<view class="user-avatar">
+								<tm-icon name="account-circle" :font-size="80" color="#667eea"></tm-icon>
+							</view>
+							<tm-text
+								:font-size="36"
+								:bold="true"
+								:label="'你好，' + (user_store.username || user_store.email || '已登录用户')"
+								:margin="[20, 0, 10, 0]"
+							></tm-text>
+							<tm-text :font-size="24" color="#999999" label="当前登录账号会自动保存排盘记录"></tm-text>
+						</view>
+
+						<view class="user-actions">
+							<tm-button
+								v-if="user_store.isAdmin"
+								type="warning"
+								block
+								:margin="[30, 0, 0, 0]"
+								:round="8"
+								:height="88"
+								:font-size="32"
+								label="管理员后台"
+								@tap="goToAdmin"
+							></tm-button>
+							<tm-button
+								type="primary"
+								block
+								:margin="[20, 0, 0, 0]"
+								:round="8"
+								:height="88"
+								:font-size="32"
+								label="返回上一页"
+								@tap="goBack"
+							></tm-button>
+							<tm-button
+								type="danger"
+								block
+								:margin="[20, 0, 0, 0]"
+								:round="8"
+								:height="88"
+								:font-size="32"
+								label="退出登录"
+								@tap="logout"
+							></tm-button>
+						</view>
+					</tm-sheet>
+				</view>
+
+				<!-- 未登录：仅登录 -->
+				<view v-else class="login-container">
+					<view class="header-section">
+						<view class="logo-wrapper">
+							<tm-icon name="account-circle" :font-size="80" color="#FFFFFF"></tm-icon>
+						</view>
+						<tm-text :font-size="44" :bold="true" color="#FFFFFF" label="八字排盘" :margin="[30, 0, 10, 0]"></tm-text>
+						<tm-text
+							:font-size="24"
+							color="rgba(255, 255, 255, 0.8)"
+							label="登录后可同步查看您的排盘历史"
+							:margin="[0, 0, 60, 0]"
+						></tm-text>
+					</view>
+
+					<tm-sheet :round="12" :shadow="8" :padding="[50, 40]" class="login-card">
+						<view class="form-content">
+							<view class="input-wrapper">
+								<tm-input
+									v-model="loginIdentifier"
+									@input="loginError = ''"
+									placeholder="请输入邮箱或用户名"
+									prefix="account"
+									clearable
+									:border="1"
+									:round="8"
+									:padding="[20, 20]"
+									class="login-input"
+								></tm-input>
+							</view>
+
+							<view class="input-wrapper">
+								<tm-input
+									v-model="loginPassword"
+									@input="loginError = ''"
+									type="password"
+									placeholder="请输入密码"
+									prefix="lock"
+									clearable
+									:border="1"
+									:round="8"
+									:padding="[20, 20]"
+									class="login-input"
+								></tm-input>
+							</view>
+
+							<view v-if="loginError" class="error-message">
+								<tm-icon name="close-circle" :font-size="20" color="#F56C6C" :margin="[0, 8, 0, 0]"></tm-icon>
+								<tm-text :font-size="22" color="#F56C6C" :label="loginError"></tm-text>
+							</view>
+
+							<tm-button
+								:margin="[40, 0, 0, 0]"
+								type="primary"
+								block
+								:loading="loginLoading"
+								:disabled="loginLoading || !loginIdentifier || !loginPassword"
+								label="登录"
+								:round="8"
+								:height="88"
+								:font-size="32"
+								:bold="true"
+								@tap="submitLogin"
+							></tm-button>
+						</view>
+					</tm-sheet>
+				</view>
+			</view>
+		</view>
+	</tm-app>
+</template>
+
+<script lang="ts" setup>
+import { ref, computed, onMounted } from 'vue';
+import { useUserStore } from '@/store/user';
+import { request } from '@/services/api/index';
+import { getDeviceId } from '@/utils/device';
+import { sanitizeInput } from '@/utils/sanitize';
+
+const user_store = useUserStore();
+
+const isLoggedIn = computed(() => user_store.isLoggedIn);
+const loginIdentifier = ref('');
+const loginPassword = ref('');
+const loginLoading = ref(false);
+const loginError = ref('');
+
+onMounted(() => {
+	user_store.restoreAuth();
+	// 管理员已登录则跳后台
+	if (user_store.isAdmin) {
+		uni.reLaunch({ url: '/pages/admin/dashboard' });
+		return;
+	}
+	// 非管理员已登录则保持状态
+});
+
+async function submitLogin() {
+	if (!loginIdentifier.value || !loginPassword.value) {
+		loginError.value = '请输入账号和密码';
+		return;
+	}
+	loginLoading.value = true;
+	loginError.value = '';
+
+	const deviceId = getDeviceId();
+	const safeIdentifier = sanitizeInput(loginIdentifier.value, 255);
+	// 密码不应进行字符清理，只做长度截取
+	const safePassword = loginPassword.value.slice(0, 128);
+
+	try {
+		const res = await request('/api/auth/login', {
+			method: 'POST',
+			data: { identifier: safeIdentifier, password: safePassword, device_id: deviceId }
+		});
+
+		if (!res.success) {
+			loginError.value = res.message || res.error || '登录失败，请稍后重试';
+			return;
+		}
+
+		const payload: any = res.data || {};
+		if (!payload.access_token) {
+			loginError.value = res.message || '登录失败，请稍后重试';
+			return;
+		}
+
+		const user = payload.user || {};
+		user_store.setAuth({
+			username: user?.username || null,
+			email: user?.email,
+			access_token: payload.access_token,
+			refresh_token: payload.refresh_token,
+			role: user?.role || 'user'
+		});
+
+		uni.showToast({ title: '登录成功', icon: 'success', duration: 1500 });
+		setTimeout(() => {
+			if (user?.role === 'admin') {
+				uni.reLaunch({ url: '/pages/admin/dashboard' });
+			} else {
+				uni.navigateBack();
+			}
+		}, 600);
+	} catch (err: any) {
+		loginError.value = err?.message || '网络错误，请检查后端是否已启动';
+	} finally {
+		loginLoading.value = false;
+	}
+}
+
+function goBack() {
+	uni.navigateBack();
+}
+
+function goToAdmin() {
+	if (isLoggedIn.value && user_store.isAdmin) {
+		uni.navigateTo({ url: '/pages/admin/dashboard' });
+	} else {
+		uni.navigateTo({ url: '/pages/auth/auth' });
+	}
+}
+
+async function logout() {
+	await user_store.logout();
+	uni.showToast({ title: '已退出登录', icon: 'none', duration: 1200 });
+}
+</script>
+
+<style scoped>
+.page-wrapper {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	position: relative;
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+.page-content-scale {
+	padding: 40rpx 24rpx;
+	position: relative;
+	z-index: 1;
+}
+
+@media (min-width: 900px) {
+	.page-content-scale {
+		padding: 60rpx 40rpx;
+	}
+}
+
+:global(.layout-wide) .page-content-scale {
+	padding: 60rpx 40rpx;
+}
+
+.login-container {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+}
+
+@media (min-width: 600px) {
+	.login-container {
+		max-width: 500px;
+		margin: 0 auto;
+	}
+}
+
+.header-section {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	margin-bottom: 60rpx;
+}
+
+.logo-wrapper {
+	width: 160rpx;
+	height: 160rpx;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.2);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 2px solid rgba(255, 255, 255, 0.3);
+	box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.1);
+}
+
+.login-card,
+.user-info-card {
+	width: 100%;
+	background: rgba(255, 255, 255, 0.98);
+}
+
+.user-header {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+}
+
+.user-avatar {
+	width: 160rpx;
+	height: 160rpx;
+	border-radius: 50%;
+	background: rgba(102, 126, 234, 0.1);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.user-actions {
+	width: 100%;
+	margin-top: 40rpx;
+}
+
+.form-content {
+	width: 100%;
+}
+
+.input-wrapper {
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	margin-top: 30rpx;
+}
+
+.input-wrapper:first-child {
+	margin-top: 0;
+}
+
+.login-input {
+	width: 100% !important;
+}
+
+.input-wrapper :deep(.tm-input) {
+	width: 100% !important;
+}
+
+.input-wrapper :deep(.tm-input__wrap) {
+	width: 100% !important;
+}
+
+.error-message {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	margin-top: 20rpx;
+	padding: 16rpx 20rpx;
+	background: rgba(245, 108, 108, 0.1);
+	border-radius: 8rpx;
+	border-left: 4rpx solid #F56C6C;
+}
+</style>

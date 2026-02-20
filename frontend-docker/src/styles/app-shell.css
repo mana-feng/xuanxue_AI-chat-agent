@@ -1,0 +1,569 @@
+/**
+ * App Shell 布局系统
+ * 统一的应用框架布局
+ */
+
+/* ==================== 全局基础样式 ==================== */
+html,
+body,
+#app,
+uni-app,
+uni-page-body {
+	margin: 0;
+	padding: 0;
+	min-height: 100vh;
+	box-sizing: border-box;
+}
+
+/* #ifndef MP-WEIXIN */
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+/* #endif */
+
+/* #ifdef MP-WEIXIN */
+page,
+view,
+text,
+image,
+scroll-view,
+swiper,
+swiper-item,
+form,
+input,
+textarea,
+button,
+navigator,
+video,
+canvas,
+map,
+cover-view,
+cover-image,
+icon,
+rich-text,
+progress,
+checkbox,
+checkbox-group,
+radio,
+radio-group,
+slider,
+switch,
+picker,
+picker-view,
+picker-view-column,
+movable-area,
+movable-view,
+ad,
+ad-custom {
+	box-sizing: border-box;
+}
+/* #endif */
+
+:root,
+page {
+	--app-bg: #f6f7fb;
+	--app-bg-spot: rgba(99, 102, 241, 0.08);
+	--surface: #ffffff;
+	--surface-soft: #f8fafc;
+	--surface-raised: #ffffff;
+	--text-primary: #111827;
+	--text-secondary: #6b7280;
+	--border-subtle: #e5e7eb;
+	--radius-sm: 12px;
+	--radius-md: 16px;
+	--radius-lg: 20px;
+	--shadow-xs: 0 6px 18px rgba(15, 23, 42, 0.08);
+	--shadow-md: 0 16px 40px rgba(15, 23, 42, 0.12);
+	--page-pad-x: 14px;
+	--page-pad-y: 16px;
+	--page-max: 720px;
+	--header-height: 52px;
+	--safe-top: 0px;
+	--safe-bottom: 0px;
+	--bottom-nav-height: 64px;
+}
+
+/* #ifdef H5 */
+:root,
+page {
+	--safe-top: 12px;
+	--safe-bottom: env(safe-area-inset-bottom);
+}
+/* #endif */
+
+@media (min-width: 900px) {
+	:root,
+	page {
+		--page-pad-x: 32px;
+		--page-pad-y: 28px;
+		--page-max: 980px;
+		--header-height: 60px;
+		--bottom-nav-height: 72px;
+	}
+}
+
+.layout-wide {
+	--page-pad-x: 32px;
+	--page-pad-y: 28px;
+	--page-max: 980px;
+	--header-height: 60px;
+	--bottom-nav-height: 72px;
+	--container-max-width: 980px;
+}
+
+/* ==================== App Shell 布局 ==================== */
+.app-shell {
+	min-height: 100vh;
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	background: radial-gradient(circle at 18% 16%, var(--app-bg-spot), transparent 42%),
+		radial-gradient(circle at 78% 8%, rgba(14, 165, 233, 0.06), transparent 38%),
+		var(--app-bg);
+}
+
+/* ==================== Header 布局 ==================== */
+.app-header {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 1000;
+
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+
+	height: calc(var(--header-height) + var(--safe-top));
+	padding-top: var(--safe-top);
+	padding-left: var(--page-pad-x);
+	/* give extra breathing room on the right for the user icon */
+	padding-right: calc(var(--page-pad-x) + 16px);
+
+	background: var(--surface, #ffffff);
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+	box-sizing: border-box;
+}
+
+.app-header__left {
+	display: flex;
+	align-items: center;
+	gap: clamp(8px, 1.5vw, 16px);
+	flex: 1;
+	min-width: 0;
+}
+
+.app-header__logo {
+	display: flex;
+	align-items: center;
+	gap: clamp(8px, 1.5vw, 12px);
+	cursor: pointer;
+	text-decoration: none;
+	color: inherit;
+}
+
+.app-header__logo .logo-icon {
+	width: clamp(24px, 4vw, 32px);
+	height: clamp(24px, 4vw, 32px);
+	object-fit: contain;
+}
+
+.app-header__title {
+	font-size: clamp(16px, 2vw, 20px);
+	font-weight: 600;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	color: var(--text-primary);
+}
+
+.app-header__right {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: nowrap;
+	flex-shrink: 0;
+}
+
+.icon-btn {
+	border: none;
+	background: transparent;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border-radius: 999px;
+	transition: background-color 0.2s ease;
+	padding: 0;
+	margin: 0;
+}
+
+.icon-btn:hover,
+.icon-btn:active {
+	background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* ==================== Main 内容区域 ==================== */
+.app-main {
+	flex: 1;
+	width: 100%;
+	/* Header is fixed, so we need padding-top equal to header height + safe area */
+	padding-top: calc(var(--header-height) + var(--page-pad-y) + var(--safe-top));
+	padding-bottom: calc(var(--page-pad-y) + var(--safe-bottom) + var(--bottom-nav-height));
+	padding-inline: var(--page-pad-x);
+	display: flex;
+	justify-content: center;
+	box-sizing: border-box;
+}
+
+/* 小屏幕时调整 main 内边�?*/
+
+/* ==================== 页面容器 ==================== */
+.page-shell {
+	width: 100%;
+	max-width: var(--page-max);
+	margin: 0 auto;
+	display: flex;
+	justify-content: center;
+	box-sizing: border-box;
+}
+
+.page-card {
+	width: 100%;
+	max-width: var(--page-max);
+	margin-inline: auto;
+	border-radius: var(--radius-lg);
+	background: var(--surface, #ffffff);
+	box-shadow: var(--shadow-xs);
+	border: 1px solid var(--border-subtle, #e5e7eb);
+	padding: 18px 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	box-sizing: border-box;
+	animation: card-rise 0.35s ease both;
+}
+
+@media (min-width: 900px) {
+	.page-card {
+		padding: 28px 26px;
+		border-radius: 24px;
+		box-shadow: var(--shadow-md);
+		gap: 22px;
+	}
+}
+
+.layout-wide .page-card {
+	padding: 28px 26px;
+	border-radius: 24px;
+	box-shadow: var(--shadow-md);
+	gap: 22px;
+}
+
+/* ==================== 页面标题 ==================== */
+.page-title-wrapper {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	margin-bottom: 12px;
+	padding-bottom: 12px;
+	border-bottom: 1px solid var(--border-subtle);
+}
+
+.page-title {
+	font-size: clamp(20px, 4vw, 26px);
+	font-weight: 700;
+	margin: 0;
+	margin-bottom: 4px;
+	line-height: 1.3;
+	color: var(--text-primary);
+}
+
+.page-subtitle {
+	font-size: clamp(13px, 2.5vw, 14px);
+	color: var(--text-secondary, #6b7280);
+	margin: 0;
+	line-height: 1.5;
+}
+
+/* ==================== Section 样式 ==================== */
+.section {
+	background: var(--surface-soft, #f8fafc);
+	border-radius: var(--radius-md);
+	padding: 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	border: 1px solid var(--border-subtle, #e5e7eb);
+	box-sizing: border-box;
+}
+
+.section__header {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 8px;
+	padding-bottom: 8px;
+	border-bottom: 1px solid var(--border-subtle, #e5e7eb);
+}
+
+.section__title {
+	font-size: clamp(16px, 3vw, 18px);
+	font-weight: 600;
+	margin: 0;
+	line-height: 1.4;
+	color: var(--text-primary);
+}
+
+.section__body {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	width: 100%;
+}
+
+/* ==================== 表单布局 ==================== */
+.form-row {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 12px;
+	width: 100%;
+}
+
+@media screen and (min-width: 720px) {
+	.form-row {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+.layout-medium .form-row,
+.layout-wide .form-row {
+	grid-template-columns: repeat(2, 1fr);
+}
+
+.form-group {
+	display: flex;
+	flex-direction: column;
+	gap: clamp(6px, 1vw, 8px);
+	width: 100%;
+}
+
+/* ==================== 按钮区域 ==================== */
+.page-card__footer {
+	display: flex;
+	justify-content: center;
+	margin-top: clamp(8px, 2vh, 16px);
+	width: 100%;
+	padding-bottom: var(--safe-bottom);
+}
+
+.primary-btn {
+	width: 100%;
+	max-width: 100%;
+}
+
+.primary-btn .button {
+	height: 48px !important;
+	font-size: 15px !important;
+	border-radius: 999px !important;
+}
+
+.primary-btn.disabled .button {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+/* ==================== 统一主题样式 ==================== */
+.theme-page-bg {
+	min-height: 100vh;
+	width: 100%;
+	background: radial-gradient(circle at 18% 18%, rgba(79, 70, 229, 0.04), transparent 42%),
+		radial-gradient(circle at 82% 8%, rgba(14, 165, 233, 0.04), transparent 40%),
+		var(--app-bg);
+}
+
+.theme-container {
+	width: 100%;
+	max-width: var(--page-max);
+	margin: 0 auto;
+	padding: 18px 14px calc(40px + var(--safe-bottom));
+	box-sizing: border-box;
+}
+
+.theme-card {
+	position: relative;
+	width: 100%;
+	background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+	border: 1px solid #e5e9f2;
+	border-radius: 18px;
+	box-shadow: var(--shadow-xs);
+	padding: 18px 16px;
+	overflow: hidden;
+	animation: card-rise 0.35s ease both;
+}
+
+.theme-card::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(circle at 12% 12%, rgba(102, 126, 234, 0.08), transparent 35%),
+		radial-gradient(circle at 88% 6%, rgba(118, 75, 162, 0.07), transparent 32%);
+	pointer-events: none;
+}
+
+.theme-card-glass {
+	position: relative;
+	background: rgba(255, 255, 255, 0.86);
+	backdrop-filter: blur(10px);
+	border: 1px solid rgba(226, 232, 240, 0.9);
+	box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+}
+
+.theme-section {
+	background: #ffffff;
+	border-radius: 14px;
+	border: 1px solid #e2e8f0;
+	padding: 14px 12px;
+	margin-bottom: 14px;
+	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+	position: relative;
+	z-index: 1;
+}
+
+.theme-section__header {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 10px;
+	border-bottom: 1px dashed #e5e7eb;
+	padding-bottom: 10px;
+}
+
+.theme-section__title {
+	font-size: clamp(18px, 3.2vw, 22px);
+	color: #1f2a44;
+	font-weight: 700;
+}
+
+.theme-divider {
+	height: 1px;
+	width: 100%;
+	background: linear-gradient(90deg, transparent, #e5e9f2, transparent);
+	margin: 12px 0;
+}
+
+@media (min-width: 900px) {
+	.theme-container {
+		padding: 28px 24px 64px;
+	}
+
+	.theme-card {
+		border-radius: 22px;
+		padding: 26px 24px;
+		box-shadow: var(--shadow-md);
+	}
+
+	.theme-section {
+		padding: 18px 18px;
+		margin-bottom: 18px;
+	}
+}
+
+.layout-wide .theme-container {
+	padding: 28px 24px 64px;
+}
+
+.layout-wide .theme-card {
+	border-radius: 22px;
+	padding: 26px 24px;
+	box-shadow: var(--shadow-md);
+}
+
+.layout-wide .theme-section {
+	padding: 18px 18px;
+	margin-bottom: 18px;
+}
+
+/* ==================== 按钮风格统一 ==================== */
+.btn-gradient {
+	border-radius: 999px;
+	overflow: hidden;
+}
+
+.btn-gradient .button {
+	/* 不自定义背景色，使用 tmui 默认 primary 渐变（与首页一致） */
+	color: #ffffff !important;
+	border-radius: 999px !important;
+	box-shadow: 0 10px 22px rgba(148, 163, 184, 0.22) !important;
+	border: 1px solid rgba(255, 255, 255, 0.32) !important;
+	backdrop-filter: blur(3px);
+	min-height: 34px;
+	padding: 0 16px;
+	font-size: 13px !important;
+	transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.08s ease;
+}
+
+.btn-gradient .button:active {
+	transform: translateY(1px);
+	box-shadow: 0 8px 18px rgba(129, 140, 248, 0.18) !important;
+	filter: brightness(0.985);
+}
+
+.btn-soft {
+	border-radius: 14px;
+}
+
+.btn-soft .button {
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(241, 245, 249, 0.9)) !important;
+	color: #1f2937 !important;
+	border: 1px solid rgba(226, 232, 240, 0.9) !important;
+	box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06) !important;
+	min-height: 32px;
+	padding: 0 14px;
+	font-size: 13px !important;
+	transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.08s ease;
+}
+
+.btn-soft .button:active {
+	transform: translateY(1px);
+	box-shadow: 0 5px 12px rgba(15, 23, 42, 0.06) !important;
+	filter: brightness(0.98);
+}
+
+.btn-outline-danger {
+	border-radius: 14px;
+}
+
+.btn-outline-danger .button {
+	background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 241, 242, 0.9)) !important;
+	color: #e11d48 !important;
+	border: 1px solid rgba(225, 29, 72, 0.55) !important;
+	box-shadow: 0 6px 14px rgba(225, 29, 72, 0.16) !important;
+	min-height: 32px;
+	padding: 0 14px;
+	font-size: 13px !important;
+	transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.08s ease;
+}
+
+.btn-outline-danger .button:active {
+	transform: translateY(1px);
+	box-shadow: 0 5px 12px rgba(225, 29, 72, 0.16) !important;
+	filter: brightness(0.98);
+}
+
+@keyframes card-rise {
+	0% {
+		transform: translateY(8px);
+		opacity: 0;
+	}
+
+	100% {
+		transform: translateY(0);
+		opacity: 1;
+	}
+}

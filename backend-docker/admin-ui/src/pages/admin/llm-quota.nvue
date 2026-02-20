@@ -1,0 +1,450 @@
+<template>
+	<tm-app>
+		<view class="page-wrapper theme-page-bg">
+			<yx-nav-header></yx-nav-header>
+			
+			<view class="page-content theme-container" :style="pageContentStyle">
+				<view class="theme-card theme-card-glass">
+				<!-- 顶部标题 -->
+				<view class="header">
+					<tm-text
+						:font-size="42"
+						:bold="true"
+						color="#2d3748"
+						label="AI额度管理"
+					></tm-text>
+					<view class="header-buttons">
+						<tm-button
+							class="btn-gradient"
+							size="small"
+							color="teal"
+							linear="right"
+							label="返回"
+							:margin="[0, 12, 0, 0]"
+							:round="12"
+							:padding="[20, 24]"
+							@tap="goBack"
+						></tm-button>
+					</view>
+				</view>
+
+				<!-- 搜索框 -->
+				<view class="search-section">
+					<tm-input
+						v-model="searchKeyword"
+						placeholder="搜索用户邮箱或用户名"
+						prefix="search"
+						clearable
+						:border="1"
+						:round="12"
+						:padding="[20, 20]"
+						:height="88"
+						:font-size="28"
+						@input="handleSearch"
+					></tm-input>
+				</view>
+
+				<!-- 额度列表 -->
+				<view class="quota-list" v-if="!loading">
+					<tm-sheet
+						v-for="quota in quotaList"
+						:key="quota.userId"
+						:round="12"
+						:shadow="2"
+						:padding="[24, 24]"
+						:margin="[0, 0, 0, 0]"
+						class="quota-card list-item"
+					>
+						<view class="quota-row">
+							<!-- 左侧：用户信息 -->
+							<view class="quota-left">
+								<view class="user-info">
+									<tm-text :font-size="28" :bold="true" color="#2d3748" :label="quota.email"></tm-text>
+									<tm-text 
+										v-if="quota.username" 
+										:font-size="24" 
+										color="#6b7280" 
+										:margin="[8, 0, 0, 0]" 
+										:label="`@${quota.username}`"
+									></tm-text>
+								</view>
+							</view>
+
+							<!-- 中间：额度信息 -->
+							<view class="quota-right">
+								<view class="quota-info-item">
+									<tm-text :font-size="22" color="#718096" label="剩余次数:"></tm-text>
+									<tm-text 
+										:font-size="26" 
+										:bold="true" 
+										:color="(quota.remainingCount || 0) > 0 ? '#48bb78' : '#f56565'"
+										:label="`${quota.remainingCount || 0}次`"
+									></tm-text>
+								</view>
+							</view>
+
+							<!-- 右侧：操作按钮 -->
+							<view class="quota-action">
+								<tm-button
+									class="btn-gradient"
+									size="mini"
+									color="teal"
+									linear="right"
+									label="调整额度"
+									:round="8"
+									@tap="openEditDialog(quota)"
+								></tm-button>
+							</view>
+						</view>
+					</tm-sheet>
+
+					<!-- 空状态 -->
+					<view v-if="quotaList.length === 0" class="empty-state">
+						<tm-icon name="inbox" :font-size="120" color="#cbd5e0"></tm-icon>
+						<tm-text :font-size="28" color="#718096" :margin="[20, 0, 0, 0]" label="暂无用户数据"></tm-text>
+					</view>
+				</view>
+
+				<!-- 加载状态 -->
+				<view v-if="loading" class="loading-state">
+					<tm-text :font-size="28" color="#718096" label="加载中..."></tm-text>
+				</view>
+
+				<!-- 分页 -->
+				<view v-if="!loading && quotaList.length > 0" class="pagination">
+					<tm-button
+						class="btn-gradient"
+						size="small"
+						color="teal"
+						linear="right"
+						:disabled="currentPage === 1"
+						label="上一页"
+						:round="8"
+						:margin="[0, 12, 0, 0]"
+						@tap="prevPage"
+					></tm-button>
+					<tm-text :font-size="24" color="#4b5563" :label="`第 ${currentPage} / ${totalPages} 页`"></tm-text>
+					<tm-button
+						class="btn-gradient"
+						size="small"
+						color="teal"
+						linear="right"
+						:disabled="currentPage >= totalPages"
+						label="下一页"
+						:round="8"
+						:margin="[12, 0, 0, 0]"
+						@tap="nextPage"
+					></tm-button>
+				</view>
+			</view>
+		</view>
+
+		<!-- 编辑额度弹窗 -->
+		<tm-drawer
+			v-model:show="showEditDialog"
+			:round="16"
+			:height="700"
+			:width="650"
+			placement="center"
+			title="调整用户额度"
+		>
+			<view class="edit-dialog-content" v-if="editingQuota">
+				<view class="form-item">
+					<tm-text :font-size="24" :bold="true" :label="`用户: ${editingQuota.email}`" :margin="[0, 0, 20, 0]"></tm-text>
+				</view>
+
+				<view class="form-item">
+					<tm-text :font-size="22" class="form-label" label="剩余次数"></tm-text>
+					<tm-input
+						v-model.number="editForm.remainingCount"
+						type="number"
+						placeholder="剩余次数"
+						:border="1"
+						:round="12"
+						:padding="[20, 20]"
+						:height="88"
+						:font-size="28"
+					></tm-input>
+				</view>
+
+				<view class="dialog-actions">
+					<tm-button
+						class="btn-gradient"
+						color="teal"
+						linear="right"
+						label="取消"
+						:round="12"
+						:margin="[0, 12, 0, 0]"
+						@tap="showEditDialog = false"
+					></tm-button>
+					<tm-button
+						class="btn-gradient"
+						color="teal"
+						linear="right"
+						label="保存"
+						:round="12"
+						:loading="saving"
+						@tap="saveQuota"
+					></tm-button>
+				</view>
+			</view>
+		</tm-drawer>
+		</view>
+	</tm-app>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted, computed } from 'vue';
+import { useUserStore } from '@/store/user';
+import { getUserQuotasList, setUserQuota, type UserQuota } from '@/services/api/admin';
+
+const userStore = useUserStore();
+
+// navbar 高度（rpx），与 yx-nav-header 中的 navbarHeight 保持一致
+const navbarHeight = 40;
+
+// 计算页面内容的 padding-top，避免被 fixed 的 header 遮挡
+const pageContentStyle = computed(() => {
+	return {
+		paddingTop: `${navbarHeight + 20}rpx` // navbar高度 + 原有padding
+	};
+});
+
+const quotaList = ref<UserQuota[]>([]);
+const loading = ref(false);
+const currentPage = ref(1);
+const pageSize = ref(20);
+const totalPages = ref(1);
+const searchKeyword = ref('');
+let searchTimer: any = null;
+
+const showEditDialog = ref(false);
+const editingQuota = ref<UserQuota | null>(null);
+const editForm = ref({
+	remainingCount: 0,
+});
+const saving = ref(false);
+
+onMounted(() => {
+	userStore.restoreAuth();
+	
+	if (!userStore.isAdmin) {
+		uni.reLaunch({
+			url: '/pages/auth/auth'
+		});
+		return;
+	}
+	
+	loadQuotas();
+});
+
+function loadQuotas() {
+	loading.value = true;
+	getUserQuotasList({
+		page: currentPage.value,
+		pageSize: pageSize.value,
+		search: searchKeyword.value || undefined,
+	})
+		.then((res) => {
+			if (res.success && res.data) {
+				quotaList.value = res.data.list;
+				totalPages.value = res.data.totalPages;
+			}
+		})
+		.catch((err) => {
+			console.error('加载额度列表失败:', err);
+			uni.showToast({
+				title: '加载失败',
+				icon: 'none'
+			});
+		})
+		.finally(() => {
+			loading.value = false;
+		});
+}
+
+function handleSearch() {
+	// 防抖搜索
+	if (searchTimer) {
+		clearTimeout(searchTimer);
+	}
+	searchTimer = setTimeout(() => {
+		currentPage.value = 1;
+		loadQuotas();
+	}, 500);
+}
+
+function prevPage() {
+	if (currentPage.value > 1) {
+		currentPage.value--;
+		loadQuotas();
+	}
+}
+
+function nextPage() {
+	if (currentPage.value < totalPages.value) {
+		currentPage.value++;
+		loadQuotas();
+	}
+}
+
+function openEditDialog(quota: UserQuota) {
+	editingQuota.value = quota;
+	editForm.value = {
+		remainingCount: quota.remainingCount || 0
+	};
+	showEditDialog.value = true;
+}
+
+function saveQuota() {
+	if (!editingQuota.value) return;
+	
+	saving.value = true;
+	setUserQuota(editingQuota.value.userId, editForm.value)
+		.then((res) => {
+			if (res.success) {
+				uni.showToast({
+					title: '保存成功',
+					icon: 'success'
+				});
+				showEditDialog.value = false;
+				loadQuotas();
+			}
+		})
+		.catch((err) => {
+			console.error('保存额度失败:', err);
+			uni.showToast({
+				title: err?.error || '保存失败',
+				icon: 'none'
+			});
+		})
+		.finally(() => {
+			saving.value = false;
+		});
+}
+
+// Token 计数已删除，不再需要格式化
+
+function goBack() {
+	uni.navigateBack();
+}
+</script>
+
+<style scoped>
+.page-wrapper {
+	background-color: #f5f5f5;
+}
+
+.page-content {
+	padding: 20rpx;
+}
+
+.header {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 30rpx;
+}
+
+.header-buttons {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+.search-section {
+	margin-bottom: 30rpx;
+}
+
+.quota-card {
+	background: #ffffff;
+}
+
+.quota-row {
+	display: flex;
+	align-items: center;
+	gap: 20rpx;
+	flex-direction: row;
+}
+
+.quota-left {
+	flex-shrink: 0;
+	min-width: 200rpx;
+	max-width: 250rpx;
+	margin-right: 40rpx;
+}
+
+.user-info {
+	display: flex;
+	flex-direction: column;
+}
+
+.quota-right {
+	flex: 1;
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 12rpx;
+	align-items: center;
+	min-width: 0;
+}
+
+.quota-info-item {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 8rpx;
+	padding: 8rpx 12rpx;
+	background-color: #f7fafc;
+	border-radius: 8rpx;
+	white-space: nowrap;
+}
+
+.quota-action {
+	flex-shrink: 0;
+}
+
+.empty-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 100rpx 0;
+}
+
+.loading-state {
+	display: flex;
+	justify-content: center;
+	padding: 100rpx 0;
+}
+
+.pagination {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	padding: 30rpx 0;
+}
+
+.edit-dialog-content {
+	padding: 20rpx;
+}
+
+.form-item {
+	margin-bottom: 30rpx;
+}
+
+.form-label {
+	margin-bottom: 12rpx !important;
+	display: block;
+}
+
+.dialog-actions {
+	display: flex;
+	flex-direction: row;
+	justify-content: flex-end;
+	margin-top: 40rpx;
+}
+</style>
+

@@ -1,0 +1,95 @@
+/**
+ * Shared page patterns for cards, grids and action rows.
+ * Keeps BaZi / Liuyao / About pages visually aligned.
+ */
+
+.page-card__body {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+@media (min-width: 900px) {
+	.page-card__body {
+		gap: 18px;
+	}
+}
+
+.page-title-text .page-title {
+	margin: 0;
+}
+
+.page-title-text .page-subtitle {
+	margin: 0;
+}
+
+.section-lead {
+	font-size: 14px;
+	color: #64748b;
+	line-height: 1.6;
+	margin: 0 0 6px 0;
+}
+
+.info-grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 12px;
+}
+
+@media (min-width: 720px) {
+	.info-grid {
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	}
+}
+
+.info-tile {
+	padding: 14px 16px;
+	border: 1px solid #e5e7eb;
+	border-radius: 12px;
+	background: #f8fafc;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.action-row {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 12px;
+}
+
+@media (min-width: 720px) {
+	.action-row {
+		flex-direction: row;
+		align-items: center;
+		justify-content: flex-end;
+		flex-wrap: wrap;
+	}
+}
+
+.form-grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 14px;
+}
+
+@media (min-width: 720px) {
+	.form-grid.columns-2 {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.form-grid.columns-3 {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}
+
+.card-stack {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.muted-text {
+	color: #64748b;
+}

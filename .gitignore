@@ -1,0 +1,49 @@
+# dependencies
+**/node_modules/
+
+# builds
+backend-docker/dist/
+frontend-docker/dist/
+frontend-docker/unpackage/
+backend-docker/admin-ui/dist/
+backend-docker/admin-ui/unpackage/
+
+# env files
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.development.example
+!**/.env.production.example
+
+# deploy files (keep example, ignore real secrets)
+docker-compose.deploy.yml
+!docker-compose.deploy.example.yml
+
+# logs and coverage
+logs/
+*.log
+coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local databases and generated outputs
+**/*.db
+bazi-*.json
+analysis-results/
+
+# editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# temp
+*.local
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+*.orig
+*.rej

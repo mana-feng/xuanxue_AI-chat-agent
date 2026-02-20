@@ -1,0 +1,26 @@
+{
+    "name" : "mana-AI",
+    "appid" : "__UNI__G9DE1127",
+    "description" : "",
+    "versionName" : "1.0.0",
+    "versionCode" : 1,
+    "transformPx" : false,
+    "uniStatistics" : {
+        "enable" : false
+    },
+    "vueVersion" : "3",
+    "h5" : {
+        "router" : {
+            "mode" : "hash",
+            "base" : "./"
+        },
+        "title" : "mana玄学AI",
+        "optimization" : {
+            "treeShaking" : {
+                "enable" : true
+            }
+        }
+    },
+    "fallbackLocale" : "zh-Hans",
+    "locale" : "zh-Hans"
+}

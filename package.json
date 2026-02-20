@@ -1,0 +1,20 @@
+{
+  "name": "mana-xuan-ai",
+  "version": "1.0.0",
+  "description": "AI Xuanxue docker workspace",
+  "private": true,
+  "scripts": {
+    "docker:up": "docker compose -f docker-compose.deploy.yml up -d backend frontend admin-ui db",
+    "docker:pull-up": "docker compose -f docker-compose.deploy.yml pull backend frontend admin-ui db && docker compose -f docker-compose.deploy.yml up -d backend frontend admin-ui db",
+    "docker:push": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/push-dockerhub.ps1"
+  },
+  "keywords": [
+    "bazi",
+    "uni-app",
+    "express",
+    "mysql",
+    "docker"
+  ],
+  "author": "",
+  "license": "ISC"
+}

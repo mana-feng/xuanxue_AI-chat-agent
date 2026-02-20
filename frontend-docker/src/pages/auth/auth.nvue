@@ -1,0 +1,905 @@
+<template>
+	<tm-app>
+		<view class="page-wrapper">
+			<!-- 顶部安全区域和返回按钮 -->
+			<view class="top-status-bar" :style="{ height: statusBarHeight + 'px' }"></view>
+			<view class="top-nav-bar">
+				<view class="nav-back-btn" @tap="goHome">
+					<tm-icon name="tmicon-angle-left" :font-size="38" color="#FFFFFF"></tm-icon>
+					<tm-text :font-size="28" color="#FFFFFF" label="返回首页" :margin="[4, 0, 0, 0]"></tm-text>
+				</view>
+			</view>
+
+			<view class="page-content-scale">
+				<!-- 已登录状态 -->
+				<view v-if="isLoggedIn" class="login-container">
+					<tm-sheet
+						:round="12"
+						:shadow="8"
+						:margin="[0, 0, 0, 0]"
+						:padding="[50, 40]"
+						class="user-info-card"
+						:follow-dark="true"
+					>
+						<view class="user-header">
+							<view class="user-avatar">
+								<tm-icon name="account-circle" :font-size="80" color="#667eea"></tm-icon>
+							</view>
+							<tm-text
+								:font-size="36"
+								:bold="true"
+								:label="'您好，' + (user_store.username || user_store.email || '已登录用户')"
+								:margin="[20, 0, 10, 0]"
+							></tm-text>
+							<tm-text
+								:font-size="24"
+								color="#999999"
+								label="当前登录账号将自动保存您的排盘记录"
+							></tm-text>
+						</view>
+
+						<view class="user-actions">
+							<tm-button
+								type="primary"
+								block
+								:margin="[20, 0, 0, 0]"
+								:round="8"
+								:height="88"
+								:font-size="32"
+								label="返回上一页"
+								@tap="goBack"
+							></tm-button>
+							<tm-button
+								type="danger"
+								block
+								:margin="[20, 0, 0, 0]"
+								:round="8"
+								:height="88"
+								:font-size="32"
+								label="退出登录"
+								@tap="logout"
+							></tm-button>
+						</view>
+					</tm-sheet>
+				</view>
+
+				<!-- 未登录：登录/注册界面 -->
+				<view v-else class="login-container">
+					<!-- Logo/标题区域 -->
+					<view class="header-section">
+						<view class="logo-wrapper">
+							<tm-icon name="account-circle" :font-size="80" color="#FFFFFF"></tm-icon>
+						</view>
+						<tm-text
+							:font-size="44"
+							:bold="true"
+							color="#FFFFFF"
+							label="八字排盘"
+							:margin="[30, 0, 10, 0]"
+						></tm-text>
+						<tm-text
+							:font-size="24"
+							color="rgba(255, 255, 255, 0.8)"
+							label="登录后可在多设备同步查看您的排盘历史"
+							:margin="[0, 0, 60, 0]"
+						></tm-text>
+					</view>
+
+					<!-- 登录/注册切换标签 -->
+					<tm-sheet
+						:round="12"
+						:shadow="8"
+						:margin="[0, 0, 0, 0]"
+						:padding="[50, 40]"
+						class="login-card"
+					>
+						<view class="tab-switcher">
+							<view 
+								class="tab-item" 
+								:class="{ active: currentTab === 'login' }"
+								@tap="currentTab = 'login'"
+							>
+								<tm-text
+									:font-size="32"
+									:bold="currentTab === 'login'"
+									:color="currentTab === 'login' ? '#667eea' : '#999999'"
+									label="登录"
+								></tm-text>
+							</view>
+							<view 
+								class="tab-item" 
+								:class="{ active: currentTab === 'register' }"
+								@tap="currentTab = 'register'"
+							>
+								<tm-text
+									:font-size="32"
+									:bold="currentTab === 'register'"
+									:color="currentTab === 'register' ? '#667eea' : '#999999'"
+									label="注册"
+								></tm-text>
+							</view>
+						</view>
+
+						<!-- 登录表单 -->
+						<view v-if="currentTab === 'login'" class="form-content">
+							<view class="input-wrapper">
+							<tm-input
+								v-model="loginIdentifier"
+								placeholder="请输入邮箱或用户名"
+								prefix="account"
+								clearable
+								:border="1"
+								:round="8"
+									:padding="[20, 20]"
+									class="login-input"
+									@input="loginError = ''"
+								></tm-input>
+							</view>
+							
+							<view class="input-wrapper">
+							<tm-input
+								v-model="loginPassword"
+								type="password"
+								placeholder="请输入密码"
+								prefix="lock"
+								clearable
+									:border="1"
+									:round="8"
+									:padding="[20, 20]"
+									class="login-input"
+									@input="loginError = ''"
+								></tm-input>
+							</view>
+
+							<!-- 错误提示 -->
+							<view v-if="loginError" class="error-message">
+								<tm-icon name="close-circle" :font-size="20" color="#F56C6C" :margin="[0, 8, 0, 0]"></tm-icon>
+								<tm-text
+									:font-size="22"
+									color="#F56C6C"
+									:label="loginError"
+								></tm-text>
+							</view>
+
+							<tm-button
+								:margin="[40, 0, 0, 0]"
+								type="primary"
+								block
+								:loading="loginLoading"
+								:disabled="loginLoading || !loginIdentifier || !loginPassword"
+								label="登录"
+								:round="8"
+								:height="88"
+								:font-size="32"
+								:bold="true"
+								@tap="submitLogin"
+							></tm-button>
+						</view>
+
+						<!-- 注册表单 -->
+						<view v-if="currentTab === 'register'" class="form-content">
+							<!-- 注册提示 -->
+							<view class="register-tip">
+								<tm-icon name="information-circle" :font-size="24" color="#667eea" :margin="[0, 10, 0, 0]"></tm-icon>
+								<tm-text
+									:font-size="24"
+									color="#666666"
+									label="填写以下信息完成注册"
+								></tm-text>
+							</view>
+
+							<view class="input-wrapper">
+								<tm-input
+									v-model="registerUsername"
+									placeholder="设置用户名（2-20个字符）"
+									prefix="account"
+									clearable
+									:border="1"
+									:round="8"
+									:padding="[20, 20]"
+									class="login-input"
+									@input="registerError = ''"
+								></tm-input>
+							</view>
+
+							<view class="input-wrapper">
+								<tm-input
+									v-model="registerEmail"
+									placeholder="请输入常用邮箱"
+									prefix="mail"
+									clearable
+									:border="1"
+									:round="8"
+									:padding="[20, 20]"
+									class="login-input"
+									@input="registerError = ''"
+								></tm-input>
+							</view>
+							
+							<!-- 验证码输入区域 -->
+							<view class="input-wrapper">
+								<view class="verification-code-container">
+									<view class="code-input-wrapper">
+										<tm-input
+											v-model="registerVerificationCode"
+											placeholder="请输入邮箱验证码"
+											prefix="key"
+											type="number"
+											clearable
+											:border="1"
+											:round="8"
+											:padding="[20, 20]"
+											class="login-input"
+											@input="registerError = ''"
+										></tm-input>
+									</view>
+									<tm-button
+										:disabled="codeCountdown > 0 || !registerEmail || sendCodeLoading"
+										:loading="sendCodeLoading"
+										:round="8"
+										:height="88"
+										:font-size="26"
+										type="primary"
+										:label="codeCountdown > 0 ? `${codeCountdown}秒` : '发送验证码'"
+										class="code-button"
+										@tap="sendVerificationCode"
+									></tm-button>
+								</view>
+							</view>
+							
+							<view class="input-wrapper">
+								<tm-input
+									v-model="registerPassword"
+									type="password"
+									placeholder="设置密码（不少于6位）"
+									prefix="lock"
+									clearable
+									:border="1"
+									:round="8"
+									:padding="[20, 20]"
+									class="login-input"
+									@input="registerError = ''"
+								></tm-input>
+							</view>
+
+							<view class="input-wrapper">
+								<tm-input
+									v-model="registerPasswordConfirm"
+									type="password"
+									placeholder="请再次输入密码确认"
+									prefix="lock"
+									clearable
+									:border="1"
+									:round="8"
+									:padding="[20, 20]"
+									class="login-input"
+									@input="registerError = ''"
+								></tm-input>
+							</view>
+
+							<!-- 协议提示 -->
+							<view class="protocol-hint">
+								<tm-icon name="checkmark-circle" :font-size="20" color="#999999" :margin="[0, 8, 0, 0]"></tm-icon>
+								<view class="protocol-text-wrapper">
+									<tm-text
+										:font-size="22"
+										color="#999999"
+									label="注册即表示同意"
+									></tm-text>
+									<tm-text
+										:font-size="22"
+										color="#667eea"
+									label="《用户服务协议》"
+										@tap="openProtocol('user')"
+									></tm-text>
+									<tm-text
+										:font-size="22"
+										color="#999999"
+									label="和"
+									></tm-text>
+									<tm-text
+										:font-size="22"
+										color="#667eea"
+									label="《隐私权政策》"
+										@tap="openProtocol('privacy')"
+									></tm-text>
+								</view>
+							</view>
+
+							<!-- 错误提示 -->
+							<view v-if="registerError" class="error-message">
+								<tm-icon name="close-circle" :font-size="20" color="#F56C6C" :margin="[0, 8, 0, 0]"></tm-icon>
+								<tm-text
+									:font-size="22"
+									color="#F56C6C"
+									:label="registerError"
+								></tm-text>
+							</view>
+
+							<tm-button
+								:margin="[40, 0, 0, 0]"
+								type="success"
+								block
+								:loading="registerLoading"
+								:disabled="
+									registerLoading ||
+									!registerEmail ||
+									!registerVerificationCode ||
+									!registerPassword ||
+									registerPassword.length < 6 ||
+									!registerPasswordConfirm ||
+									registerPasswordConfirm !== registerPassword
+								"
+								label="注册并登录"
+								:round="8"
+								:height="88"
+								:font-size="32"
+								:bold="true"
+								@tap="submitRegister"
+							></tm-button>
+						</view>
+					</tm-sheet>
+				</view>
+			</view>
+		</view>
+	</tm-app>
+</template>
+
+<script lang="ts" setup>
+import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useUserStore } from '@/store/user';
+import { request } from '@/services/api/index';
+import { sendEmailVerificationCode, verifyEmailCode } from '@/config/emailVerification';
+import { getDeviceId } from '@/utils/device';
+import { sanitizeInput } from '@/utils/sanitize';
+import { getSystemInfo } from '@/utils/platform';
+
+const user_store = useUserStore();
+
+// 获取系统信息用于适配顶部安全区
+const sysInfo = getSystemInfo();
+const statusBarHeight = sysInfo.statusBarHeight || 20;
+
+function goHome() {
+	uni.reLaunch({
+		url: '/pages/index/index'
+	});
+}
+
+const isLoggedIn = computed(() => user_store.isLoggedIn);
+
+// 标签页切换
+const currentTab = ref<'login' | 'register'>('login');
+
+// 登录表单（支持邮箱或用户名）
+const loginIdentifier = ref('');
+const loginPassword = ref('');
+const loginLoading = ref(false);
+const loginError = ref('');
+// 移除记住密码功能
+
+
+// 注册表单
+const registerUsername = ref('');
+const registerEmail = ref('');
+const registerVerificationCode = ref('');
+const registerPassword = ref('');
+const registerPasswordConfirm = ref('');
+const registerLoading = ref(false);
+const registerError = ref('');
+
+// 验证码相关
+const sendCodeLoading = ref(false);
+const codeCountdown = ref(0);
+let countdownTimer: any = null;
+
+onMounted(() => {
+	user_store.restoreAuth();
+	
+	// 如果已经登录了管理员账号，直接跳转到后台
+	if (user_store.isAdmin) {
+		uni.reLaunch({
+			url: '/pages/index/index'
+		});
+		return;
+	}
+});
+
+function openProtocol(type: 'user' | 'privacy') {
+	const title = type === 'user' ? '用户服务协议' : '隐私权政策';
+	uni.showToast({
+		title: title + '页面开发中',
+		icon: 'none',
+		duration: 1500
+	});
+}
+
+async function submitLogin() {
+	if (!loginIdentifier.value || !loginPassword.value) {
+		loginError.value = '请输入账号和密码';
+		return;
+	}
+	loginLoading.value = true;
+	loginError.value = '';
+
+	// 获取设备ID
+	const deviceId = getDeviceId();
+	const safeIdentifier = sanitizeInput(loginIdentifier.value, 255);
+	const safePassword = sanitizeInput(loginPassword.value, 128);
+
+	try {
+		const res = await request('/api/auth/login', {
+			method: 'POST',
+			data: {
+				identifier: safeIdentifier,
+				password: safePassword,
+				device_id: deviceId
+			},
+			sanitizeData: false
+		});
+
+		if (!res.success) {
+			loginError.value = res.message || res.error || '登录失败，请稍后重试';
+			return;
+		}
+
+		const payload: any = res.data || {};
+		if (!payload.access_token) {
+			loginError.value = res.message || '登录失败，请稍后重试';
+			return;
+		}
+
+		const user = payload.user || {};
+		user_store.setAuth({
+			username: user?.username || null,
+			email: user?.email,
+			access_token: payload.access_token,
+			refresh_token: payload.refresh_token,
+			role: user?.role || 'user'
+		});
+
+		uni.showToast({
+			title: '登录成功',
+			icon: 'success',
+			duration: 1500
+		});
+		setTimeout(() => {
+			uni.reLaunch({
+				url: '/pages/index/index'
+			});
+		}, 600);
+	} catch (err: any) {
+		loginError.value = err?.message || '网络错误，请检查后端是否已启动';
+	} finally {
+		loginLoading.value = false;
+	}
+}
+
+// 发送验证码
+async function sendVerificationCode() {
+	if (!registerEmail.value) {
+		registerError.value = '请先输入邮箱地址';
+		return;
+	}
+	
+	// 简单的邮箱格式验证
+	const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+	if (!emailRegex.test(registerEmail.value.trim())) {
+		registerError.value = '邮箱格式不正确';
+		return;
+	}
+	
+	sendCodeLoading.value = true;
+	registerError.value = '';
+	
+	try {
+		const result = await sendEmailVerificationCode(registerEmail.value, 'register');
+		if (result.success) {
+			uni.showToast({
+				title: result.message || '验证码已发送到您的邮箱',
+				icon: 'success',
+				duration: 2000
+			});
+			
+			// 开始倒计时（60秒）
+			codeCountdown.value = 60;
+			if (countdownTimer) clearInterval(countdownTimer);
+			countdownTimer = setInterval(() => {
+				codeCountdown.value--;
+				if (codeCountdown.value <= 0) {
+					clearInterval(countdownTimer);
+					countdownTimer = null;
+				}
+			}, 1000);
+		}
+	} catch (error: any) {
+		registerError.value = error.message || '发送验证码失败，请稍后重试';
+		uni.showToast({
+			title: error.message || '发送失败',
+			icon: 'none',
+			duration: 2000
+		});
+	} finally {
+		sendCodeLoading.value = false;
+	}
+}
+
+async function submitRegister() {
+	const safeUsername = sanitizeInput(registerUsername.value, 50);
+	const safeEmail = sanitizeInput(registerEmail.value, 255);
+	// 密码不应进行字符清理，只做长度截取
+	const safePassword = registerPassword.value.slice(0, 128);
+	const safePasswordConfirm = registerPasswordConfirm.value.slice(0, 128);
+	const safeCode = sanitizeInput(registerVerificationCode.value, 10);
+
+	if (!safeUsername || !safeEmail || !safePassword) {
+		registerError.value = '请输入用户名、邮箱和密码';
+		return;
+	}
+	if (!safeCode) {
+		registerError.value = '请输入邮箱验证码';
+		return;
+	}
+	if (safeUsername.length < 2) {
+		registerError.value = '用户名长度不能少于 2 个字符';
+		return;
+	}
+	if (safePassword.length < 6) {
+		registerError.value = '密码长度不能少于 6 位';
+		return;
+	}
+	if (safePasswordConfirm !== safePassword) {
+		registerError.value = '两次输入的密码不一致';
+		return;
+	}
+	
+	// 先验证验证码
+	registerLoading.value = true;
+	registerError.value = '';
+	
+	try {
+		const verifyResult = await verifyEmailCode(safeEmail, safeCode, 'register');
+		if (!verifyResult.success) {
+		registerError.value = verifyResult.message || '验证码验证失败';
+			registerLoading.value = false;
+			return;
+		}
+	} catch (error: any) {
+		registerError.value = error.message || '验证码错误，请检查后重试';
+		registerLoading.value = false;
+		uni.showToast({
+			title: error.message || '验证码错误',
+			icon: 'none',
+			duration: 2000
+		});
+		return;
+	}
+	
+	// 验证码验证成功，继续注册流程
+	const deviceId = getDeviceId();
+	try {
+		const res = await request('/api/auth/register', {
+			method: 'POST',
+			data: {
+				username: safeUsername,
+				email: safeEmail,
+				password: safePassword,
+				device_id: deviceId
+			},
+			sanitizeData: false
+		});
+
+		if (!res.success) {
+			registerError.value = res.message || res.error || '注册失败，请稍后重试';
+			return;
+		}
+
+		const payload: any = res.data || {};
+		if (!payload.access_token) {
+			registerError.value = res.message || '注册失败，请稍后重试';
+			return;
+		}
+
+		const user = payload.user || {};
+		user_store.setAuth({
+			username: user?.username || registerUsername.value,
+			email: user?.email || registerEmail.value,
+			access_token: payload.access_token,
+			refresh_token: payload.refresh_token,
+			role: user?.role || 'user'
+		});
+		uni.showToast({
+			title: '注册并登录成功',
+			icon: 'success',
+			duration: 1500
+		});
+		setTimeout(() => {
+			uni.reLaunch({
+				url: '/pages/index/index'
+			});
+		}, 600);
+	} catch (err: any) {
+		registerError.value = err?.message || '网络错误，请检查后端是否已启动';
+	} finally {
+		registerLoading.value = false;
+	}
+}
+
+function goBack() {
+	uni.navigateBack();
+}
+
+
+
+async function logout() {
+	await user_store.logout();
+	uni.showToast({
+		title: '已退出登录',
+		icon: 'none',
+		duration: 1200
+	});
+}
+
+// 清理倒计时定时器
+onUnmounted(() => {
+	if (countdownTimer) {
+		clearInterval(countdownTimer);
+		countdownTimer = null;
+	}
+});
+</script>
+
+<style scoped>
+.page-wrapper {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	position: relative;
+}
+
+.top-status-bar {
+	width: 100%;
+}
+
+.top-nav-bar {
+	width: 100%;
+	height: 44px;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	padding: 0 24rpx;
+}
+
+.nav-back-btn {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	opacity: 0.9;
+	padding: 10rpx;
+}
+
+.nav-back-btn:active {
+	opacity: 0.7;
+}
+
+.page-content-scale {
+	padding: 40rpx 24rpx;
+	position: relative;
+	z-index: 1;
+}
+
+@media (min-width: 900px) {
+	.page-content-scale {
+		padding: 60rpx 40rpx;
+	}
+}
+
+:global(.layout-wide) .page-content-scale {
+	padding: 60rpx 40rpx;
+}
+
+.login-container {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+}
+
+.header-section {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	margin-bottom: 60rpx;
+}
+
+.logo-wrapper {
+	width: 160rpx;
+	height: 160rpx;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.2);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 2px solid rgba(255, 255, 255, 0.3);
+	box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.1);
+}
+
+.login-card {
+	width: 100%;
+	background: rgba(255, 255, 255, 0.98);
+}
+
+.user-info-card {
+	width: 100%;
+	background: rgba(255, 255, 255, 0.98);
+}
+
+.user-header {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+}
+
+.user-avatar {
+	width: 160rpx;
+	height: 160rpx;
+	border-radius: 50%;
+	background: rgba(102, 126, 234, 0.1);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.user-actions {
+	width: 100%;
+	margin-top: 40rpx;
+}
+
+.tab-switcher {
+	display: flex;
+	flex-direction: row;
+	border-bottom: 2rpx solid #f0f0f0;
+	margin-bottom: 40rpx;
+}
+
+.tab-item {
+	flex: 1;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	padding: 20rpx 0;
+	border-bottom: 4rpx solid transparent;
+}
+
+.tab-item.active {
+	border-bottom-color: #667eea;
+}
+
+.form-content {
+	width: 100%;
+}
+
+.input-wrapper {
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	margin-top: 30rpx;
+}
+
+.input-wrapper:first-child {
+	margin-top: 0;
+}
+
+.register-tip {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	margin-bottom: 30rpx;
+	padding: 20rpx;
+	background: rgba(102, 126, 234, 0.08);
+	border-radius: 8rpx;
+	border-left: 4rpx solid #667eea;
+}
+
+.verification-code-container {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	width: 100%;
+}
+
+.verification-code-container > view {
+	margin-right: 20rpx;
+}
+
+.verification-code-container > view:last-child {
+	margin-right: 0;
+}
+
+.code-input-wrapper {
+	flex: 1;
+}
+
+.code-button {
+	width: 180rpx;
+}
+
+.login-input {
+	width: 100% !important;
+}
+
+.input-wrapper :deep(.tm-input) {
+	width: 100% !important;
+}
+
+.input-wrapper :deep(.tm-input__wrap) {
+	width: 100% !important;
+}
+
+.error-message {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	margin-top: 20rpx;
+	padding: 16rpx 20rpx;
+	background: rgba(245, 108, 108, 0.1);
+	border-radius: 8rpx;
+	border-left: 4rpx solid #F56C6C;
+}
+
+.remember-password-wrapper {
+	margin-top: 20rpx;
+	margin-bottom: 10rpx;
+}
+
+.remember-checkbox {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	cursor: pointer;
+}
+
+.protocol-hint {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-start;
+	justify-content: center;
+	margin-top: 30rpx;
+	padding: 20rpx;
+	background: rgba(0, 0, 0, 0.02);
+	border-radius: 8rpx;
+}
+
+.protocol-text-wrapper {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	flex-wrap: wrap;
+}
+
+.protocol-text-wrapper > view {
+	margin-right: 4rpx;
+	margin-bottom: 4rpx;
+}
+
+.protocol-text-wrapper > view:last-child {
+	margin-right: 0;
+}
+
+.footer-hint {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	margin-top: 40rpx;
+	padding: 20rpx;
+	border-radius: 8rpx;
+	background: rgba(0, 0, 0, 0.02);
+}
+</style>
+
+
+
+
+
+
+

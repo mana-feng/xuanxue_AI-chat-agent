@@ -1,0 +1,492 @@
+<template>
+	<tm-app>
+		<view class="app-shell chat-page-container">
+			<yx-nav-header></yx-nav-header>
+			<view class="app-main chat-main-layout">
+				<!-- #ifdef H5 -->
+				<advanced-chat-panel-h5
+					ref="panelRef"
+					class="chat-panel-wrapper"
+					:disable-auto-restore="shouldDisableRestore"
+					@send="handleSend"
+				/>
+				<!-- #endif -->
+				<!-- #ifndef H5 -->
+				<chat-panel
+					ref="panelRef"
+					class="chat-panel-wrapper"
+					:disable-auto-restore="shouldDisableRestore"
+					@send="handleSend"
+				/>
+				<!-- #endif -->
+			</view>
+		</view>
+	</tm-app>
+</template>
+
+<script lang="ts" setup>
+import { nextTick, onMounted, ref } from 'vue';
+import { onLoad } from '@dcloudio/uni-app';
+import ChatPanel from '@/chat/ChatPanel.vue';
+// #ifdef H5
+import AdvancedChatPanelH5 from '@/chat/AdvancedChatPanelH5.vue';
+// #endif
+import { request } from '@/services/api/index';
+import { API_BASE_URL } from '@/config/config';
+import { signRequest } from '@/utils/api-signature';
+import { getAccessToken } from '@/utils/tokenStore';
+import { bootstrapApp } from '@/utils/bootstrap';
+import { encodeTOON } from '@/utils/toon';
+import { useUserStore } from '@/store/user';
+import { useBaziStore } from '@/store/bazi';
+import { useYunStore } from '@/store/yun';
+import { useLiuyaoStore } from '@/store/liuyao';
+import { useZiweiStore } from '@/store/ziwei';
+import { buildBaziExportPayload } from '@/utils/baziExport';
+import { buildLiuyaoExportPayload } from '@/utils/liuyaoExport';
+import { buildZiweiExportPayload } from '@/utils/ziweiExport';
+
+type ChatContext = 'bazi' | 'liuyao' | 'ziwei';
+type ChatRole = 'system' | 'user' | 'assistant';
+type ChatMessage = {
+	role: ChatRole;
+	content: string;
+};
+type ParsedHttpError = {
+	message: string;
+	code?: string;
+};
+
+const panelRef = ref<any>(null);
+const chatContext = ref<ChatContext>('bazi');
+const shouldDisableRestore = ref(false);
+let firstSendDone = false;
+let streamEnabled = true;
+
+const userStore = useUserStore();
+const baziStore = useBaziStore();
+const yunStore = useYunStore();
+const liuyaoStore = useLiuyaoStore();
+const ziweiStore = useZiweiStore();
+
+onLoad((options: Record<string, unknown>) => {
+	const from = String(options?.from || '').toLowerCase();
+	if (from === 'bazi' || from === 'liuyao' || from === 'ziwei') {
+		chatContext.value = from as ChatContext;
+		shouldDisableRestore.value = true;
+	}
+});
+
+onMounted(() => {
+	setTimeout(() => {
+		void loadQuotaInfo();
+		if (chatContext.value === 'liuyao') {
+			panelRef.value?.appendAssistant('已为您加载六爻排盘结果，您可以让 AI 为您解读卦象。', 'ready');
+		} else if (chatContext.value === 'ziwei') {
+			panelRef.value?.appendAssistant('已为您加载紫薇排盘结果，您可以让 AI 为您解答命盘重点。', 'ready');
+		}
+	}, 120);
+});
+
+function handleSend(text: string) {
+	void sendToLLM(text);
+}
+
+async function loadQuotaInfo() {
+	await bootstrapApp();
+	const accessToken = getAccessToken();
+	if (!userStore.isLoggedIn || !accessToken) return;
+
+	try {
+		const res = await request('/api/llm/quota', {
+			method: 'GET',
+			needAuth: true,
+		});
+		if (res?.success && res.data) {
+			await nextTick();
+			panelRef.value?.updateQuotaInfo(res.data);
+		}
+	} catch (err: any) {
+		const errorText = String(err?.error || err?.message || err?.errMsg || '').toLowerCase();
+		if (errorText.includes('401') || errorText.includes('unauthorized')) return;
+		console.error('load quota failed:', err);
+	}
+}
+
+function stripHtml(value: unknown): string {
+	const raw = String(value ?? '');
+	const stripped = raw.replace(/<[^>]+>/g, '');
+	return stripped || raw;
+}
+
+function maskSensitiveText(value: string): string {
+	const raw = String(value || '');
+	return raw
+		.replace(/([?&]key=)[^&\s]+/gi, '$1***')
+		.replace(
+			/([?&](token|access_token|refresh_token|api_key|apikey|signature|sign|nonce)=)[^&\s]+/gi,
+			'$1***'
+		)
+		.replace(/(Bearer\s+)[A-Za-z0-9._~+/=-]+/gi, '$1***')
+		.replace(
+			/(["']?(api[_-]?key|token|access[_-]?token|refresh[_-]?token|password|secret|authorization|signature)["']?\s*[:=]\s*["']?)([^"',\s}]+)/gi,
+			'$1***'
+		);
+}
+
+function normalizeError(value: unknown): string {
+	const stripped = stripHtml(value).trim();
+	const masked = maskSensitiveText(stripped);
+	const lower = masked.toLowerCase();
+
+	if (
+		lower.includes('generativelanguage.googleapis.com') ||
+		(lower.includes('request to') && lower.includes('failed'))
+	) {
+		return '上游服务连接异常，请稍后重试';
+	}
+
+	return masked;
+}
+
+function normalizeClientError(err: any): { message: string; code?: string } {
+	const code = typeof err?.code === 'string' ? err.code : undefined;
+	if (code === 'LLM_UPSTREAM_UNREACHABLE') {
+		return {
+			code,
+			message: '上游服务连接异常，请稍后重试或在后台切换可用模型',
+		};
+	}
+	const message = normalizeError(err?.error || err?.message || err?.errMsg || '调用失败');
+	return { message, code };
+}
+
+function isQuotaErrorText(value: unknown): boolean {
+	const text = String(value ?? '').toLowerCase();
+	return text.includes('quota') || text.includes('limit') || text.includes('rate') || text.includes('额度');
+}
+
+function buildContextSystemPrompt(): string | null {
+	try {
+		if (chatContext.value === 'liuyao') {
+			const payload = buildLiuyaoExportPayload(liuyaoStore);
+			return payload ? `User Liuyao result:\n${payload}` : null;
+		}
+
+		if (chatContext.value === 'ziwei') {
+			const payload = buildZiweiExportPayload(userStore, ziweiStore);
+			const toon = payload ? encodeTOON(payload) : '';
+			return toon ? `User Ziwei profile (TOON):\n${toon}` : null;
+		}
+
+		const payload = buildBaziExportPayload(userStore, baziStore, yunStore);
+		const toon = payload ? encodeTOON(payload) : '';
+		return toon ? `User Bazi profile (TOON):\n${toon}` : null;
+	} catch (err) {
+		console.error('build context prompt failed:', err);
+		return null;
+	}
+}
+
+function buildMessages(inputText: string): ChatMessage[] {
+	const messages: ChatMessage[] = [];
+	const text = inputText.trim();
+	if (!text) return messages;
+
+	if (!firstSendDone) {
+		const systemPrompt = buildContextSystemPrompt();
+		if (systemPrompt) {
+			messages.push({
+				role: 'system',
+				content: systemPrompt,
+			});
+		}
+		firstSendDone = true;
+	}
+
+	const historyMessages = panelRef.value?.getMessages?.() || [];
+	for (const msg of historyMessages) {
+		if (msg?.id === 'm-1') continue;
+		if (msg?.status === 'waiting' || msg?.status === 'stream') continue;
+		const historyText = String(msg?.text || '').trim();
+		if (!historyText) continue;
+
+		messages.push({
+			role: msg?.role === 'user' ? 'user' : 'assistant',
+			content: historyText,
+		});
+	}
+
+	const lastHistory = historyMessages[historyMessages.length - 1];
+	const hasSameLatestUser =
+		lastHistory?.role === 'user' && String(lastHistory?.text || '').trim() === text;
+	if (!hasSameLatestUser) {
+		messages.push({ role: 'user', content: text });
+	}
+
+	return messages;
+}
+
+function extractTextFromPayload(payload: any): string {
+	if (!payload || typeof payload !== 'object') return '';
+
+	if (typeof payload.reply === 'string') return payload.reply;
+
+	if (payload.event === 'delta' && typeof payload.text === 'string') return payload.text;
+	if (payload.delta && typeof payload.delta.text === 'string') return payload.delta.text;
+
+	const choice = payload.choices?.[0];
+	if (typeof choice?.delta?.content === 'string') return choice.delta.content;
+	if (typeof choice?.message?.content === 'string') return choice.message.content;
+	if (typeof choice?.text === 'string') return choice.text;
+
+	if (Array.isArray(payload.content)) {
+		const blocks = payload.content
+			.map((item: any) => (typeof item?.text === 'string' ? item.text : ''))
+			.filter((item: string) => Boolean(item));
+		if (blocks.length) return blocks.join('');
+	}
+	if (typeof payload.content === 'string') return payload.content;
+
+	const parts = payload?.candidates?.[0]?.content?.parts;
+	if (Array.isArray(parts)) {
+		const blocks = parts
+			.map((item: any) => (typeof item?.text === 'string' ? item.text : ''))
+			.filter((item: string) => Boolean(item));
+		if (blocks.length) return blocks.join('');
+	}
+
+	return '';
+}
+
+function parseHttpErrorText(bodyText: string, status: number): ParsedHttpError {
+	try {
+		const json = JSON.parse(bodyText);
+		const message = normalizeError(json?.error || json?.message);
+		const code = typeof json?.code === 'string' ? json.code : undefined;
+		if (message || code) {
+			return { message: message || `HTTP ${status}`, code };
+		}
+	} catch (err) {
+		void err;
+	}
+	const fallback = normalizeError(bodyText);
+	return { message: fallback || `HTTP ${status}` };
+}
+
+async function sendToLLM(text: string) {
+	const panel = panelRef.value;
+	if (!panel) return;
+
+	panel.setSending(true);
+	panel.createWaitingMessage();
+
+	try {
+		const messages = buildMessages(text);
+		if (!messages.length) {
+			throw new Error('消息不能为空');
+		}
+
+		// #ifdef H5
+		if (streamEnabled) {
+			try {
+				await sendWithHttpStream(messages);
+			} catch (streamErr) {
+				streamEnabled = false;
+				const normalizedErr = normalizeClientError(streamErr);
+				console.warn('http stream failed, fallback to normal request:', normalizedErr.message);
+				await sendWithHttp(messages);
+			}
+		} else {
+			await sendWithHttp(messages);
+		}
+		// #endif
+
+		// #ifndef H5
+		await sendWithHttp(messages);
+		// #endif
+	} catch (err: any) {
+		const normalizedErr = normalizeClientError(err);
+		const errorText = normalizedErr.message;
+		if (isQuotaErrorText(errorText)) {
+			panel.appendAssistant(`额度提示：${errorText}`, 'error');
+		} else {
+			panel.appendAssistant(`调用失败：${errorText}`, 'error');
+		}
+	} finally {
+		panel.setSending(false);
+	}
+}
+
+async function sendWithHttp(messages: ChatMessage[]) {
+	const res = await request('/api/llm/chat', {
+		method: 'POST',
+		needAuth: true,
+		data: {
+			stream: false,
+			messages,
+		},
+	});
+
+	if (!res?.success) {
+		const err: any = new Error(res?.error || res?.message || '调用失败');
+		if (res?.code) err.code = res.code;
+		throw err;
+	}
+
+	const replyRaw = extractTextFromPayload(res?.data) || (res?.data as any)?.reply || '';
+	const reply = stripHtml(replyRaw);
+	if (!reply.trim()) {
+		throw new Error('回复为空，请检查后端配置');
+	}
+
+	panelRef.value?.appendAssistant(reply, 'ready');
+	setTimeout(() => {
+		void loadQuotaInfo();
+	}, 300);
+}
+
+// #ifdef H5
+async function sendWithHttpStream(messages: ChatMessage[]) {
+	const panel = panelRef.value;
+	if (!panel) return;
+	if (typeof fetch !== 'function') {
+		throw new Error('当前环境不支持流式请求');
+	}
+
+	const payload = {
+		stream: true,
+		messages,
+	};
+
+	const headers: Record<string, string> = {
+		'Content-Type': 'application/json',
+	};
+	const accessToken = getAccessToken();
+	if (accessToken) {
+		headers.Authorization = `Bearer ${accessToken}`;
+	}
+	const signed = await signRequest(payload, headers);
+	Object.assign(headers, signed.headers);
+
+	const response = await fetch(`${API_BASE_URL}/api/llm/chat`, {
+		method: 'POST',
+		headers,
+		body: JSON.stringify(payload),
+	});
+
+	if (!response.ok) {
+		const bodyText = await response.text();
+		const parsed = parseHttpErrorText(bodyText, response.status);
+		const err: any = new Error(parsed.message);
+		if (parsed.code) err.code = parsed.code;
+		throw err;
+	}
+	if (!response.body) {
+		throw new Error('流式响应不可用');
+	}
+
+	const reader = response.body.getReader();
+	const decoder = new TextDecoder();
+	let buffer = '';
+	let streamError = '';
+	let streamErrorCode = '';
+
+	const processLine = (line: string) => {
+		const trimmed = line.trim();
+		if (!trimmed || trimmed.startsWith(':') || trimmed.startsWith('event:')) return;
+		if (trimmed === 'data: [DONE]' || trimmed === '[DONE]') return;
+
+		const payloadText = trimmed.startsWith('data:') ? trimmed.slice(5).trim() : trimmed;
+		if (!payloadText) return;
+
+		let data: any;
+		try {
+			data = JSON.parse(payloadText);
+		} catch (err) {
+			void err;
+			return;
+		}
+
+		const serverError = normalizeError(data?.error || data?.message);
+		const serverCode = typeof data?.code === 'string' ? data.code : '';
+		if (serverError) {
+			streamError = serverError;
+			streamErrorCode = serverCode;
+			return;
+		}
+
+		const text = extractTextFromPayload(data);
+		if (text) {
+			panel.appendAssistant(stripHtml(text), 'stream');
+		}
+	};
+
+	while (true) {
+		const { done, value } = await reader.read();
+		if (done) break;
+		if (!value) continue;
+
+		buffer += decoder.decode(value, { stream: true });
+		const lines = buffer.split('\n');
+		buffer = lines.pop() || '';
+
+		for (const line of lines) {
+			processLine(line);
+			if (streamError) break;
+		}
+		if (streamError) break;
+	}
+
+	if (!streamError && buffer.trim()) {
+		processLine(buffer);
+	}
+
+	if (streamError) {
+		const err: any = new Error(streamError);
+		if (streamErrorCode) err.code = streamErrorCode;
+		throw err;
+	}
+
+	panel.finishStreaming();
+	setTimeout(() => {
+		void loadQuotaInfo();
+	}, 300);
+}
+// #endif
+</script>
+
+<style scoped>
+.chat-panel-wrapper {
+	width: 100%;
+	flex: 1;
+	height: 100%;
+}
+
+.chat-page-container {
+	height: 100vh;
+	overflow: hidden;
+}
+
+.chat-main-layout {
+	padding-top: calc(48px + var(--safe-top)) !important;
+	padding-bottom: calc(64px + var(--safe-bottom)) !important;
+	height: 100%;
+	width: 100vw;
+	display: flex;
+	flex-direction: column;
+	box-sizing: border-box;
+}
+
+@media (min-width: 640px) {
+	.chat-main-layout {
+		padding-top: calc(64px + var(--safe-top)) !important;
+	}
+}
+
+@media (min-width: 900px) {
+	.chat-main-layout {
+		padding-bottom: calc(72px + var(--safe-bottom)) !important;
+	}
+}
+</style>
