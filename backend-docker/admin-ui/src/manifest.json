@@ -1,0 +1,26 @@
+{
+    "name" : "玄学AI Chat & Agent",
+    "appid" : "__UNI__XXXXXXXXXX",
+    "description" : "",
+    "versionName" : "1.0.0",
+    "versionCode" : 1,
+    "transformPx" : false,
+    "uniStatistics" : {
+        "enable" : false
+    },
+    "vueVersion" : "3",
+    "h5" : {
+        "router" : {
+            "mode" : "hash",
+            "base" : "./"
+        },
+        "title" : "玄学AI Chat & Agent",
+        "optimization" : {
+            "treeShaking" : {
+                "enable" : true
+            }
+        }
+    },
+    "fallbackLocale" : "zh-Hans",
+    "locale" : "zh-Hans"
+}

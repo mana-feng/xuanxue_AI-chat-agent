@@ -1,0 +1,951 @@
+<template>
+	<tm-app>
+		<PageScaffold class="page-bazi-input" title="八字排盘" subtitle="请填写以下信息进行八字排盘">
+			<SectionBlock icon="tmicon-md-person" title="基础信息">
+				<view class="card-stack">
+					<tm-input
+						v-model="realname"
+						placeholder="请输入姓名（可选）"
+						prefix="tmicon-md-person"
+						:round="12"
+						:border="1"
+						:padding="[24, 20]"
+					></tm-input>
+
+					<view class="form-group-single">
+						<view class="form-label">
+							<tm-icon name="tmicon-md-people" :font-size="24" color="#718096" :margin="[0, 6, 0, 0]"></tm-icon>
+							<tm-text :font-size="26" color="#718096" label="性别"></tm-text>
+						</view>
+						<view class="form-control">
+							<tm-segtab
+								v-model="gender"
+								:list="[{ text: '男' }, { text: '女' }]"
+								:width="300"
+								:margin="[0, 0]"
+								:default-value="0"
+							></tm-segtab>
+						</view>
+					</view>
+				</view>
+			</SectionBlock>
+
+			<SectionBlock icon="tmicon-time" title="出生时间" subtitle="支持阳历/阴历，精确到分钟">
+				<view class="card-stack">
+					<view class="form-group-single calendar-type-selector">
+						<view class="form-label">
+							<tm-icon name="tmicon-calendar-alt" :font-size="24" color="#718096" :margin="[0, 6, 0, 0]"></tm-icon>
+							<tm-text :font-size="26" color="#718096" label="日历类型"></tm-text>
+						</view>
+						<view class="form-control segtab-wrapper">
+							<tm-segtab
+								v-model="model"
+								:default-value="0"
+								:list="[{ text: '阳历' }, { text: '阴历' }]"
+								:margin="[0, 0]"
+								:width="300"
+							></tm-segtab>
+						</view>
+					</view>
+
+					<tm-button
+						type="primary"
+						linear="right"
+						linear-deep="accent"
+						:block="true"
+						:round="12"
+						:padding="[24, 24]"
+						icon="tmicon-calendar-alt"
+						icon-pos="left"
+						class="birth-time-btn"
+						:label="datetime_label || (model === 0 ? '请选择阳历出生日期和时间（精确到分钟）' : '请选择阴历出生日期和时间（精确到分钟）')"
+						@tap="SelectTime"
+					></tm-button>
+
+					<view v-if="lunar_label || bazi_label" class="info-grid info-cards">
+						<view v-if="lunar_label" class="info-card">
+							<view class="info-card-header">
+								<tm-icon name="tmicon-integral" :font-size="32" color="#48bb78"></tm-icon>
+								<tm-text
+									:font-size="24"
+									color="#718096"
+									:label="model === 0 ? '对应阴历' : '对应阳历'"
+									:margin="[0, 0, 0, 12]"
+								></tm-text>
+							</view>
+							<tm-text :font-size="28" color="#2d3748" :bold="true" :label="lunar_label"></tm-text>
+						</view>
+
+						<view v-if="bazi_label" class="info-card">
+							<view class="info-card-header">
+								<tm-icon name="tmicon-calendar" :font-size="32" color="#667eea"></tm-icon>
+								<tm-text :font-size="24" color="#718096" label="四柱八字" :margin="[0, 0, 0, 12]"></tm-text>
+							</view>
+							<view class="bazi-display">
+								<tm-tag
+									v-for="(item, index) in bazi_label.split(' ')"
+									:key="index"
+									:label="item"
+									type="primary"
+									:round="8"
+									:margin="[0, 8, 0, 0]"
+									:font-size="26"
+									:bold="true"
+								></tm-tag>
+							</view>
+						</view>
+					</view>
+				</view>
+			</SectionBlock>
+
+			<template #footer>
+				<tm-button
+					:class="['primary-btn', { disabled: !canSubmit }]"
+					:label="'开始排盘'"
+					:type="canSubmit ? 'primary' : 'grey'"
+					:round="999"
+					:bold="true"
+					:linear="canSubmit ? 'right' : ''"
+					:linear-deep="'accent'"
+					:shadow="canSubmit ? 10 : 0"
+					:disabled="!canSubmit"
+					icon="tmicon-calendar-alt"
+					block
+					@tap="Sumbit"
+				></tm-button>
+			</template>
+		</PageScaffold>
+
+		<tm-time-picker
+			v-model:show="solar_select_show"
+			:round="6"
+			:default-value="solar_default_value"
+			:start="solar_time_pick.start"
+			:end="solar_time_pick.end"
+			:format="solar_time_pick.format"
+			:show-detail="solar_time_pick.detail"
+			:show-suffix="time_suffix.solar"
+			@confirm="SolarConfirm"
+		></tm-time-picker>
+		<tm-time-picker
+			v-model:show="lunar_select_show"
+			:round="6"
+			:default-value="lunar_default_value"
+			:start="lunar_time_pick.start"
+			:end="lunar_time_pick.end"
+			:format="lunar_time_pick.format"
+			:show-detail="lunar_time_pick.detail"
+			:show-suffix="time_suffix.lunar"
+			:column-flex="lunar_time_column_flex"
+			@confirm="LunarConfirm"
+		></tm-time-picker>
+	</tm-app>
+</template>
+
+
+<script lang="ts" setup>
+import { ref, computed, watch, nextTick } from 'vue';
+import { onLoad, onShow } from '@dcloudio/uni-app';
+import { Solar } from 'lunar-javascript';
+import PageScaffold from '@/components/layout/PageScaffold.vue';
+import SectionBlock from '@/components/layout/SectionBlock.vue';
+import { useUserStore } from '@/store/user';
+import { useBaziStore } from '@/store/bazi';
+import utils from '@/libs/utils/utils';
+
+const realname = ref('');
+const gender = ref(0);
+const model = ref(0);
+const timestamp = ref<number | null>(null);
+const datetime_label = ref('');
+const lunar_label = ref<string | null>(null);
+const bazi_label = ref('');
+
+const user_store = useUserStore();
+const bazi_store = useBaziStore();
+
+const canSubmit = computed(() => timestamp.value !== null);
+
+const solar_select_show = ref(false);
+const lunar_select_show = ref(false);
+
+const solar_default_value = ref('');
+const lunar_default_value = ref('');
+
+const solar_time_pick = {
+	start: '1900/01/01 00:00',
+	end: '2099/12/30 00:00',
+	format: 'YYYY/MM/DD HH:mm',
+	detail: {
+		year: true,
+		month: true,
+		day: true,
+		hour: true,
+		minute: true,
+		second: false,
+	},
+};
+
+const lunar_time_pick = {
+	start: '1900/01/01 00',
+	end: '2099/12/30 00',
+	format: 'YYYY/MM/DD HH',
+	detail: {
+		year: true,
+		month: true,
+		day: true,
+		hour: true,
+		minute: false,
+		second: false,
+	},
+};
+
+const lunar_time_column_flex = {
+	year: 1.15,
+	month: 0.75,
+	day: 0.75,
+	hour: 2.35,
+};
+
+const time_suffix = {
+	solar: { year: '年', month: '月', day: '日', hour: '时', minute: '分', second: '秒' },
+	lunar: { year: '年', month: '月', day: '日', hour: '时辰', minute: '分', second: '秒' },
+};
+
+watch(model, PullDatatimeLabel);
+watch(timestamp, PullDatatimeLabel);
+
+function initCurrentTime() {
+	timestamp.value = new Date().getTime();
+	PullDatatimeLabel();
+}
+
+let editDataProcessed = false;
+
+onLoad((options: any) => {
+	user_store.restoreAuth();
+
+	const editDataStr = uni.getStorageSync('edit_bazi_data');
+
+	if (editDataStr) {
+		try {
+			const editData = JSON.parse(editDataStr);
+
+			if (editData.isEdit && editData.timestamp) {
+				realname.value = editData.realname === '佚名' ? '' : (editData.realname || '');
+				gender.value = editData.gender !== undefined && editData.gender !== null ? editData.gender : 0;
+				timestamp.value = editData.timestamp;
+
+				if (editData.recordId) {
+					user_store.recordId = editData.recordId;
+				}
+
+				editDataProcessed = true;
+
+				uni.removeStorageSync('edit_bazi_data');
+
+				nextTick(() => {
+					PullDatatimeLabel();
+					uni.showToast({
+						title: '已加载数据，可进行编辑',
+						icon: 'success',
+						duration: 2000,
+					});
+				});
+				return;
+			}
+		} catch (e) {
+			console.warn('解析编辑数据失败:', e);
+			uni.removeStorageSync('edit_bazi_data');
+		}
+	}
+
+	realname.value = '';
+	gender.value = 0;
+	user_store.recordId = null;
+	initCurrentTime();
+});
+
+onShow(() => {
+	if (editDataProcessed) {
+		editDataProcessed = false;
+		return;
+	}
+
+	const editDataStr = uni.getStorageSync('edit_bazi_data');
+	if (editDataStr) {
+		try {
+			const editData = JSON.parse(editDataStr);
+			if (editData.isEdit && editData.timestamp) {
+				realname.value = editData.realname === '佚名' ? '' : (editData.realname || '');
+				gender.value = editData.gender !== undefined && editData.gender !== null ? editData.gender : 0;
+				timestamp.value = editData.timestamp;
+				if (editData.recordId) {
+					user_store.recordId = editData.recordId;
+				}
+				uni.removeStorageSync('edit_bazi_data');
+				nextTick(() => {
+					PullDatatimeLabel();
+				});
+				return;
+			}
+		} catch (e) {
+			console.warn('解析编辑数据失败:', e);
+			uni.removeStorageSync('edit_bazi_data');
+		}
+	}
+
+	if (!editDataStr) user_store.recordId = null;
+});
+
+function SelectTime() {
+	uni.hideKeyboard();
+	const timeToUse = timestamp.value || new Date().getTime();
+	const timeStr = utils.HideSecond(timeToUse);
+	solar_default_value.value = timeStr;
+	lunar_default_value.value = timeStr.replace(/:\d{2}$/, '');
+
+	setTimeout(() => {
+		if (model.value === 0) {
+			solar_select_show.value = true;
+		} else {
+			lunar_select_show.value = true;
+		}
+	}, 400);
+}
+
+function parsePickerTimeToTimestamp(time: string): number | null {
+	const raw = (time || '').trim();
+	if (!raw) return null;
+	const full = raw.match(/^(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})$/);
+	if (full) {
+		const y = Number(full[1]);
+		const mo = Number(full[2]);
+		const d = Number(full[3]);
+		const h = Number(full[4]);
+		const mi = Number(full[5]);
+		const dt = new Date(y, mo - 1, d, h, mi, 0);
+		return Number.isFinite(dt.getTime()) ? dt.getTime() : null;
+	}
+	const hourOnly = raw.match(/^(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2})$/);
+	if (hourOnly) {
+		const y = Number(hourOnly[1]);
+		const mo = Number(hourOnly[2]);
+		const d = Number(hourOnly[3]);
+		const h = Number(hourOnly[4]);
+		const dt = new Date(y, mo - 1, d, h, 0, 0);
+		return Number.isFinite(dt.getTime()) ? dt.getTime() : null;
+	}
+	const parsed = Date.parse(raw);
+	return Number.isFinite(parsed) ? parsed : null;
+}
+
+const SolarConfirm = (time: string) => {
+	const ts = parsePickerTimeToTimestamp(time);
+	if (ts !== null) timestamp.value = ts;
+};
+const LunarConfirm = (time: string) => {
+	const ts = parsePickerTimeToTimestamp(time);
+	if (ts !== null) timestamp.value = ts;
+};
+
+function PullDatatimeLabel() {
+	const time = timestamp.value;
+	if (time === null) return;
+	const index = model.value;
+	const solar = Solar.fromDate(new Date(time));
+	const lunar = solar.getLunar();
+
+	const bazi = lunar.getEightChar();
+	const baziList = [bazi.getYear(), bazi.getMonth(), bazi.getDay(), bazi.getTime()];
+	bazi_label.value = baziList.join(' ');
+
+	if (index === 0) {
+		const date = utils.HideSecond(time);
+		datetime_label.value = date;
+		solar_default_value.value = date;
+		lunar_default_value.value = date.replace(/:\d{2}$/, '');
+		lunar_label.value = `${lunar.toString()} ${lunar.getTimeZhi()}时`;
+	} else {
+		const lunarStr = `${lunar.toString()} ${lunar.getTimeZhi()}时`;
+		datetime_label.value = lunarStr;
+		const date = utils.HideSecond(time);
+		solar_default_value.value = date;
+		lunar_default_value.value = date.replace(/:\d{2}$/, '');
+		lunar_label.value = date;
+	}
+}
+
+	function Sumbit() {
+	const datetime = timestamp.value;
+	if (datetime === null) {
+		uni.showToast({
+			title: '请先选择出生日期和时间',
+			icon: 'none',
+			duration: 2000,
+		});
+		SelectTime();
+		return;
+	}
+
+		const params = {
+			realname: (realname.value || '').trim(),
+			timestamp: datetime,
+			gender: Number(gender.value),
+		};
+	uni.showLoading({
+		title: '排盘中，请稍后！',
+	});
+
+	try {
+		const currentRecordId = user_store.recordId;
+		user_store.set(params);
+		if (currentRecordId) {
+			user_store.recordId = currentRecordId;
+		} else {
+			user_store.recordId = null;
+		}
+
+		bazi_store.pull(params);
+
+		setTimeout(() => {
+			uni.hideLoading();
+
+			if (!bazi_store.solar || !bazi_store.solar.year) {
+				uni.showToast({
+					title: '排盘数据不完整，请重试',
+					icon: 'none',
+					duration: 2000,
+				});
+				return;
+			}
+
+			uni.navigateTo({
+				url: '/pages/index/detail',
+				fail: (err) => {
+					console.error('跳转失败:', err);
+					uni.showToast({
+						title: '跳转失败，请重试',
+						icon: 'none',
+						duration: 2000,
+					});
+				},
+			});
+		}, 200);
+	} catch (error: any) {
+		uni.hideLoading();
+		console.error('排盘失败:', error);
+		uni.showToast({
+			title: '排盘计算失败：' + (error?.message || '未知错误'),
+			icon: 'none',
+			duration: 2000,
+		});
+	}
+}
+
+
+</script>
+
+
+<style scoped>
+/* 页面样式已在 app-shell.css 中定义 */
+/* 这里只添加页面特定的样式 */
+
+.page-bazi-input .app-main {
+	background: radial-gradient(circle at 20% 20%, rgba(102, 126, 234, 0.08), transparent 40%),
+		radial-gradient(circle at 80% 10%, rgba(118, 75, 162, 0.08), transparent 38%),
+		#f6f8fc;
+}
+
+.page-bazi-input .page-shell {
+	width: 100%;
+	display: flex;
+	justify-content: center;
+	padding: var(--page-pad-y) var(--page-pad-x);
+	box-sizing: border-box;
+}
+
+.page-bazi-input .page-card {
+	width: 100%;
+	max-width: var(--page-max);
+	background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+	border: 1px solid #e5e9f2;
+	border-radius: 16px;
+	box-shadow: 0 12px 32px rgba(31, 41, 55, 0.1);
+	padding: 18px 16px;
+	position: relative;
+	overflow: hidden;
+}
+
+.page-bazi-input .page-card::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(circle at 12% 12%, rgba(102, 126, 234, 0.08), transparent 35%),
+		radial-gradient(circle at 88% 6%, rgba(118, 75, 162, 0.07), transparent 32%);
+	pointer-events: none;
+}
+
+.page-bazi-input .page-title-wrapper {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	margin-bottom: 12px;
+	position: relative;
+	z-index: 1;
+}
+
+.page-bazi-input .page-title {
+	margin: 0;
+	font-size: 22px;
+	color: #1f2937;
+	letter-spacing: 0.2px;
+}
+
+.page-bazi-input .page-subtitle {
+	margin: 4px 0 0;
+	font-size: 13px;
+	color: #6b7280;
+}
+
+.page-bazi-input .section {
+	background: #ffffff;
+	border-radius: 14px;
+	border: 1px solid #e2e8f0;
+	padding: 14px 12px 12px;
+	margin-bottom: 14px;
+	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+	position: relative;
+	z-index: 1;
+}
+
+.page-bazi-input .section__header {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 12px;
+	border-bottom: 1px dashed #e5e7eb;
+	padding-bottom: 12px;
+}
+
+.page-bazi-input .section__title {
+	font-size: 18px;
+	color: #2d3748;
+}
+
+.page-bazi-input .section__body {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.page-bazi-input .page-card__footer {
+	margin-top: 14px;
+	padding-top: 10px;
+	border-top: 1px solid #eef2f7;
+	display: flex;
+	justify-content: center;
+	position: relative;
+	z-index: 1;
+	padding-bottom: calc(var(--safe-bottom) + var(--bottom-nav-height));
+}
+
+.birth-time-btn {
+	width: 100%;
+	text-align: left;
+}
+
+@media (min-width: 900px) {
+	.page-bazi-input .page-shell {
+		padding: var(--page-pad-y) var(--page-pad-x);
+	}
+	.page-bazi-input .page-card {
+		max-width: var(--page-max);
+		padding: 28px 26px;
+		border-radius: 20px;
+		box-shadow: 0 18px 60px rgba(31, 41, 55, 0.12);
+	}
+	.page-bazi-input .section {
+		padding: 20px 18px 18px;
+		margin-bottom: 18px;
+	}
+}
+
+.layout-wide .page-bazi-input .page-shell {
+	padding: var(--page-pad-y) var(--page-pad-x);
+}
+
+.layout-wide .page-bazi-input .page-card {
+	max-width: var(--page-max);
+	padding: 28px 26px;
+	border-radius: 20px;
+	box-shadow: 0 18px 60px rgba(31, 41, 55, 0.12);
+}
+
+.layout-wide .page-bazi-input .section {
+	padding: 20px 18px 18px;
+	margin-bottom: 18px;
+}
+
+
+/* 未登录状态样式 */
+.page-bazi-input .auth-not-logged-in {
+	display: flex;
+	flex-direction: column;
+	gap: 20rpx;
+	width: 100%;
+}
+
+/* 登录/注册表单样式 */
+.page-bazi-input .auth-form-container {
+	margin-top: 24rpx;
+	padding-top: 24rpx;
+	border-top: 1rpx solid #e2e8f0;
+	width: 100%;
+	box-sizing: border-box;
+	background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+	border-radius: 12rpx;
+	padding: 24rpx;
+}
+
+.page-bazi-input .auth-tabs {
+	display: flex;
+	flex-direction: row;
+	border-bottom: 2rpx solid #e2e8f0;
+	margin-bottom: 24rpx;
+	width: 100%;
+}
+
+.page-bazi-input .auth-tab {
+	flex: 1;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	padding: 20rpx 0;
+	border-bottom: 4rpx solid transparent;
+	transition: all 0.3s;
+	min-width: 0;
+}
+
+.page-bazi-input .auth-tab.active {
+	border-bottom-color: #667eea;
+}
+
+.page-bazi-input .auth-form-fields {
+	margin-bottom: 20rpx;
+	width: 100%;
+}
+
+.page-bazi-input .auth-form-hint {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 20rpx;
+	width: 100%;
+	flex-wrap: wrap;
+}
+
+.page-bazi-input .auth-form-hint > view {
+	margin-right: 8rpx;
+	margin-bottom: 8rpx;
+}
+
+.page-bazi-input .auth-form-hint > view:last-child {
+	margin-right: 0;
+}
+
+.page-bazi-input .auth-error {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	padding: 16rpx 20rpx;
+	background: rgba(245, 101, 101, 0.1);
+	border-radius: 12rpx;
+	border-left: 4rpx solid #f56565;
+	margin-bottom: 20rpx;
+	width: 100%;
+}
+
+.page-bazi-input .auth-form-actions {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+}
+
+/* 表单卡片样式 - 使用响应式类 */
+.page-bazi-input .form-card {
+  /* 已在 responsive-card 中定义 */
+}
+
+.page-bazi-input .form-header-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-bazi-input .form-header-text > view {
+	margin-bottom: 6px;
+}
+
+.page-bazi-input .form-header-text > view:last-child {
+	margin-bottom: 0;
+}
+
+.page-bazi-input .form-section-card {
+	background: linear-gradient(180deg, #fbfdff 0%, #ffffff 100%);
+	border-radius: 12px;
+	padding: 24px 22px;
+	border: 1px solid #e2e8f0;
+}
+
+.page-bazi-input .form-submit {
+	width: 100%;
+	margin-top: 28px;
+	display: flex;
+	justify-content: center;
+}
+
+.page-bazi-input .form-row {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	gap: 16rpx;
+}
+
+.page-bazi-input .form-row > view {
+	margin-right: 0;
+	margin-bottom: 0;
+}
+
+.page-bazi-input .form-row > view:last-child {
+	margin-right: 0;
+}
+
+@media (min-width: 720px) {
+	.page-bazi-input .form-row {
+		flex-direction: row;
+		flex-wrap: wrap;
+		gap: 0;
+	}
+
+	.page-bazi-input .form-row > view {
+		margin-right: 24rpx;
+		margin-bottom: 24rpx;
+	}
+
+	.page-bazi-input .form-row > view:last-child {
+		margin-right: 0;
+	}
+}
+
+.layout-medium .page-bazi-input .form-row,
+.layout-wide .page-bazi-input .form-row {
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 0;
+}
+
+.layout-medium .page-bazi-input .form-row > view,
+.layout-wide .page-bazi-input .form-row > view {
+	margin-right: 24rpx;
+	margin-bottom: 24rpx;
+}
+
+.layout-medium .page-bazi-input .form-row > view:last-child,
+.layout-wide .page-bazi-input .form-row > view:last-child {
+	margin-right: 0;
+}
+
+.page-bazi-input .form-group {
+	flex: 1;
+	width: 240rpx;
+	display: flex;
+	flex-direction: column;
+}
+
+.page-bazi-input .form-group > view {
+	margin-bottom: 12rpx;
+}
+
+.page-bazi-input .form-group > view:last-child {
+	margin-bottom: 0;
+}
+
+.page-bazi-input .form-group-single {
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+.page-bazi-input .form-group-single > view {
+	margin-bottom: 10px;
+}
+
+.page-bazi-input .form-group-single > view:last-child {
+	margin-bottom: 0;
+}
+
+.page-bazi-input .form-group-single.calendar-type-selector {
+	margin-bottom: 24rpx;
+}
+
+.page-bazi-input .form-label {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+.page-bazi-input .form-control {
+	width: 100%;
+}
+
+.page-bazi-input .segtab-wrapper {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	overflow: hidden;
+}
+
+.page-bazi-input .segtab-wrapper :deep(.tm-segtab) {
+	width: 100%;
+}
+
+.page-bazi-input .info-cards {
+	display: flex;
+	flex-direction: column;
+	margin-top: 8rpx;
+	gap: 12rpx;
+}
+
+.page-bazi-input .info-cards > view {
+	width: 100%;
+	margin-right: 0;
+	margin-bottom: 0;
+}
+
+@media (min-width: 720px) {
+	.page-bazi-input .info-cards {
+		flex-direction: row;
+		flex-wrap: wrap;
+		gap: 0;
+	}
+
+	.page-bazi-input .info-cards > view {
+		width: calc(50% - 8rpx);
+		margin-right: 16rpx;
+		margin-bottom: 16rpx;
+	}
+
+	.page-bazi-input .info-cards > view:nth-child(2n) {
+		margin-right: 0;
+	}
+}
+
+.layout-medium .page-bazi-input .info-cards,
+.layout-wide .page-bazi-input .info-cards {
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 0;
+}
+
+.layout-medium .page-bazi-input .info-cards > view,
+.layout-wide .page-bazi-input .info-cards > view {
+	width: calc(50% - 8rpx);
+	margin-right: 16rpx;
+	margin-bottom: 16rpx;
+}
+
+.layout-medium .page-bazi-input .info-cards > view:nth-child(2n),
+.layout-wide .page-bazi-input .info-cards > view:nth-child(2n) {
+	margin-right: 0;
+}
+
+.page-bazi-input .info-card {
+	background: transparent;
+	border-radius: 14rpx;
+	padding: 20rpx 24rpx;
+	border: 1rpx solid transparent;
+	box-shadow: none;
+}
+
+.page-bazi-input .info-card-header {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	margin-bottom: 12rpx;
+}
+
+.page-bazi-input .bazi-display {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+.page-bazi-input .bazi-display > view {
+	margin-right: 8rpx;
+	margin-bottom: 8rpx;
+}
+
+.page-bazi-input .bazi-display > view:last-child {
+	margin-right: 0;
+}
+
+/* 按钮样式已在 app-shell.css 中定义 */
+
+.page-bazi-input .submit-button-wrapper {
+	position: relative;
+	width: 100%;
+}
+
+.page-bazi-input .submit-button {
+	position: relative;
+	z-index: 2;
+}
+
+.page-bazi-input .submit-button :deep(.tm-button) {
+	background: linear-gradient(135deg, #4c51bf 0%, #2a3fb8 100%) !important;
+	color: #ffffff !important;
+	box-shadow: 0 14rpx 28rpx rgba(44, 64, 180, 0.28) !important;
+}
+
+.page-bazi-input .submit-button-wrapper.disabled .submit-button :deep(.tm-button) {
+	background: #d2d6dc !important;
+	color: #a0aec0 !important;
+	box-shadow: none !important;
+}
+
+.page-bazi-input .submit-button:active {
+	transform: scale(0.98);
+}
+
+.page-bazi-input .submit-button-glow {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(135deg, rgba(102, 126, 234, 0.4) 0%, rgba(118, 75, 162, 0.4) 100%);
+	border-radius: 16rpx;
+	z-index: 1;
+	opacity: 0.6;
+}
+
+.page-bazi-input .submit-button-wrapper.disabled .submit-button-glow {
+	opacity: 0.15;
+}
+
+.page-bazi-input .error-container {
+	padding: 16rpx 20rpx;
+	background: rgba(245, 101, 101, 0.1);
+	border-radius: 12rpx;
+	border-left: 4rpx solid #f56565;
+	width: 100%;
+}
+
+.page-bazi-input .announcement-list {
+	max-height: 60vh;
+	overflow-y: auto;
+}</style>

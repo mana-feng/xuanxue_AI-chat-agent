@@ -1,0 +1,1168 @@
+<template>
+	<tm-app>
+		<view class="page-wrapper theme-page-bg">
+			<yx-nav-header></yx-nav-header>
+
+			<view class="page-content theme-container" :style="pageContentStyle">
+				<!-- 页面标题 -->
+				<view class="page-header">
+					<tm-text :font-size="40" :bold="true" color="#2d3748" label="访问统计"></tm-text>
+					<tm-button
+						class="btn-gradient"
+						size="small"
+						color="teal"
+						linear="right"
+						:round="12"
+						:padding="[20, 24]"
+						label="返回后台"
+						@tap="goBack"
+					></tm-button>
+				</view>
+
+				<!-- 核心指标卡片 - 使用响应式 Grid 布局 -->
+				<tm-sheet :round="16" :shadow="4" :padding="[28, 24]" class="stats-card responsive-padding-md" :follow-dark="true">
+					<view class="metrics-grid">
+						<view class="metric-item">
+							<tm-text :font-size="20" color="#718096" label="今日 PV"></tm-text>
+							<tm-text :font-size="48" :bold="true" color="#667eea" :label="formatNum(stats.todayPageviews)"></tm-text>
+							<tm-text :font-size="16" :color="stats.todayPageviews >= stats.yesterdayPageviews ? '#48bb78' : '#fc8181'" :label="diffLabel(stats.todayPageviews, stats.yesterdayPageviews)"></tm-text>
+						</view>
+						<view class="metric-divider"></view>
+						<view class="metric-item">
+							<tm-text :font-size="20" color="#718096" label="总浏览量"></tm-text>
+							<tm-text :font-size="48" :bold="true" color="#2d3748" :label="formatNum(stats.totalPageviews)"></tm-text>
+						</view>
+						<view class="metric-divider"></view>
+						<view class="metric-item">
+							<tm-text :font-size="20" color="#718096" label="独立访客"></tm-text>
+							<tm-text :font-size="48" :bold="true" color="#48bb78" :label="formatNum(stats.uniqueVisitors)"></tm-text>
+						</view>
+						<view class="metric-divider"></view>
+						<view class="metric-item">
+							<tm-text :font-size="20" color="#718096" label="会话数"></tm-text>
+							<tm-text :font-size="48" :bold="true" color="#ed8936" :label="formatNum(stats.totalSessions)"></tm-text>
+						</view>
+					</view>
+				</tm-sheet>
+
+				<!-- 次要指标 - 响应式布局 -->
+				<tm-sheet :round="16" :shadow="4" :padding="[24, 20]" class="stats-card responsive-padding-md" :follow-dark="true">
+					<view class="sub-metrics">
+						<view class="sub-metric">
+							<tm-text :font-size="18" color="#718096" label="7 天"></tm-text>
+							<tm-text :font-size="32" :bold="true" color="#667eea" :label="formatNum(stats.weeklyPageviews)"></tm-text>
+						</view>
+						<view class="sub-metric">
+							<tm-text :font-size="18" color="#718096" label="30 天"></tm-text>
+							<tm-text :font-size="32" :bold="true" color="#9f7aea" :label="formatNum(stats.monthlyPageviews)"></tm-text>
+						</view>
+						<view class="sub-metric">
+							<tm-text :font-size="18" color="#718096" label="跳出率"></tm-text>
+							<tm-text :font-size="32" :bold="true" :color="stats.bounceRate > 60 ? '#fc8181' : stats.bounceRate > 40 ? '#ed8936' : '#48bb78'" :label="stats.bounceRate.toFixed(1) + '%'"></tm-text>
+						</view>
+						<view class="sub-metric">
+							<tm-text :font-size="18" color="#718096" label="新访客 / 回访客"></tm-text>
+							<tm-text :font-size="26" :bold="true" color="#38b2ac" :label="formatNum(stats.newVisitorCount) + ' / ' + formatNum(stats.returningVisitorCount)"></tm-text>
+						</view>
+					</view>
+				</tm-sheet>
+
+				<!-- 每日趋势 -->
+				<tm-sheet :round="16" :shadow="4" :padding="[24, 20]" class="stats-card" :follow-dark="true">
+					<view class="card-header">
+						<tm-icon name="tmicon-md-trending-up" :font-size="28" color="#667eea"></tm-icon>
+						<tm-text :font-size="28" :bold="true" color="#2d3748" label="每日趋势 (近 30 天)"></tm-text>
+					</view>
+					<scroll-view scroll-x class="trend-scroll">
+						<view class="trend-chart">
+							<!-- Y 轴刻度 -->
+							<view class="y-axis">
+								<view v-for="(tick, idx) in yTicks" :key="idx" class="y-tick">
+									<tm-text :font-size="14" color="#a0aec0" :label="tick + ''"></tm-text>
+								</view>
+							</view>
+							<!-- 柱状图区域 -->
+							<view class="trend-bars">
+								<view v-for="(item, idx) in recentTrend" :key="idx" class="trend-bar-wrap">
+									<view class="trend-bar-col">
+										<view class="trend-bar pv-bar" :style="{ height: barHeight(item.pv, maxPv) }"></view>
+										<view class="trend-bar uv-bar" :style="{ height: barHeight(item.uv, maxPv) }"></view>
+									</view>
+									<tm-text :font-size="22" color="#a0aec0" :label="formatDate(item.date)"></tm-text>
+								</view>
+							</view>
+						</view>
+					</scroll-view>
+					<view class="legend-row">
+						<view class="legend-item"><view class="dot pv-dot"></view><tm-text :font-size="18" color="#718096" label="PV"></tm-text></view>
+						<view class="legend-item"><view class="dot uv-dot"></view><tm-text :font-size="18" color="#718096" label="UV"></tm-text></view>
+					</view>
+				</tm-sheet>
+
+				<!-- 24 小时分布 - 优化布局和对齐 -->
+				<tm-sheet :round="16" :shadow="4" :padding="[24, 20]" class="stats-card responsive-padding-md" :follow-dark="true">
+					<view class="card-header">
+						<tm-icon name="tmicon-md-time" :font-size="28" color="#ed8936"></tm-icon>
+						<tm-text :font-size="28" :bold="true" color="#2d3748" label="24 小时分布"></tm-text>
+					</view>
+					<scroll-view :scroll-x="true" class="hourly-scroll" :show-scrollbar="true">
+						<view class="hourly-chart">
+							<!-- Y 轴刻度 -->
+							<view class="y-axis">
+								<view v-for="(tick, idx) in hourYTicks" :key="idx" class="y-tick">
+									<tm-text :font-size="16" color="#a0aec0" :label="tick + ''"></tm-text>
+								</view>
+							</view>
+							<!-- 柱状图区域 -->
+							<view class="hourly-bars">
+								<view v-for="h in stats.hourlyData" :key="h.hour" class="hour-bar-wrap">
+									<view class="hour-bar" :style="{ height: barHeight(h.count, maxHour) }">
+										<!-- 悬停提示 -->
+										<view class="hour-tooltip">
+											<tm-text :font-size="14" color="#fff" :label="h.count + ''"></tm-text>
+										</view>
+									</view>
+									<tm-text :font-size="18" color="#a0aec0" :label="h.hour + ''"></tm-text>
+								</view>
+							</view>
+						</view>
+					</scroll-view>
+				</tm-sheet>
+
+				<!-- 访问记录总览 -->
+				<tm-sheet :round="16" :shadow="4" :padding="[28, 24]" class="stats-card records-card" :follow-dark="true">
+					<view class="card-header records-header">
+						<view class="records-title-wrap">
+							<tm-icon name="tmicon-md-eye-outline" :font-size="28" color="#e53e3e"></tm-icon>
+							<tm-text :font-size="42" :bold="true" color="#2d3748" label="访问记录总览"></tm-text>
+							<tm-text :font-size="26" color="#718096" :label="'共 ' + formatNum(stats.recentVisitors.length) + ' 条记录，每页 20 条'"></tm-text>
+						</view>
+						<tm-text :font-size="24" color="#a0aec0" :label="'按访问时间倒序显示'"></tm-text>
+					</view>
+					<view class="rt-list">
+						<view v-for="(item, index) in paginatedVisitors" :key="index" class="rt-item">
+							<view class="rt-left">
+								<view class="rt-device-icon">
+									<text v-if="item.deviceType && item.deviceType.toLowerCase() === 'mobile'" class="device-emoji">📱</text>
+									<text v-else-if="item.deviceType && item.deviceType.toLowerCase() === 'tablet'" class="device-emoji">📟</text>
+									<text v-else class="device-emoji">💻</text>
+								</view>
+								<view class="rt-dot" :style="{ background: rtDotColor(item.referrerType) }"></view>
+								<view class="rt-detail">
+									<view class="rt-title-row">
+										<tm-text :font-size="34" :bold="true" color="#2d3748" :label="item.title || item.pathname" :lines="1"></tm-text>
+										<tm-text :font-size="24" color="#94a3b8" :label="formatTime(item.time)"></tm-text>
+									</view>
+									<tm-text :font-size="24" color="#4a5568" :label="item.pathname"></tm-text>
+									<view class="rt-device-details rt-device-details-inline">
+										<view class="rt-device-info-row rt-device-info-chip" v-if="item.isLoggedIn && item.username">
+											<tm-text :font-size="24" color="#48bb78" :label="'👤 ' + item.username"></tm-text>
+										</view>
+										<view class="rt-device-info-row rt-device-info-chip" v-else>
+											<tm-text :font-size="24" color="#a0aec0" :label="'👤 游客'"></tm-text>
+										</view>
+										<view class="rt-device-info-row rt-device-info-chip">
+											<tm-text :font-size="24" color="#94a3b8" :label="'📱 ' + (item.screenWidth || '?') + '×' + (item.screenHeight || '?') + (item.pixelRatio ? ' (' + item.pixelRatio + 'x)' : '')"></tm-text>
+										</view>
+										<view class="rt-device-info-row rt-device-info-chip">
+											<tm-text :font-size="24" color="#94a3b8" :label="'🌐 ' + (item.browser || '未知') + (item.browserVersion ? ' ' + item.browserVersion : '')"></tm-text>
+										</view>
+										<view class="rt-device-info-row rt-device-info-chip">
+											<tm-text :font-size="24" color="#94a3b8" :label="'💻 ' + (item.os || '未知') + (item.osVersion ? ' ' + item.osVersion : '')"></tm-text>
+										</view>
+										<view class="rt-device-info-row rt-device-info-chip">
+											<tm-text :font-size="24" color="#94a3b8" :label="'📍 ' + (item.ip || '未知')"></tm-text>
+										</view>
+									</view>
+								</view>
+							</view>
+						</view>
+						<view v-if="stats.recentVisitors.length === 0" class="empty-tip">
+							<tm-text :font-size="30" color="#999" label="暂无访问记录"></tm-text>
+						</view>
+					</view>
+					<!-- 分页控制 -->
+				<view v-if="stats.recentVisitors.length > 20" class="pagination">
+					<view 
+						class="page-btn" 
+						:class="{ 'page-btn-disabled': currentPage === 1 }"
+						@click="prevPage"
+					>
+						<tm-icon name="tmicon-angle-left" :font-size="32" color="#4a5568" :follow-theme="false"></tm-icon>
+					</view>
+					<tm-text :font-size="28" color="#4a5568" :label="currentPage + ' / ' + totalPages"></tm-text>
+					<view 
+						class="page-btn" 
+						:class="{ 'page-btn-disabled': currentPage === totalPages }"
+						@click="nextPage"
+					>
+						<tm-icon name="tmicon-angle-right" :font-size="32" color="#4a5568" :follow-theme="false"></tm-icon>
+					</view>
+				</view>
+				</tm-sheet>
+			</view>
+		</view>
+	</tm-app>
+</template>
+
+<script setup lang="ts">
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { useUserStore } from '@/store/user';
+import { getAdminAnalyticsStats, AnalyticsStats } from '@/services/api/admin';
+
+const userStore = useUserStore();
+const defaultStats: AnalyticsStats = {
+	todayPageviews: 0,
+	yesterdayPageviews: 0,
+	totalPageviews: 0,
+	uniqueVisitors: 0,
+	totalSessions: 0,
+	weeklyPageviews: 0,
+	monthlyPageviews: 0,
+	deviceStats: { mobile: 0, tablet: 0, desktop: 0 },
+	topBrowsers: [],
+	topOs: [],
+	topPages: [],
+	topReferrers: [],
+	connectionStats: [],
+	referrerTypeStats: [],
+	searchEngineStats: [],
+	searchKeywords: [],
+	screenResolutions: [],
+	hourlyData: Array.from({ length: 24 }, (_, i) => ({ hour: i, count: 0 })),
+	dailyTrend: [],
+	dowData: [
+		{ day: '周日', dayIndex: 0, count: 0 },
+		{ day: '周一', dayIndex: 1, count: 0 },
+		{ day: '周二', dayIndex: 2, count: 0 },
+		{ day: '周三', dayIndex: 3, count: 0 },
+		{ day: '周四', dayIndex: 4, count: 0 },
+		{ day: '周五', dayIndex: 5, count: 0 },
+		{ day: '周六', dayIndex: 6, count: 0 },
+	],
+	newVisitorCount: 0,
+	returningVisitorCount: 0,
+	bounceRate: 0,
+	entryPages: [],
+	performanceStats: { avgLoadTime: 0, minLoadTime: 0, maxLoadTime: 0, avgFCP: 0, avgDCL: 0 },
+	languageStats: [],
+	timezoneStats: [],
+	utmCampaigns: [],
+	recentVisitors: [],
+};
+
+const stats = reactive<AnalyticsStats>({ ...defaultStats });
+const loading = false;
+
+const pageContentStyle = computed(() => {
+	try {
+		const systemInfo = uni.getSystemInfoSync();
+		const statusBarHeight = systemInfo.statusBarHeight || 0;
+		const headerHeight = 64;
+		const padding = 24;
+		return {
+			paddingTop: `${statusBarHeight + headerHeight + padding}px`,
+		};
+	} catch (e) {
+		return {
+			paddingTop: '88px',
+		};
+	}
+});
+
+// 实时访客分页
+const ITEMS_PER_PAGE = 20;
+const currentPage = ref(1);
+
+const totalPages = computed(() => {
+	return Math.ceil(stats.recentVisitors.length / ITEMS_PER_PAGE) || 1;
+});
+
+const paginatedVisitors = computed(() => {
+	const start = (currentPage.value - 1) * ITEMS_PER_PAGE;
+	const end = start + ITEMS_PER_PAGE;
+	return stats.recentVisitors.slice(start, end);
+});
+
+const prevPage = () => {
+	if (currentPage.value > 1) {
+		currentPage.value--;
+	}
+};
+
+const nextPage = () => {
+	if (currentPage.value < totalPages.value) {
+		currentPage.value++;
+	}
+};
+
+const maxPv = computed(() => {
+	const recent30 = stats.dailyTrend.slice(-30);
+	if (recent30.length === 0) return 100;
+	return Math.max(...recent30.map((d) => Math.max(d.pv, d.uv)), 100);
+});
+
+const recentTrend = computed(() => {
+	const data = stats.dailyTrend.slice(-30);
+	return data.reverse();
+});
+
+const yTicks = computed(() => {
+	const max = maxPv.value;
+	return [
+		max,
+		Math.round(max * 0.75),
+		Math.round(max * 0.5),
+		Math.round(max * 0.25),
+		0,
+	];
+});
+
+const hourYTicks = computed(() => {
+	const max = maxHour.value;
+	return [
+		max,
+		Math.round(max * 0.75),
+		Math.round(max * 0.5),
+		Math.round(max * 0.25),
+		0,
+	];
+});
+
+const maxHour = computed(() => {
+	if (stats.hourlyData.length === 0) return 100;
+	return Math.max(...stats.hourlyData.map((h) => h.count), 100);
+});
+
+const formatNum = (num: number) => {
+	if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+	if (num >= 10000) return (num / 10000).toFixed(1) + 'w';
+	if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
+	return num.toString();
+};
+
+const diffLabel = (curr: number, prev: number) => {
+	if (prev === 0) return '新数据';
+	const diff = curr - prev;
+	const pct = Math.round((Math.abs(diff) / prev) * 100);
+	return diff >= 0 ? `↑${pct}%` : `↓${pct}%`;
+};
+
+const CHART_HEIGHT = 200; // 柱状图可用高度（像素）- 与 Y 轴高度匹配
+
+const barHeight = (val: number, max: number) => {
+	const pct = max > 0 ? (val / max) : 0;
+	// 预留底部 margin(8px) 和标签空间 (24px)
+	const availableHeight = CHART_HEIGHT - 8 - 24;
+	return Math.max(pct * availableHeight, 4) + 'px';
+};
+
+const formatDate = (dateStr: string) => {
+	if (!dateStr) return '';
+	const date = new Date(dateStr);
+	const month = date.getMonth() + 1;
+	const day = date.getDate();
+	return `${month}/${day}`;
+};
+
+const sourceColor = (type: string) => {
+	const map: Record<string, string> = {
+		direct: '#667eea',
+		search: '#48bb78',
+		social: '#ed64a6',
+		referral: '#ed8936',
+	};
+	return map[type] || '#cbd5e0';
+};
+
+const sourceTypeLabel = (type: string) => {
+	const map: Record<string, string> = {
+		direct: '直接访问',
+		search: '搜索引擎',
+		social: '社交媒体',
+		referral: '外部链接',
+	};
+	return map[type] || type;
+};
+
+const rtDotColor = (type: string) => sourceColor(type);
+
+const formatTime = (ts: string | number) => {
+	const d = new Date(ts);
+	const year = d.getFullYear();
+	const month = (d.getMonth() + 1).toString().padStart(2, '0');
+	const day = d.getDate().toString().padStart(2, '0');
+	const h = d.getHours().toString().padStart(2, '0');
+	const m = d.getMinutes().toString().padStart(2, '0');
+	return `${year}-${month}-${day} ${h}:${m}`;
+};
+
+const getConnLabel = (type: string) => {
+	const map: Record<string, string> = {
+		wifi: 'WiFi',
+		cellular: '移动网络',
+		ethernet: '有线网络',
+		unknown: '未知',
+	};
+	return map[type] || type;
+};
+
+const formatReferrer = (ref: string) => {
+	if (!ref || ref === 'direct') return '直接访问';
+	try {
+		const u = new URL(ref);
+		return u.hostname.replace('www.', '');
+	} catch {
+		return ref;
+	}
+};
+
+const goBack = () => {
+	uni.navigateBack();
+};
+
+// 定时刷新
+let refreshTimer: any = null;
+
+const loadStats = async () => {
+	try {
+		const res = await getAdminAnalyticsStats();
+		if (res && res.success && res.data) {
+			Object.assign(stats, res.data);
+		}
+	} catch (e) {
+		console.error('加载统计数据失败:', e);
+	}
+};
+
+onMounted(() => {
+	loadStats();
+	refreshTimer = setInterval(() => {
+		loadStats();
+	}, 30000);
+});
+
+onUnmounted(() => {
+	if (refreshTimer) {
+		clearInterval(refreshTimer);
+		refreshTimer = null;
+	}
+});
+</script>
+
+<style scoped>
+.page-wrapper {
+	min-height: 100vh;
+	background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+}
+
+.page-content {
+	padding: 24px 16px 32px;
+	max-width: 1200px;
+	margin: 0 auto;
+}
+
+.page-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 16px 0 24px;
+}
+
+.stats-card {
+	margin-bottom: 20px;
+	background: rgba(255, 255, 255, 0.95);
+	backdrop-filter: blur(10px);
+}
+
+/* 核心指标网格 - 响应式优化 */
+.metrics-grid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: clamp(8px, 1.5vw, 16px);
+	position: relative;
+}
+
+@media screen and (max-width: 767px) {
+	.metrics-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+.metric-item {
+	text-align: center;
+	padding: 8px 0;
+	position: relative;
+}
+
+.metric-item:not(:last-child)::after {
+	content: '';
+	position: absolute;
+	right: -8px;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 1px;
+	height: 60px;
+	background: #e2e8f0;
+}
+
+@media screen and (max-width: 767px) {
+	.metric-item {
+		padding: 4px 0;
+	}
+	
+	.metric-item text[label*="今日 PV"],
+	.metric-item text[label*="总浏览量"],
+	.metric-item text[label*="独立访客"],
+	.metric-item text[label*="会话数"] {
+		font-size: 16px !important;
+	}
+	
+	.metric-item text[bold="true"] {
+		font-size: 36px !important;
+	}
+	
+	.metric-item:not(:last-child)::after {
+		display: none;
+	}
+}
+
+.metric-divider {
+	display: none;
+}
+
+/* 次要指标 - 响应式优化 */
+.sub-metrics {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: clamp(12px, 2vw, 20px);
+}
+
+@media screen and (min-width: 768px) {
+	.sub-metrics {
+		grid-template-columns: repeat(4, 1fr);
+	}
+}
+
+.sub-metric {
+	text-align: center;
+}
+
+/* 卡片标题 */
+.card-header {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	margin-bottom: 16px;
+	gap: 10px;
+}
+
+/* 趋势图表 - 响应式优化 */
+.trend-scroll {
+	width: 100%;
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+	/* 自定义滚动条样式 */
+	scrollbar-width: thin;
+	scrollbar-color: #cbd5e0 transparent;
+}
+
+/* Webkit 浏览器滚动条样式 */
+.trend-scroll::-webkit-scrollbar {
+	height: 6px;
+}
+
+.trend-scroll::-webkit-scrollbar-track {
+	background: transparent;
+	border-radius: 3px;
+}
+
+.trend-scroll::-webkit-scrollbar-thumb {
+	background: #cbd5e0;
+	border-radius: 3px;
+}
+
+.trend-scroll::-webkit-scrollbar-thumb:hover {
+	background: #a0aec0;
+}
+
+.trend-chart {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-end;
+	height: 220px;
+	padding: 16px 12px;
+	gap: 12px;
+	min-width: 600px;
+}
+
+/* Y 轴刻度 - 响应式优化 */
+.y-axis {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	align-items: flex-end;
+	height: 180px;
+	min-width: 40px;
+	padding-right: 8px;
+	flex-shrink: 0;
+}
+
+@media screen and (max-width: 767px) {
+	.y-axis {
+		min-width: 32px;
+	}
+	
+	.y-tick text {
+		font-size: 12px;
+	}
+}
+
+.y-tick {
+	height: 20px;
+	display: flex;
+	align-items: center;
+}
+
+.trend-bars {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-end;
+	flex: 1;
+	gap: 6px;
+}
+
+.trend-bar-wrap {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: flex-end;
+	height: 180px;
+	min-width: 40px;
+	flex-shrink: 0;
+}
+
+@media screen and (max-width: 767px) {
+	.trend-bar-wrap {
+		min-width: 28px;
+	}
+	
+	.trend-bar {
+		width: 10px;
+	}
+}
+
+.trend-bar-col {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-end;
+	gap: 2px;
+}
+
+.trend-bar {
+	width: 14px;
+	border-radius: 3px;
+	min-height: 4px;
+	transition: all 0.2s ease;
+}
+
+@media screen and (max-width: 767px) {
+	.trend-bar {
+		width: 10px;
+	}
+}
+
+.pv-bar {
+	background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+}
+
+.uv-bar {
+	background: linear-gradient(180deg, #48bb78 0%, #38a169 100%);
+}
+
+.legend-row {
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+	gap: 24px;
+	margin-top: 12px;
+}
+
+.legend-item {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 6px;
+}
+
+.dot {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+}
+
+.pv-dot {
+	background: #667eea;
+}
+
+.uv-dot {
+	background: #48bb78;
+}
+
+/* 小时分布 - 响应式优化 */
+.hourly-scroll {
+	width: 100%;
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+	/* 自定义滚动条样式 */
+	scrollbar-width: thin;
+	scrollbar-color: #cbd5e0 transparent;
+}
+
+/* Webkit 浏览器滚动条样式 */
+.hourly-scroll::-webkit-scrollbar {
+	height: 6px;
+}
+
+.hourly-scroll::-webkit-scrollbar-track {
+	background: transparent;
+	border-radius: 3px;
+}
+
+.hourly-scroll::-webkit-scrollbar-thumb {
+	background: #cbd5e0;
+	border-radius: 3px;
+}
+
+.hourly-scroll::-webkit-scrollbar-thumb:hover {
+	background: #a0aec0;
+}
+
+.hourly-chart {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-end;
+	height: 260px; /* 优化高度 */
+	padding: 20px 16px;
+	gap: 16px;
+	min-width: 800px; /* 保证 24 个柱子的最小宽度 */
+}
+
+@media screen and (max-width: 767px) {
+	.hourly-chart {
+		height: 220px;
+		padding: 16px 12px;
+		min-width: 600px; /* 移动端最小宽度 */
+	}
+}
+
+/* Y 轴刻度 - 响应式优化 */
+.y-axis {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	align-items: flex-end;
+	height: 200px; /* 与柱状图区域匹配 */
+	min-width: 44px;
+	padding-right: 12px;
+	flex-shrink: 0;
+}
+
+@media screen and (max-width: 767px) {
+	.y-axis {
+		height: 160px;
+		min-width: 36px;
+		padding-right: 8px;
+	}
+	
+	.y-tick text {
+		font-size: 14px;
+	}
+}
+
+.y-tick {
+	height: 24px;
+	display: flex;
+	align-items: center;
+}
+
+@media screen and (max-width: 767px) {
+	.y-tick {
+		height: 20px;
+	}
+}
+
+.hourly-bars {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-end;
+	flex: 1;
+	gap: 3px;
+	height: 200px; /* 与 Y 轴高度匹配 */
+}
+
+@media screen and (max-width: 767px) {
+	.hourly-bars {
+		height: 160px;
+		gap: 2px;
+	}
+}
+
+.hour-bar-wrap {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: flex-end;
+	flex: 1;
+	min-width: 28px;
+	height: 200px; /* 固定高度确保对齐 */
+}
+
+@media screen and (max-width: 767px) {
+	.hour-bar-wrap {
+		min-width: 18px;
+		height: 160px;
+	}
+}
+
+.hour-bar {
+	width: 12px;
+	background: linear-gradient(180deg, #ed8936 0%, #dd6b20 100%);
+	border-radius: 6px;
+	min-height: 6px;
+	margin-bottom: 8px;
+	position: relative;
+	transition: all 0.2s ease;
+	cursor: pointer;
+}
+
+@media screen and (max-width: 767px) {
+	.hour-bar {
+		width: 8px;
+		min-height: 4px;
+		margin-bottom: 6px;
+	}
+}
+
+.hour-bar:hover {
+	background: linear-gradient(180deg, #f6ad55 0%, #ed8936 100%);
+	transform: scaleY(1.05);
+}
+
+/* 小时标签样式 */
+.hour-bar-wrap text {
+	font-size: 18px;
+	color: #a0aec0;
+	height: 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+@media screen and (max-width: 767px) {
+	.hour-bar-wrap text {
+		font-size: 16px;
+		height: 20px;
+	}
+}
+
+/* 悬停提示 - 移动端优化 */
+.hour-tooltip {
+	position: absolute;
+	top: -36px;
+	left: 50%;
+	transform: translateX(-50%);
+	background: rgba(45, 55, 72, 0.95);
+	padding: 4px 8px;
+	border-radius: 4px;
+	white-space: nowrap;
+	opacity: 0;
+	visibility: hidden;
+	transition: all 0.2s;
+	z-index: 10;
+	pointer-events: none;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+@media screen and (max-width: 767px) {
+	.hour-tooltip {
+		display: none;
+	}
+}
+
+.hour-bar:hover .hour-tooltip {
+	opacity: 1;
+	visibility: visible;
+	transform: translateX(-50%) translateY(-2px);
+}
+
+/* 访问记录 - 响应式优化 */
+.records-card {
+	overflow: hidden;
+}
+
+.records-header {
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 16px;
+	padding-bottom: 16px;
+	border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+}
+
+@media screen and (max-width: 767px) {
+	.records-header {
+		flex-direction: column;
+		gap: 12px;
+	}
+}
+
+.records-title-wrap {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	flex: 1;
+}
+
+.rt-list {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	margin: 20px 0;
+}
+
+@media screen and (max-width: 767px) {
+	.rt-list {
+		gap: 10px;
+		margin: 12px 0;
+	}
+}
+
+.rt-item {
+	display: flex;
+	flex-direction: row;
+	align-items: stretch;
+	padding: 20px 24px;
+	background: rgba(248, 250, 252, 0.95);
+	border: 1px solid rgba(226, 232, 240, 0.9);
+	border-radius: 18px;
+	transition: all 0.2s ease;
+}
+
+@media screen and (max-width: 767px) {
+	.rt-item {
+		padding: 16px 16px;
+		flex-direction: column;
+		gap: 12px;
+	}
+}
+
+.rt-item:hover {
+	background: rgba(241, 245, 249, 0.95);
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.rt-left {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-start;
+	gap: 16px;
+	flex: 1;
+	min-width: 0;
+}
+
+@media screen and (max-width: 767px) {
+	.rt-left {
+		width: 100%;
+		gap: 12px;
+	}
+}
+
+.rt-device-icon {
+	width: 56px;
+	height: 56px;
+	border-radius: 14px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: #ffffff;
+	flex-shrink: 0;
+	box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+@media screen and (max-width: 767px) {
+	.rt-device-icon {
+		width: 48px;
+		height: 48px;
+	}
+	
+	.device-emoji {
+		font-size: 26px;
+	}
+}
+
+.device-emoji {
+	font-size: 30px;
+	line-height: 1;
+}
+
+.rt-dot {
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	margin-top: 10px;
+	flex-shrink: 0;
+}
+
+@media screen and (max-width: 767px) {
+	.rt-dot {
+		margin-top: 6px;
+	}
+}
+
+.rt-detail {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	flex: 1;
+	min-width: 0;
+}
+
+.rt-title-row {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	gap: 16px;
+	flex-wrap: wrap;
+}
+
+@media screen and (max-width: 767px) {
+	.rt-title-row {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 8px;
+	}
+}
+
+.rt-device-details {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding-top: 4px;
+}
+
+@media screen and (max-width: 767px) {
+	.rt-device-details {
+		gap: 6px;
+		padding-top: 2px;
+	}
+}
+
+.rt-device-details-inline {
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 12px;
+}
+
+@media screen and (max-width: 767px) {
+	.rt-device-details-inline {
+		gap: 8px;
+	}
+}
+
+.rt-device-info-row {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 10px;
+	line-height: 1.5;
+}
+
+@media screen and (max-width: 767px) {
+	.rt-device-info-row {
+		gap: 6px;
+	}
+}
+
+.rt-device-info-chip {
+	padding: 8px 14px;
+	background: rgba(255, 255, 255, 0.92);
+	border: 1px solid rgba(203, 213, 225, 0.8);
+	border-radius: 999px;
+	transition: all 0.2s ease;
+}
+
+@media screen and (max-width: 767px) {
+	.rt-device-info-chip {
+		padding: 6px 12px;
+		font-size: 12px;
+	}
+}
+
+.rt-device-info-chip:hover {
+	background: rgba(255, 255, 255, 1);
+	border-color: rgba(102, 126, 234, 0.3);
+}
+
+/* 分页控制 - 响应式优化 */
+.pagination {
+	display: flex;
+	flex-direction: row;
+	justify-content: center;
+	align-items: center;
+	gap: 12px;
+	padding-top: 14px;
+	border-top: 1px solid rgba(226, 232, 240, 0.7);
+	min-height: 44px;
+}
+
+.page-btn {
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(248, 250, 252, 0.95);
+	border: 1px solid rgba(226, 232, 240, 0.9);
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.page-btn:hover {
+	background: rgba(102, 126, 234, 0.1);
+	border-color: rgba(102, 126, 234, 0.3);
+}
+
+.page-btn-disabled {
+	opacity: 0.4;
+	pointer-events: none;
+}
+
+@media screen and (max-width: 767px) {
+	.pagination {
+		gap: 8px;
+		padding-top: 12px;
+	}
+	
+	.page-btn {
+		width: 36px;
+		height: 36px;
+	}
+}
+
+.empty-tip {
+	text-align: center;
+	padding: 28px 0;
+}
+
+@media screen and (max-width: 767px) {
+	.empty-tip {
+		padding: 20px 0;
+	}
+}
+</style>

@@ -1,0 +1,69 @@
+# dependencies
+**/node_modules/
+
+# builds
+backend-docker/dist/
+frontend-docker/dist/
+frontend-docker/unpackage/
+backend-docker/admin-ui/dist/
+backend-docker/admin-ui/unpackage/
+
+# env files
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.development.example
+!**/.env.production.example
+
+# deploy files (keep example, ignore real secrets)
+docker-compose.deploy.yml
+!docker-compose.deploy.example.yml
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# temp
+.local-dev/
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+*.orig
+*.rej
+
+# uni-app private configs
+**/project.private.config.json
+
+# HBuilderX
+.hbuilderx/
+
+# coverage
+coverage/
+**/coverage/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Docker exports
+*.tar
+
+# npm cache
+.npm/
+
+# local scripts (contain machine-specific paths)
+start-local.bat
+stop-local.bat
+stop-local.ps1
+
+# screenshots (local assets)
+screenshots/

@@ -1,0 +1,771 @@
+<template>
+	<tm-app>
+		<PageScaffold class="page-ziwei-input" title="紫微排盘" subtitle="请填写以下信息进行紫微排盘">
+			<SectionBlock icon="tmicon-md-person" title="基础信息">
+				<view class="card-stack">
+					<tm-input
+						v-model="realname"
+						placeholder="&#x8BF7;&#x8F93;&#x5165;&#x59D3;&#x540D;&#xFF08;&#x53EF;&#x9009;&#xFF09;"
+						prefix="tmicon-md-person"
+						:round="12"
+						:border="1"
+						:padding="[24, 20]"
+					></tm-input>
+
+					<view class="form-group-single">
+						<view class="form-label">
+							<tm-icon name="tmicon-md-people" :font-size="24" color="#718096" :margin="[0, 6, 0, 0]"></tm-icon>
+							<tm-text :font-size="26" color="#718096" label="&#x6027;&#x522B;"></tm-text>
+						</view>
+						<view class="form-control">
+							<tm-segtab
+								v-model="gender"
+								:list="[{ text: '\u7537' }, { text: '\u5973' }]"
+								:width="300"
+								:margin="[0, 0]"
+								:default-value="0"
+							></tm-segtab>
+						</view>
+					</view>
+				</view>
+			</SectionBlock>
+
+			<SectionBlock icon="tmicon-time" title="出生时间" subtitle="支持阳历/阴历，精确到分钟">
+				<view class="card-stack">
+					<view class="form-group-single calendar-type-selector">
+						<view class="form-label">
+							<tm-icon name="tmicon-calendar-alt" :font-size="24" color="#718096" :margin="[0, 6, 0, 0]"></tm-icon>
+							<tm-text :font-size="26" color="#718096" label="&#x65E5;&#x5386;&#x7C7B;&#x578B;"></tm-text>
+						</view>
+						<view class="form-control segtab-wrapper">
+							<tm-segtab
+								v-model="model"
+								:default-value="0"
+								:list="[{ text: '\u9633\u5386' }, { text: '\u9634\u5386' }]"
+								:margin="[0, 0]"
+								:width="300"
+							></tm-segtab>
+						</view>
+					</view>
+
+					<tm-button
+						type="primary"
+						linear="right"
+						linear-deep="accent"
+						:block="true"
+						:round="12"
+						:padding="[24, 24]"
+						icon="tmicon-calendar-alt"
+						icon-pos="left"
+						class="birth-time-btn"
+						:label="datetime_label || (model === 0 ? '\u8BF7\u9009\u62E9\u9633\u5386\u51FA\u751F\u65E5\u671F\u548C\u65F6\u95F4\uff08\u7CBE\u786E\u5230\u5206\u949F\uff09' : '\u8BF7\u9009\u62E9\u9634\u5386\u51FA\u751F\u65E5\u671F\u548C\u65F6\u95F4\uff08\u7CBE\u786E\u5230\u5206\u949F\uff09')"
+						@tap="SelectTime"
+					></tm-button>
+
+					<view v-if="lunar_label || datetime_label" class="info-grid info-cards">
+						<view v-if="lunar_label" class="info-card">
+							<view class="info-card-header">
+								<tm-icon name="tmicon-integral" :font-size="32" color="#48bb78"></tm-icon>
+									<tm-text
+										:font-size="24"
+										color="#718096"
+										:label="model === 0 ? '\u5BF9\u5E94\u9634\u5386' : '\u5BF9\u5E94\u9633\u5386'"
+										:margin="[0, 0, 0, 12]"
+									></tm-text>
+							</view>
+							<tm-text :font-size="28" color="#2d3748" :bold="true" :label="lunar_label"></tm-text>
+						</view>
+						<view v-if="datetime_label" class="info-card">
+							<view class="info-card-header">
+								<tm-icon name="tmicon-calendar" :font-size="32" color="#667eea"></tm-icon>
+								<tm-text :font-size="24" color="#718096" label="&#x6392;&#x76D8;&#x65F6;&#x95F4;" :margin="[0, 0, 0, 12]"></tm-text>
+							</view>
+							<tm-text :font-size="28" color="#2d3748" :bold="true" :label="datetime_label"></tm-text>
+						</view>
+					</view>
+				</view>
+			</SectionBlock>
+
+			<template #footer>
+				<tm-button
+					:class="['primary-btn', { disabled: !canSubmit }]"
+					:label="'\u5F00\u59CB\u6392\u76D8'"
+					:type="canSubmit ? 'primary' : 'grey'"
+					:round="999"
+					:bold="true"
+					:linear="canSubmit ? 'right' : ''"
+					:linear-deep="'accent'"
+					:shadow="canSubmit ? 10 : 0"
+					:disabled="!canSubmit"
+					icon="tmicon-calendar-alt"
+					block
+					@tap="Submit"
+				></tm-button>
+			</template>
+		</PageScaffold>
+
+		<tm-time-picker
+			v-model:show="solar_select_show"
+			:round="6"
+			:default-value="solar_default_value"
+			:start="solar_time_pick.start"
+			:end="solar_time_pick.end"
+			:format="solar_time_pick.format"
+			:show-detail="solar_time_pick.detail"
+			:show-suffix="time_suffix.solar"
+			@confirm="SolarConfirm"
+		></tm-time-picker>
+		<tm-time-picker
+			v-model:show="lunar_select_show"
+			:round="6"
+			:default-value="lunar_default_value"
+			:start="lunar_time_pick.start"
+			:end="lunar_time_pick.end"
+			:format="lunar_time_pick.format"
+			:show-detail="lunar_time_pick.detail"
+			:show-suffix="time_suffix.lunar"
+			:column-flex="lunar_time_column_flex"
+			@confirm="LunarConfirm"
+		></tm-time-picker>
+	</tm-app>
+</template>
+
+<script lang="ts" setup>
+import { ref, computed, watch, nextTick } from 'vue';
+import { onLoad, onShow } from '@dcloudio/uni-app';
+import { Solar } from 'lunar-javascript';
+import PageScaffold from '@/components/layout/PageScaffold.vue';
+import SectionBlock from '@/components/layout/SectionBlock.vue';
+import { useUserStore } from '@/store/user';
+import utils from '@/libs/utils/utils';
+import { useZiweiStore } from '@/store/ziwei';
+
+const realname = ref('');
+const gender = ref(0);
+const model = ref(0);
+const timestamp = ref<number | null>(null);
+const datetime_label = ref('');
+const lunar_label = ref<string | null>(null);
+
+const user_store = useUserStore();
+const ziwei_store = useZiweiStore();
+
+const canSubmit = computed(() => timestamp.value !== null);
+
+const solar_select_show = ref(false);
+const lunar_select_show = ref(false);
+
+const solar_default_value = ref('');
+const lunar_default_value = ref('');
+
+const solar_time_pick = {
+	start: '1900/01/01 00:00',
+	end: '2099/12/30 00:00',
+	format: 'YYYY/MM/DD HH:mm',
+	detail: {
+		year: true,
+		month: true,
+		day: true,
+		hour: true,
+		minute: true,
+		second: false,
+	},
+};
+
+const lunar_time_pick = {
+	start: '1900/01/01 00',
+	end: '2099/12/30 00',
+	format: 'YYYY/MM/DD HH',
+	detail: {
+		year: true,
+		month: true,
+		day: true,
+		hour: true,
+		minute: false,
+		second: false,
+	},
+};
+
+const lunar_time_column_flex = {
+	year: 1.15,
+	month: 0.75,
+	day: 0.75,
+	hour: 2.35,
+};
+
+const time_suffix = {
+	solar: { year: '\u5E74', month: '\u6708', day: '\u65E5', hour: '\u65F6', minute: '\u5206', second: '\u79D2' },
+	lunar: { year: '\u5E74', month: '\u6708', day: '\u65E5', hour: '\u65F6\u8FB0', minute: '\u5206', second: '\u79D2' },
+};
+
+watch(model, PullDatatimeLabel);
+watch(timestamp, PullDatatimeLabel);
+
+function initCurrentTime() {
+	timestamp.value = new Date().getTime();
+	PullDatatimeLabel();
+}
+
+let editDataProcessed = false;
+
+onLoad((options: any) => {
+	user_store.restoreAuth();
+
+	const editDataStr = uni.getStorageSync('edit_ziwei_data');
+	if (editDataStr) {
+		try {
+			const editData = JSON.parse(editDataStr);
+			if (editData.isEdit && editData.timestamp) {
+				realname.value = editData.realname || '';
+				gender.value =
+					editData.gender !== undefined && editData.gender !== null ? editData.gender : 0;
+				timestamp.value = editData.timestamp;
+				if (editData.recordId) {
+					user_store.recordId = editData.recordId;
+				}
+				editDataProcessed = true;
+				uni.removeStorageSync('edit_ziwei_data');
+				nextTick(() => {
+					PullDatatimeLabel();
+					uni.showToast({
+						title: '\u5DF2\u52A0\u8F7D\u5F85\u7F16\u8F91\u4FE1\u606F\uFF0C\u8BF7\u786E\u8BA4\u540E\u91CD\u65B0\u6392\u76D8',
+						icon: 'success',
+						duration: 2000,
+					});
+				});
+				return;
+			}
+		} catch (e) {
+			console.warn('閻熸瑱绲鹃悗鐣岀磽閺嶎剛甯嗛柡浣哄瀹撲焦寰勬潏顐バ?', e);
+			uni.removeStorageSync('edit_ziwei_data');
+		}
+	}
+
+	realname.value = '';
+	gender.value = 0;
+	user_store.recordId = null;
+	initCurrentTime();
+});
+
+onShow(() => {
+	if (editDataProcessed) {
+		editDataProcessed = false;
+		return;
+	}
+
+	const editDataStr = uni.getStorageSync('edit_ziwei_data');
+	if (editDataStr) {
+		try {
+			const editData = JSON.parse(editDataStr);
+			if (editData.isEdit && editData.timestamp) {
+				realname.value = editData.realname || '';
+				gender.value =
+					editData.gender !== undefined && editData.gender !== null ? editData.gender : 0;
+				timestamp.value = editData.timestamp;
+				if (editData.recordId) {
+					user_store.recordId = editData.recordId;
+				}
+				uni.removeStorageSync('edit_ziwei_data');
+				nextTick(() => {
+					PullDatatimeLabel();
+				});
+				return;
+			}
+		} catch (e) {
+			console.warn('閻熸瑱绲鹃悗鐣岀磽閺嶎剛甯嗛柡浣哄瀹撲焦寰勬潏顐バ?', e);
+			uni.removeStorageSync('edit_ziwei_data');
+		}
+	}
+
+	if (!editDataStr) {
+		user_store.recordId = null;
+	}
+});
+
+function SelectTime() {
+	uni.hideKeyboard();
+	const timeToUse = timestamp.value || new Date().getTime();
+	const timeStr = utils.HideSecond(timeToUse);
+	solar_default_value.value = timeStr;
+	lunar_default_value.value = timeStr.replace(/:\d{2}$/, '');
+
+	setTimeout(() => {
+		if (model.value === 0) {
+			solar_select_show.value = true;
+		} else {
+			lunar_select_show.value = true;
+		}
+	}, 400);
+}
+
+function parsePickerTimeToTimestamp(time: string): number | null {
+	const raw = (time || '').trim();
+	if (!raw) return null;
+	const full = raw.match(/^(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})$/);
+	if (full) {
+		const y = Number(full[1]);
+		const mo = Number(full[2]);
+		const d = Number(full[3]);
+		const h = Number(full[4]);
+		const mi = Number(full[5]);
+		const dt = new Date(y, mo - 1, d, h, mi, 0);
+		return Number.isFinite(dt.getTime()) ? dt.getTime() : null;
+	}
+	const hourOnly = raw.match(/^(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2})$/);
+	if (hourOnly) {
+		const y = Number(hourOnly[1]);
+		const mo = Number(hourOnly[2]);
+		const d = Number(hourOnly[3]);
+		const h = Number(hourOnly[4]);
+		const dt = new Date(y, mo - 1, d, h, 0, 0);
+		return Number.isFinite(dt.getTime()) ? dt.getTime() : null;
+	}
+	const parsed = Date.parse(raw);
+	return Number.isFinite(parsed) ? parsed : null;
+}
+
+const SolarConfirm = (time: string) => {
+	const ts = parsePickerTimeToTimestamp(time);
+	if (ts !== null) timestamp.value = ts;
+};
+const LunarConfirm = (time: string) => {
+	const ts = parsePickerTimeToTimestamp(time);
+	if (ts !== null) timestamp.value = ts;
+};
+
+function PullDatatimeLabel() {
+	const time = timestamp.value;
+	if (time === null) return;
+	const index = model.value;
+	const solar = Solar.fromDate(new Date(time));
+	const lunar = solar.getLunar();
+
+	if (index === 0) {
+		const date = utils.HideSecond(time);
+		datetime_label.value = date;
+		solar_default_value.value = date;
+		lunar_default_value.value = date.replace(/:\d{2}$/, '');
+		lunar_label.value = `${lunar.toString()} ${lunar.getTimeZhi()}\u65F6`;
+	} else {
+		const lunarStr = `${lunar.toString()} ${lunar.getTimeZhi()}\u65F6`;
+		datetime_label.value = lunarStr;
+		const date = utils.HideSecond(time);
+		solar_default_value.value = date;
+		lunar_default_value.value = date.replace(/:\d{2}$/, '');
+		lunar_label.value = date;
+	}
+}
+
+function Submit() {
+	const datetime = timestamp.value;
+	if (datetime === null) {
+		uni.showToast({
+			title: '\u8BF7\u5148\u9009\u62E9\u51FA\u751F\u65E5\u671F\u548C\u65F6\u95F4',
+			icon: 'none',
+			duration: 2000,
+		});
+		SelectTime();
+		return;
+	}
+
+	const params = {
+		realname: (realname.value || '').trim(),
+		timestamp: datetime,
+		gender: Number(gender.value),
+	};
+    
+	uni.showLoading({
+		title: '\u6392\u76D8\u4E2D\uFF0C\u8BF7\u7A0D\u540E',
+	});
+
+	try {
+		const currentRecordId = user_store.recordId;
+		user_store.set(params);
+		if (currentRecordId) {
+			user_store.recordId = currentRecordId;
+		} else {
+			user_store.recordId = null;
+		}
+
+		ziwei_store.pull(params);
+
+		setTimeout(() => {
+			uni.hideLoading();
+
+			if (!ziwei_store.astrolabe) {
+				uni.showToast({
+					title: '\u6392\u76D8\u6570\u636E\u4E0D\u5B8C\u6574\uFF0C\u8BF7\u91CD\u8BD5',
+					icon: 'none',
+					duration: 2000,
+				});
+				return;
+			}
+
+			uni.navigateTo({
+				url: '/pages/ziwei/result',
+				fail: (err) => {
+					console.error('\u8DF3\u8F6C\u5931\u8D25:', err);
+					uni.showToast({
+						title: '\u8DF3\u8F6C\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5',
+						icon: 'none',
+						duration: 2000,
+					});
+				},
+			});
+		}, 200);
+	} catch (error: any) {
+		uni.hideLoading();
+		console.error('\u6392\u76D8\u5931\u8D25:', error);
+		uni.showToast({
+			title: '\u6392\u76D8\u8BA1\u7B97\u5931\u8D25\uFF1A' + (error?.message || '\u672A\u77E5\u9519\u8BEF'),
+			icon: 'none',
+			duration: 2000,
+		});
+	}
+}
+</script>
+
+<style scoped>
+/* 妞ょ敻娼伴弽宄扮础瀹告彃婀?app-shell.css 娑擃厼鐣炬稊?*/
+/* 鏉╂瑩鍣烽崣顏呭潑閸旂娀銆夐棃銏㈠鐎规氨娈戦弽宄扮础 */
+
+.page-ziwei-input .app-main {
+	background: radial-gradient(circle at 20% 20%, rgba(102, 126, 234, 0.08), transparent 40%),
+		radial-gradient(circle at 80% 10%, rgba(118, 75, 162, 0.08), transparent 38%),
+		#f6f8fc;
+}
+
+.page-ziwei-input .page-shell {
+	width: 100%;
+	display: flex;
+	justify-content: center;
+	padding: var(--page-pad-y) var(--page-pad-x);
+	box-sizing: border-box;
+}
+
+.page-ziwei-input .page-card {
+	width: 100%;
+	max-width: var(--page-max);
+	background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+	border: 1px solid #e5e9f2;
+	border-radius: 16px;
+	box-shadow: 0 12px 32px rgba(31, 41, 55, 0.1);
+	padding: 18px 16px;
+	position: relative;
+	overflow: hidden;
+}
+
+.page-ziwei-input .page-card::before {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: radial-gradient(circle at 12% 12%, rgba(102, 126, 234, 0.08), transparent 35%),
+		radial-gradient(circle at 88% 6%, rgba(118, 75, 162, 0.07), transparent 32%);
+	pointer-events: none;
+}
+
+.page-ziwei-input .page-title-wrapper {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	margin-bottom: 12px;
+	position: relative;
+	z-index: 1;
+}
+
+.page-ziwei-input .page-title {
+	margin: 0;
+	font-size: 22px;
+	color: #1f2937;
+	letter-spacing: 0.2px;
+}
+
+.page-ziwei-input .page-subtitle {
+	margin: 4px 0 0;
+	font-size: 13px;
+	color: #6b7280;
+}
+
+.page-ziwei-input .section {
+	background: #ffffff;
+	border-radius: 14px;
+	border: 1px solid #e2e8f0;
+	padding: 14px 12px 12px;
+	margin-bottom: 14px;
+	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+	position: relative;
+	z-index: 1;
+}
+
+.page-ziwei-input .section__header {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 12px;
+	border-bottom: 1px dashed #e5e7eb;
+	padding-bottom: 12px;
+}
+
+.page-ziwei-input .section__title {
+	font-size: 18px;
+	color: #2d3748;
+}
+
+.page-ziwei-input .section__body {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.page-ziwei-input .page-card__footer {
+	margin-top: 14px;
+	padding-top: 10px;
+	border-top: 1px solid #eef2f7;
+	display: flex;
+	justify-content: center;
+	position: relative;
+	z-index: 1;
+	padding-bottom: calc(var(--safe-bottom) + var(--bottom-nav-height));
+}
+
+.birth-time-btn {
+	width: 100%;
+	text-align: left;
+}
+
+@media (min-width: 900px) {
+	.page-ziwei-input .page-shell {
+		padding: var(--page-pad-y) var(--page-pad-x);
+	}
+	.page-ziwei-input .page-card {
+		max-width: var(--page-max);
+		padding: 28px 26px;
+		border-radius: 20px;
+		box-shadow: 0 18px 60px rgba(31, 41, 55, 0.12);
+	}
+	.page-ziwei-input .section {
+		padding: 20px 18px 18px;
+		margin-bottom: 18px;
+	}
+}
+
+.layout-wide .page-ziwei-input .page-shell {
+	padding: var(--page-pad-y) var(--page-pad-x);
+}
+
+.layout-wide .page-ziwei-input .page-card {
+	max-width: var(--page-max);
+	padding: 28px 26px;
+	border-radius: 20px;
+	box-shadow: 0 18px 60px rgba(31, 41, 55, 0.12);
+}
+
+.layout-wide .page-ziwei-input .section {
+	padding: 20px 18px 18px;
+	margin-bottom: 18px;
+}
+
+/* 閺堫亞娅ヨぐ鏇犲Ц閹焦鐗卞?*/
+.page-ziwei-input .auth-not-logged-in {
+	display: flex;
+	flex-direction: column;
+	gap: 20rpx;
+	width: 100%;
+}
+
+/* 閻ц缍?濞夈劌鍞界悰銊ュ礋閺嶅嘲绱?*/
+.page-ziwei-input .auth-form-container {
+	margin-top: 24rpx;
+	padding-top: 24rpx;
+	border-top: 1rpx solid #e2e8f0;
+	width: 100%;
+	box-sizing: border-box;
+	background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+	border-radius: 12rpx;
+	padding: 24rpx;
+}
+
+.page-ziwei-input .auth-tabs {
+	display: flex;
+	flex-direction: row;
+	border-bottom: 2rpx solid #e2e8f0;
+	margin-bottom: 24rpx;
+	width: 100%;
+}
+
+.page-ziwei-input .auth-tab {
+	flex: 1;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	padding: 20rpx 0;
+	border-bottom: 4rpx solid transparent;
+	transition: all 0.3s;
+	min-width: 0;
+}
+
+.page-ziwei-input .auth-tab.active {
+	border-bottom-color: #667eea;
+}
+
+.page-ziwei-input .auth-form-fields {
+	margin-bottom: 20rpx;
+	width: 100%;
+}
+
+.page-ziwei-input .auth-form-hint {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 20rpx;
+	width: 100%;
+	flex-wrap: wrap;
+}
+
+.page-ziwei-input .auth-form-hint > view {
+	margin-right: 8rpx;
+	margin-bottom: 8rpx;
+}
+
+.page-ziwei-input .auth-form-hint > view:last-child {
+	margin-right: 0;
+}
+
+.page-ziwei-input .auth-error {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	padding: 16rpx 20rpx;
+	background: rgba(245, 101, 101, 0.1);
+	border-radius: 12rpx;
+	border-left: 4rpx solid #f56565;
+	margin-bottom: 20rpx;
+	width: 100%;
+}
+
+.page-ziwei-input .auth-form-actions {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+}
+
+/* 鐞涖劌宕熼崡锛勫閺嶅嘲绱?- 娴ｈ法鏁ら崫宥呯安瀵繒琚?*/
+.page-ziwei-input .form-card {
+  /* 瀹告彃婀?responsive-card 娑擃厼鐣炬稊?*/
+}
+
+.page-ziwei-input .form-header-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-ziwei-input .form-header-text > view {
+	margin-bottom: 6px;
+}
+
+.page-ziwei-input .form-group-single {
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+.page-ziwei-input .form-group-single > view {
+	margin-bottom: 10px;
+}
+
+.page-ziwei-input .form-group-single > view:last-child {
+	margin-bottom: 0;
+}
+
+.page-ziwei-input .form-group-single.calendar-type-selector {
+	margin-bottom: 24rpx;
+}
+
+.page-ziwei-input .form-label {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+.page-ziwei-input .form-control {
+	width: 100%;
+}
+
+.page-ziwei-input .segtab-wrapper {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	overflow: hidden;
+}
+
+.page-ziwei-input .segtab-wrapper :deep(.tm-segtab) {
+	width: 100%;
+}
+
+.page-ziwei-input .info-cards {
+	display: flex;
+	flex-direction: column;
+	margin-top: 8rpx;
+	gap: 12rpx;
+}
+
+.page-ziwei-input .info-cards > view {
+	width: 100%;
+	margin-right: 0;
+	margin-bottom: 0;
+}
+
+@media (min-width: 720px) {
+	.page-ziwei-input .info-cards {
+		flex-direction: row;
+		flex-wrap: wrap;
+		gap: 0;
+	}
+
+	.page-ziwei-input .info-cards > view {
+		width: calc(50% - 8rpx);
+		margin-right: 16rpx;
+		margin-bottom: 16rpx;
+	}
+
+	.page-ziwei-input .info-cards > view:nth-child(2n) {
+		margin-right: 0;
+	}
+}
+
+.layout-medium .page-ziwei-input .info-cards,
+.layout-wide .page-ziwei-input .info-cards {
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 0;
+}
+
+.layout-medium .page-ziwei-input .info-cards > view,
+.layout-wide .page-ziwei-input .info-cards > view {
+	width: calc(50% - 8rpx);
+	margin-right: 16rpx;
+	margin-bottom: 16rpx;
+}
+
+.layout-medium .page-ziwei-input .info-cards > view:nth-child(2n),
+.layout-wide .page-ziwei-input .info-cards > view:nth-child(2n) {
+	margin-right: 0;
+}
+
+.page-ziwei-input .info-card {
+	background: transparent;
+	border-radius: 14rpx;
+	padding: 20rpx 24rpx;
+	border: 1rpx solid transparent;
+	box-shadow: none;
+}
+
+.page-ziwei-input .info-card-header {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	margin-bottom: 12rpx;
+}
+</style>

@@ -1,0 +1,42 @@
+{
+  "name": "bazi-backend",
+  "version": "1.0.0",
+  "description": "八字排盘系统后端 API 服务",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node app.js",
+    "lint": "eslint --resolve-plugins-relative-to ../frontend-docker/node_modules \"**/*.js\"",
+    "lint:fix": "eslint --resolve-plugins-relative-to ../frontend-docker/node_modules \"**/*.js\" --fix"
+  },
+  "keywords": [
+    "bazi",
+    "api",
+    "express",
+    "mysql"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "exceljs": "^4.4.0",
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.2.1",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.15.3",
+    "node-cron": "^3.0.3",
+    "node-fetch": "^2.7.0",
+    "nodemailer": "^7.0.11",
+    "redis": "^4.7.1",
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

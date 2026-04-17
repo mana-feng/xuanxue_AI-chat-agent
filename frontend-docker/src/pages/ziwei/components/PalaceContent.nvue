@@ -1,0 +1,422 @@
+<template>
+	<view class="palace-content" :class="{ 'highlight-bg': isHighlighted }">
+		<view class="top-gods">
+			<text class="god-text">{{ formatGod(palace.boshi12) }}</text>
+			<text class="god-text">{{ formatGod(displayJiangqian12) }}</text>
+			<text class="god-text">{{ formatGod(displaySuiqian12) }}</text>
+		</view>
+
+		<view v-if="dynamicLabels && dynamicLabels.length" class="dynamic-label-grid">
+			<text v-for="(label, idx) in dynamicLabels" :key="'label-' + idx" class="dynamic-label" :class="label.type">
+				{{ label.text }}
+			</text>
+		</view>
+
+		<view class="content-grid">
+			<view class="stars-col major-col">
+				<view v-for="(star, index) in palace.majorStars" :key="'major' + index" class="star-row">
+					<text class="star-name major-star" :class="{ 'star-red': star.mutagen }">{{ star.name }}</text>
+					<text v-if="star.brightness" class="star-bright">{{ star.brightness }}</text>
+					<text v-if="star.mutagen" class="star-mutagen-inline">{{ star.mutagen }}</text>
+					<text
+						v-for="(tag, tagIndex) in scopeMutagenTags(star.name)"
+						:key="'major-tag-' + index + '-' + tagIndex"
+						class="scope-mutagen-tag"
+						:class="tag.scope"
+					>
+						{{ tag.label }}
+					</text>
+				</view>
+			</view>
+
+				<view class="center-col">
+					<view v-if="dynamicStars && dynamicStars.length" class="dynamic-stars">
+						<text v-for="(star, idx) in dynamicStars" :key="'dyn-star-' + idx" class="dynamic-star-tag">{{ star }}</text>
+					</view>
+					<text class="palace-name">{{ displayPalaceName(palace.name) }}</text>
+					<text v-if="palace.isBodyPalace" class="body-palace">身宫</text>
+					<text class="palace-life">{{ palace.changsheng12 }}</text>
+					<text class="palace-decade">大限{{ palace.decadal.range.join('-') }}</text>
+					<text v-if="palace.ages" class="palace-ages">{{ formatAges(palace.ages) }}</text>
+				</view>
+
+			<view class="stars-col minor-col">
+				<view v-for="(star, index) in palace.minorStars" :key="'minor' + index" class="star-row">
+					<text class="star-name minor-star">{{ star.name }}</text>
+					<text v-if="star.brightness" class="star-bright">{{ star.brightness }}</text>
+					<text v-if="star.mutagen" class="star-mutagen-inline">{{ star.mutagen }}</text>
+					<text
+						v-for="(tag, tagIndex) in scopeMutagenTags(star.name)"
+						:key="'minor-tag-' + index + '-' + tagIndex"
+						class="scope-mutagen-tag"
+						:class="tag.scope"
+					>
+						{{ tag.label }}
+					</text>
+				</view>
+
+				<view v-for="(star, index) in palace.adjectiveStars" :key="'adj' + index" class="star-row">
+					<text class="star-name adj-star">{{ star.name }}</text>
+				</view>
+			</view>
+		</view>
+
+		<view class="bottom-meta">
+			<text class="stem">{{ palace.heavenlyStem }}</text>
+			<text class="branch">{{ palace.earthlyBranch }}</text>
+		</view>
+
+		<view v-if="flyMutagenTags.length" class="fly-mutagen-badge">
+			<text v-for="(tag, idx) in flyMutagenTags" :key="'fly-' + idx" class="fly-text">{{ tag }}</text>
+		</view>
+	</view>
+</template>
+
+<script lang="ts" setup>
+import { computed } from 'vue';
+
+const props = defineProps<{
+	palace: any;
+	displayJiangqian12?: string;
+	displaySuiqian12?: string;
+	dynamicLabels?: Array<{ text: string; type: string }>;
+	dynamicStars?: string[];
+	flyMutagens?: string[];
+	scopeMutagens?: Record<string, Array<{ scope: string; label: string }>>;
+	isHighlighted?: boolean;
+}>();
+
+const formatAges = (ages: number[]) => `小限${ages.join(',')}`;
+
+const formatGod = (raw: string | undefined) => (raw || '').replace(/\s+/g, ' ');
+const displayPalaceName = (name: string | undefined) => (name === '仆役' ? '交友' : (name || ''));
+const displayJiangqian12 = computed(() => props.displayJiangqian12 || props.palace?.jiangqian12 || '');
+const displaySuiqian12 = computed(() => props.displaySuiqian12 || props.palace?.suiqian12 || '');
+
+const scopeMutagenTags = (starName: string) => {
+	const tags = props.scopeMutagens?.[starName];
+	return Array.isArray(tags) ? tags : [];
+};
+
+const flyMutagenTags = computed(() =>
+	Array.isArray(props.flyMutagens)
+		? props.flyMutagens.filter((item): item is string => typeof item === 'string' && item.length > 0)
+		: [],
+);
+</script>
+
+<style scoped>
+.palace-content {
+	--ink: #1f2937;
+	--ink-soft: #6b7280;
+	--line: #d6d3d1;
+	--tag-decadal: #8b5cf6;
+	--tag-age: #475569;
+	--tag-yearly: #d97706;
+	--tag-monthly: #0f766e;
+	--tag-daily: #2563eb;
+	--warn: #c2410c;
+	--mutagen-base: #334155;
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	padding: 3px 4px;
+	gap: 2px;
+	position: relative;
+	background: #fdfcfb;
+	color: var(--ink);
+	border: 1px solid transparent;
+}
+
+.highlight-bg {
+	background: #fff7eb;
+	border-color: rgba(180, 83, 9, 0.45);
+}
+
+.top-gods {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: nowrap;
+	gap: 3px;
+	min-height: 12px;
+}
+
+.god-text {
+	font-size: 9px;
+	line-height: 1.1;
+	color: #6b7280;
+	flex: 1;
+	min-width: 0;
+	white-space: normal;
+}
+
+.content-grid {
+	display: flex;
+	flex-direction: row;
+	flex: 1;
+	min-height: 0;
+}
+
+.stars-col {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	min-width: 0;
+}
+
+.major-col {
+	padding-right: 2px;
+}
+
+.minor-col {
+	padding-left: 2px;
+	align-items: flex-end;
+}
+
+.center-col {
+	width: 44px;
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 1px;
+}
+
+.star-row {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	min-height: 10px;
+	max-width: 100%;
+	overflow: hidden;
+}
+
+.star-name {
+	font-size: 10px;
+	line-height: 1;
+	white-space: nowrap;
+}
+
+.major-star {
+	font-weight: 700;
+	color: #b91c1c;
+}
+
+.minor-star {
+	color: #2563eb;
+}
+
+.adj-star {
+	color: #6b7280;
+}
+
+.dynamic-star {
+	font-weight: 700;
+}
+
+.star-red {
+	color: #b91c1c;
+}
+
+.star-mutagen-inline {
+	font-size: 8px;
+	color: #b45309;
+	margin-left: 1px;
+	font-weight: 700;
+}
+
+.scope-mutagen-tag {
+	font-size: 8px;
+	margin-left: 1px;
+	font-weight: 700;
+}
+
+.scope-mutagen-tag.decadal {
+	color: var(--tag-decadal);
+}
+
+.scope-mutagen-tag.age {
+	color: var(--tag-age);
+}
+
+.scope-mutagen-tag.yearly {
+	color: var(--tag-yearly);
+}
+
+.scope-mutagen-tag.monthly {
+	color: var(--tag-monthly);
+}
+
+.scope-mutagen-tag.daily {
+	color: var(--tag-daily);
+}
+
+.dynamic-star.decadal {
+	color: var(--tag-decadal);
+}
+
+.dynamic-star.age {
+	color: var(--tag-age);
+}
+
+.dynamic-star.yearly {
+	color: var(--tag-yearly);
+}
+
+.dynamic-star.monthly {
+	color: var(--tag-monthly);
+}
+
+.dynamic-star.daily {
+	color: var(--tag-daily);
+}
+
+.palace-name {
+	font-size: 13px;
+	font-weight: 700;
+	color: #2563eb;
+	line-height: 1;
+}
+
+.palace-life {
+	font-size: 9px;
+	color: #6b7280;
+}
+
+.body-palace {
+	font-size: 8px;
+	color: #92400e;
+	font-weight: 700;
+}
+
+.palace-decade {
+	font-size: 8px;
+	color: #16a34a;
+}
+
+.palace-ages {
+	font-size: 8px;
+	color: #9ca3af;
+}
+
+.bottom-meta {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	min-height: 12px;
+}
+
+.stem {
+	font-size: 11px;
+	font-weight: 700;
+	color: #6b7280;
+}
+
+.branch {
+	font-size: 12px;
+	font-weight: 700;
+	color: #111827;
+}
+
+.dynamic-label-grid {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	margin-top: 1px;
+	margin-bottom: 2px;
+	gap: 2px;
+}
+
+.dynamic-label {
+	flex-basis: 32%;
+	max-width: 32%;
+	text-align: center;
+	font-size: 8px;
+	padding: 0 1px;
+	border-radius: 999px;
+	font-weight: 700;
+	border: 1px solid transparent;
+	line-height: 1.2;
+	white-space: nowrap;
+}
+
+.dynamic-label.hourly {
+	color: #6d28d9;
+	background-color: #f5f3ff;
+	border-color: #ddd6fe;
+}
+
+.dynamic-label.decadal {
+	color: #92400e;
+	background-color: #fff7ed;
+	border-color: #fed7aa;
+}
+
+.dynamic-label.age {
+	color: #334155;
+	background-color: #f1f5f9;
+	border-color: #cbd5e1;
+}
+
+.dynamic-label.yearly {
+	color: #b45309;
+	background-color: #fff7ed;
+	border-color: #fed7aa;
+}
+
+.dynamic-label.monthly {
+	color: #0f766e;
+	background-color: #ecfeff;
+	border-color: #99f6e4;
+}
+
+.dynamic-label.daily {
+	color: #1d4ed8;
+	background-color: #eff6ff;
+	border-color: #bfdbfe;
+}
+
+.dynamic-stars {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 1px;
+}
+
+.dynamic-star-tag {
+	font-size: 7px;
+	line-height: 1.1;
+	color: #7c2d12;
+	background: #fffbeb;
+	border: 1px solid #fde68a;
+	border-radius: 999px;
+	padding: 0 2px;
+	font-weight: 700;
+}
+
+.fly-mutagen-badge {
+	position: absolute;
+	right: 2px;
+	bottom: 2px;
+	background: #fff7ed;
+	border: 1px solid rgba(194, 65, 12, 0.4);
+	border-radius: 4px;
+	padding: 1px 3px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 2px;
+}
+
+.fly-text {
+	font-size: 9px;
+	line-height: 1;
+	color: var(--warn);
+	font-weight: 700;
+}
+</style>

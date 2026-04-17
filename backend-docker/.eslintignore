@@ -1,0 +1,11 @@
+node_modules
+admin-ui
+dist
+coverage
+*.log
+*.db
+bazi-*.json
+analysis-results
+*.bak
+*.orig
+*.rej
