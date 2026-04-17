@@ -65,5 +65,3 @@ start-local.bat
 stop-local.bat
 stop-local.ps1
 
-# screenshots (local assets)
-screenshots/
