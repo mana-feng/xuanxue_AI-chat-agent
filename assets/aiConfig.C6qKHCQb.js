@@ -1,0 +1,1 @@
+import{s as n,ac as s,a3 as t}from"./index-C7YSPX5j.js";const a="xuanxue_ai_config";function r(){try{const s=n(a);return s?JSON.parse(s):null}catch{return null}}function c(n){s(a,JSON.stringify(n))}function u(){t(a)}function i(){return!!r()}export{u as c,r as g,i as h,c as s};
