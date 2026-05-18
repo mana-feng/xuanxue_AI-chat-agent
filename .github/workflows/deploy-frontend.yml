@@ -31,6 +31,9 @@ jobs:
         run: npm run build:h5
         working-directory: frontend-only
 
+      - name: Add CNAME
+        run: echo "xuan.manafeng.com" > frontend-only/dist/build/h5/CNAME
+
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
