@@ -1,0 +1,77 @@
+<template>
+	<tm-app>
+		<PageScaffold
+			class="page-agent"
+			title="玄学AI - 排盘 Agent"
+			subtitle="用自然语言帮你选盘、切盘和组织下一步操作"
+		>
+			<AgentToolPanel
+				:tool-cards="toolCards"
+				@open-target="openTarget"
+				@quick-prompt="handleQuickPrompt"
+			/>
+
+			<AgentQuickPrompts :quick-prompts="quickPrompts" @quick-prompt="handleQuickPrompt" />
+
+			<AgentConsolePanel
+				v-model="draft"
+				:subtitle="conversationSubtitle"
+				:pending-action="pendingAction"
+				:context-items="contextItems"
+				:messages="messages"
+				:last-message-id="lastMessageId"
+				:sending="sending"
+				:compose-tip="composeTip"
+				@send="handleSend"
+				@apply-pending="applyPendingAction"
+			/>
+		</PageScaffold>
+	</tm-app>
+</template>
+
+<script lang="ts" setup>
+import { onMounted } from 'vue';
+import { onShow } from '@dcloudio/uni-app';
+import AgentConsolePanel from '@/components/agent/AgentConsolePanel.vue';
+import AgentQuickPrompts from '@/components/agent/AgentQuickPrompts.vue';
+import AgentToolPanel from '@/components/agent/AgentToolPanel.vue';
+import PageScaffold from '@/components/layout/PageScaffold.vue';
+import { useAgentPage } from '@/features/agent/useAgentPage';
+
+const {
+	toolCards,
+	quickPrompts,
+	draft,
+	sending,
+	pendingAction,
+	messages,
+	contextItems,
+	accessLabel,
+	usageLabel,
+	conversationSubtitle,
+	composeTip,
+	lastMessageId,
+	initializePage,
+	handleSend,
+	handleQuickPrompt,
+	openTarget,
+	applyPendingAction,
+} = useAgentPage();
+
+onMounted(() => {
+	initializePage();
+});
+
+onShow(() => {
+	initializePage();
+});
+</script>
+
+<style scoped>
+.page-agent .page-card {
+	background:
+		radial-gradient(circle at 8% 12%, rgba(79, 70, 229, 0.12), transparent 32%),
+		radial-gradient(circle at 92% 0%, rgba(14, 165, 233, 0.1), transparent 28%),
+		linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+</style>

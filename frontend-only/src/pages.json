@@ -1,0 +1,71 @@
+{
+  "easycom": {
+    "autoscan": true,
+    "custom": {
+      "^tm-(.*)": "@/libs/tmui/components/tm-$1/tm-$1.vue",
+      "^yx-(.*)": "@/components/yx-$1/yx-$1.vue",
+      "^yxn-(.*)": "@/components/yxn-$1/yxn-$1.nvue"
+    }
+  },
+  "pages": [
+    {
+      "path": "pages/agent/index",
+      "style": {
+        "navigationBarTitleText": "排盘 Agent"
+      }
+    },
+    {
+      "path": "pages/index/index"
+    },
+    {
+      "path": "pages/index/detail"
+    },
+    {
+      "path": "pages/chat/index"
+    },
+    {
+      "path": "pages/about/index"
+    },
+    {
+      "path": "pages/liuyao/index",
+      "style": {
+        "navigationBarTitleText": "六爻排盘"
+      }
+    },
+    {
+      "path": "pages/liuyao/result",
+      "style": {
+        "navigationBarTitleText": "六爻排盘结果"
+      }
+    },
+    {
+      "path": "pages/ziwei/index",
+      "style": {
+        "navigationBarTitleText": "紫微排盘"
+      }
+    },
+    {
+      "path": "pages/ziwei/result",
+      "style": {
+        "navigationBarTitleText": "紫微排盘结果"
+      }
+    },
+    {
+      "path": "pages/settings/index",
+      "style": {
+        "navigationBarTitleText": "AI 配置"
+      }
+    },
+    {
+      "path": "pages/history/list"
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "玄学AI Chat & Agent",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "backgroundColor": "#FFFFFF",
+    "navigationStyle": "custom",
+    "enablePullDownRefresh": false
+  }
+}

@@ -1,0 +1,105 @@
+/**
+ * Shared page patterns for cards, grids and action rows.
+ * Keeps BaZi / Liuyao / About pages visually aligned.
+ */
+
+.page-card__body {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+@media (min-width: 768px) {
+	.page-card__body {
+		gap: 18px;
+	}
+}
+
+.page-title-text .page-title {
+	margin: 0;
+}
+
+.page-title-text .page-subtitle {
+	margin: 0;
+}
+
+.section-lead {
+	font-size: 14px;
+	color: #64748b;
+	line-height: 1.6;
+	margin: 0 0 6px 0;
+}
+
+.info-grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 12px;
+}
+
+/* 优化：使用标准断点 768px，统一 minmax 最小宽度为 260px */
+@media (min-width: 768px) {
+	.info-grid {
+		grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+	}
+}
+
+.info-tile {
+	padding: 14px 16px;
+	border: 1px solid #e5e7eb;
+	border-radius: 12px;
+	background: #f8fafc;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.action-row {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 12px;
+}
+
+/* 优化：使用标准断点 768px */
+@media (min-width: 768px) {
+	.action-row {
+		flex-direction: row;
+		align-items: center;
+		justify-content: flex-end;
+		flex-wrap: wrap;
+	}
+}
+
+.form-grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 14px;
+}
+
+/* 优化：使用 auto-fit 智能适配，标准断点 768px */
+@media (min-width: 768px) {
+	.form-grid.columns-2 {
+		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+	}
+
+	.form-grid.columns-3 {
+		grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+	}
+}
+
+/* 新增：响应式 auto-fit Grid */
+.form-grid-auto {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+	gap: 16px;
+}
+
+.card-stack {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.muted-text {
+	color: #64748b;
+}

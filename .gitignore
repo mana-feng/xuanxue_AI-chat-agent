@@ -5,6 +5,8 @@
 backend-docker/dist/
 frontend-docker/dist/
 frontend-docker/unpackage/
+frontend-only/dist/
+frontend-only/unpackage/
 backend-docker/admin-ui/dist/
 backend-docker/admin-ui/unpackage/
 

@@ -1,0 +1,1453 @@
+<template>
+	<tm-app>
+		<PageScaffold
+			class="page-ziwei-result"
+			card-class="detail-card ziwei-card"
+			title="紫微排盘结果"
+			subtitle="查看命盘、保存记录、导出与 AI 解读"
+		>
+			<view v-if="astrolabe" class="result-container">
+				<view class="section info-summary">
+					<header class="section__header">
+						<tm-icon name="tmicon-md-person" :font-size="26" color="#667eea"></tm-icon>
+						<h2 class="section__title">&#x57FA;&#x7840;&#x4FE1;&#x606F;</h2>
+					</header>
+					<view class="section__body">
+						<view class="info-grid">
+							<view v-for="item in summaryTiles" :key="item.label" class="info-tile">
+								<tm-text :font-size="24" color="#718096" :label="item.label"></tm-text>
+								<tm-text :font-size="30" :bold="true" color="#2d3748" :label="item.value"></tm-text>
+							</view>
+						</view>
+
+						<view class="actions-row">
+							<tm-button
+								type="primary"
+								:loading="saving"
+								:disabled="saving"
+								:round="12"
+								:padding="[24, 20]"
+								:bold="true"
+								label="保存"
+								icon="tmicon-md-save"
+								@tap="saveToAccount"
+							></tm-button>
+							<tm-button
+								type="primary"
+								:round="12"
+								:padding="[24, 20]"
+								label="&#x7F16;&#x8F91;&#x4FE1;&#x606F;"
+								icon="tmicon-md-create"
+								@tap="editZiwei"
+							></tm-button>
+							<tm-button
+								type="primary"
+								:round="12"
+								:padding="[24, 20]"
+								label="&#x5BFC;&#x51FA; TOON"
+								icon="tmicon-md-download"
+								@tap="exportToon"
+							></tm-button>
+							<tm-button
+								type="primary"
+								:round="12"
+								:padding="[24, 20]"
+								label="AI &#x89E3;&#x7B54;"
+								icon="tmicon-md-bulb"
+								@tap="goToChat"
+							></tm-button>
+						</view>
+
+						<view v-if="saveError" class="export-error">
+							<text class="export-error-text">{{ saveError }}</text>
+						</view>
+						<view v-if="exportError" class="export-error">
+							<text class="export-error-text">{{ exportError }}</text>
+						</view>
+					</view>
+				</view>
+
+				<view class="section chart-section">
+					<header class="section__header">
+						<tm-icon name="tmicon-md-grid" :font-size="26" color="#667eea"></tm-icon>
+						<h2 class="section__title">&#x547D;&#x76D8;&#x603B;&#x89C8;</h2>
+					</header>
+					<view class="section__body">
+						<view class="chart-grid">
+							<view class="chart-row top-row">
+								<view
+									v-for="cell in sortedCells.top"
+									:key="cell.original.earthlyBranch"
+									class="chart-cell"
+									:class="getCellClass(cell)"
+									@click="handleCellClick(cell)"
+								>
+									<PalaceContent
+										:palace="cell.original"
+										:display-jiangqian12="cell.displayJiangqian12"
+										:display-suiqian12="cell.displaySuiqian12"
+										:dynamic-labels="cell.dynamicLabels"
+										:dynamic-stars="cell.dynamicStars"
+										:fly-mutagens="cell.flyMutagens"
+										:scope-mutagens="cell.scopeMutagens"
+										:is-highlighted="highlightedIndices.includes(cell.original.index)"
+									/>
+								</view>
+							</view>
+
+							<view class="chart-row middle-row">
+								<view class="chart-col side-col">
+									<view
+										v-for="cell in sortedCells.left"
+										:key="cell.original.earthlyBranch"
+										class="chart-cell"
+										:class="getCellClass(cell)"
+										@click="handleCellClick(cell)"
+									>
+										<PalaceContent
+											:palace="cell.original"
+											:display-jiangqian12="cell.displayJiangqian12"
+											:display-suiqian12="cell.displaySuiqian12"
+											:dynamic-labels="cell.dynamicLabels"
+											:dynamic-stars="cell.dynamicStars"
+											:fly-mutagens="cell.flyMutagens"
+											:scope-mutagens="cell.scopeMutagens"
+											:is-highlighted="highlightedIndices.includes(cell.original.index)"
+										/>
+									</view>
+								</view>
+
+								<view class="center-info">
+									<view class="info-content">
+										<view class="info-header">
+											<text class="info-name">{{ userStore.realname || '\u533F\u540D' }}</text>
+											<text class="info-gender">{{ Number(userStore.gender) === 0 ? '\u7537' : '\u5973' }}</text>
+										</view>
+
+										<view class="info-row">
+											<text class="info-label">&#x9634;&#x5386;&#xFF1A;</text>
+											<text class="info-val">{{ astrolabe.lunarDate }}</text>
+										</view>
+										<view class="info-row">
+											<text class="info-label">&#x9633;&#x5386;&#xFF1A;</text>
+											<text class="info-val">{{ astrolabe.solarDate }}</text>
+										</view>
+
+										<view class="info-row">
+											<text class="info-label">&#x4E94;&#x884C;&#x5C40;&#xFF1A;</text>
+											<text class="info-val">{{ astrolabe.fiveElementsClass }}</text>
+											<text class="info-val info-val-spaced">{{ astrolabe.time }}</text>
+										</view>
+
+										<view class="info-row">
+											<text class="info-label">&#x547D;&#x4E3B;&#xFF1A;</text>
+											<text class="info-val">{{ astrolabe.soul }}</text>
+											<text class="info-label info-label-spaced">&#x8EAB;&#x4E3B;&#xFF1A;</text>
+											<text class="info-val">{{ astrolabe.body }}</text>
+										</view>
+
+										<view v-if="ziweiStore.viewMode !== 'origin'" class="scope-info">
+											<text class="scope-label">&#x5F53;&#x524D;&#x8FD0;&#x9650;&#xFF1A;</text>
+											<text class="scope-val">{{ currentScopeLabel }}</text>
+										</view>
+
+										<view v-if="focusSummary" class="focus-summary">
+											<text class="focus-title">{{ focusSummary.name }}&#x4E09;&#x65B9;&#x56DB;&#x6B63;</text>
+											<view class="focus-mutagen-row">
+												<text
+													v-for="item in focusSummary.surroundMutagens"
+													:key="'focus-mtg-' + item.name"
+													class="focus-mutagen"
+													:class="{ active: item.active }"
+												>
+													{{ item.name }}
+												</text>
+											</view>
+											<text v-if="focusSummary.flyText" class="focus-fly">{{ focusSummary.flyText }}</text>
+										</view>
+
+										<view class="legend-box">
+											<text class="legend-title">&#x56DB;&#x5316;&#x6807;&#x8BB0;</text>
+											<view class="legend-items">
+												<text class="legend-item lu">&#x7984;</text>
+												<text class="legend-item quan">&#x6743;</text>
+												<text class="legend-item ke">&#x79D1;</text>
+												<text class="legend-item ji">&#x5FCC;</text>
+											</view>
+										</view>
+									</view>
+								</view>
+
+								<view class="chart-col side-col">
+									<view
+										v-for="cell in sortedCells.right"
+										:key="cell.original.earthlyBranch"
+										class="chart-cell"
+										:class="getCellClass(cell)"
+										@click="handleCellClick(cell)"
+									>
+										<PalaceContent
+											:palace="cell.original"
+											:display-jiangqian12="cell.displayJiangqian12"
+											:display-suiqian12="cell.displaySuiqian12"
+											:dynamic-labels="cell.dynamicLabels"
+											:dynamic-stars="cell.dynamicStars"
+											:fly-mutagens="cell.flyMutagens"
+											:scope-mutagens="cell.scopeMutagens"
+											:is-highlighted="highlightedIndices.includes(cell.original.index)"
+										/>
+									</view>
+								</view>
+							</view>
+
+							<view class="chart-row bottom-row">
+								<view
+									v-for="cell in sortedCells.bottom"
+									:key="cell.original.earthlyBranch"
+									class="chart-cell"
+									:class="getCellClass(cell)"
+									@click="handleCellClick(cell)"
+								>
+									<PalaceContent
+										:palace="cell.original"
+										:display-jiangqian12="cell.displayJiangqian12"
+										:display-suiqian12="cell.displaySuiqian12"
+										:dynamic-labels="cell.dynamicLabels"
+										:dynamic-stars="cell.dynamicStars"
+										:fly-mutagens="cell.flyMutagens"
+										:scope-mutagens="cell.scopeMutagens"
+										:is-highlighted="highlightedIndices.includes(cell.original.index)"
+									/>
+								</view>
+							</view>
+						</view>
+
+						<view v-if="zoomedCell" class="palace-zoom-mask" @tap="closeCellZoom">
+							<view class="palace-zoom-panel" @tap.stop>
+								<view class="palace-zoom-header">
+									<view class="palace-zoom-title-wrap">
+										<text class="palace-zoom-title">
+											{{ displayPalaceName(zoomedCell.original.name) }}
+										</text>
+										<text class="palace-zoom-subtitle">双击宫位可放大查看</text>
+									</view>
+									<text class="palace-zoom-close" @tap="closeCellZoom">×</text>
+								</view>
+								<view class="palace-zoom-body">
+									<view class="palace-zoom-content">
+										<PalaceContent
+											:palace="zoomedCell.original"
+											:display-jiangqian12="zoomedCell.displayJiangqian12"
+											:display-suiqian12="zoomedCell.displaySuiqian12"
+											:dynamic-labels="zoomedCell.dynamicLabels"
+											:dynamic-stars="zoomedCell.dynamicStars"
+											:fly-mutagens="zoomedCell.flyMutagens"
+											:scope-mutagens="zoomedCell.scopeMutagens"
+											:is-highlighted="highlightedIndices.includes(zoomedCell.original.index)"
+										/>
+									</view>
+								</view>
+							</view>
+						</view>
+					</view>
+				</view>
+
+				<view class="section timeline-section">
+					<header class="section__header">
+						<tm-icon name="tmicon-md-time" :font-size="26" color="#667eea"></tm-icon>
+						<h2 class="section__title">&#x8FD0;&#x9650;&#x65F6;&#x95F4;&#x8F74;</h2>
+					</header>
+					<view class="section__body">
+						<Timeline
+							:astrolabe="astrolabe"
+							:view-mode="ziweiStore.viewMode"
+							:target-date="ziweiStore.targetDate"
+							@update:selection="handleTimelineSelectionUpdate"
+						/>
+					</view>
+				</view>
+			</view>
+
+			<view v-else class="section empty-state">
+				<tm-icon name="tmicon-md-time" :font-size="72" color="#cbd5e0"></tm-icon>
+				<tm-text :font-size="26" color="#718096" label="&#x6682;&#x65E0;&#x6392;&#x76D8;&#x6570;&#x636E;&#xFF0C;&#x8BF7;&#x5148;&#x8FD4;&#x56DE;&#x6392;&#x76D8;&#x4E3B;&#x9875;&#x751F;&#x6210;&#x547D;&#x76D8;&#x3002;"></tm-text>
+				<tm-button type="primary" :round="12" :padding="[22, 16]" label="&#x8FD4;&#x56DE;&#x6392;&#x76D8;" @tap="goStart"></tm-button>
+			</view>
+		</PageScaffold>
+	</tm-app>
+</template>
+
+<script lang="ts" setup>
+import { computed, ref } from 'vue';
+import PageScaffold from '@/components/layout/PageScaffold.vue';
+import { useZiweiStore } from '@/store/ziwei';
+import { useUserStore } from '@/store/user';
+import { getPersistentItem, setPersistentItem } from '@/utils/persistentStorage';
+import { encodeTOON } from '@/utils/toon';
+import { buildZiweiExportPayload } from '@/utils/ziweiExport';
+// @ts-expect-error nvue component import type is not inferred
+import PalaceContent from './components/PalaceContent.nvue';
+// @ts-expect-error nvue component import type is not inferred
+import Timeline from './components/Timeline.nvue';
+
+const ziweiStore = useZiweiStore();
+const userStore = useUserStore();
+const saving = ref(false);
+const saveError = ref('');
+const exportError = ref('');
+const zoomedCell = ref<any | null>(null);
+const lastClickTs = ref(0);
+const lastClickPalaceIndex = ref<number | null>(null);
+
+const astrolabe = computed(() => ziweiStore.astrolabe);
+const currentHoroscope = computed(() => ziweiStore.currentHoroscope);
+
+const formatTimestampForFilename = (timestamp: number | null | undefined): string => {
+	if (typeof timestamp !== 'number' || !Number.isFinite(timestamp)) return '';
+	const date = new Date(timestamp);
+	if (!Number.isFinite(date.getTime())) return '';
+	const pad = (value: number) => String(value).padStart(2, '0');
+	return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}${pad(date.getHours())}${pad(date.getMinutes())}`;
+};
+
+const exportToon = () => {
+	exportError.value = '';
+	if (!astrolabe.value) {
+		uni.showToast({
+			title: '\u6682\u65E0\u6392\u76D8\u6570\u636E\uFF0C\u65E0\u6CD5\u5BFC\u51FA',
+			icon: 'none',
+			duration: 2000,
+		});
+		return;
+	}
+
+	let payload: Record<string, unknown> | null = null;
+	try {
+		payload = buildZiweiExportPayload(userStore, ziweiStore);
+	} catch (e: any) {
+		exportError.value = `\u751F\u6210\u5BFC\u51FA\u6570\u636E\u5931\u8D25\uFF1A${e?.message || e}`;
+		return;
+	}
+
+	if (!payload) {
+		exportError.value = '\u5BFC\u51FA\u6570\u636E\u4E3A\u7A7A\uFF0C\u65E0\u6CD5\u751F\u6210 TOON \u6587\u4EF6';
+		return;
+	}
+
+	let toonStr = '';
+	try {
+		toonStr = encodeTOON(payload);
+	} catch (e: any) {
+		exportError.value = `TOON \u5E8F\u5217\u5316\u5931\u8D25\uFF1A${e?.message || e}`;
+		return;
+	}
+
+	const filename = `ziwei-${formatTimestampForFilename(userStore.timestamp) || 'export'}.toon`;
+
+	// #ifdef H5
+	try {
+		const blob = new Blob([toonStr], { type: 'text/plain;charset=utf-8' });
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement('a');
+		link.href = url;
+		link.download = filename;
+		link.click();
+		URL.revokeObjectURL(url);
+		uni.showToast({
+			title: '\u5DF2\u4E0B\u8F7D TOON \u6587\u4EF6',
+			icon: 'none',
+			duration: 2000,
+		});
+		return;
+	} catch (e) {
+		// fallback to clipboard
+	}
+	// #endif
+
+	uni.setClipboardData({
+		data: toonStr,
+		success() {
+			uni.showToast({
+				title: 'TOON \u5DF2\u590D\u5236\uFF0C\u8BF7\u7C98\u8D34\u4FDD\u5B58',
+				icon: 'none',
+				duration: 2000,
+			});
+		},
+		fail(err) {
+			exportError.value = `\u5BFC\u51FA\u5931\u8D25\uFF1A${err?.errMsg || '\u526A\u8D34\u677F\u4E0D\u53EF\u7528'}`;
+		},
+	});
+};
+
+const buildZiweiLitePayload = () => {
+	const chart = astrolabe.value;
+	if (!chart) return null;
+
+	const palaces = (chart.palaces || []).map((palace: any) => ({
+		index: palace?.index,
+		name: palace?.name || '',
+		heavenlyStem: palace?.heavenlyStem || '',
+		earthlyBranch: palace?.earthlyBranch || '',
+	}));
+
+	return {
+		lite: true,
+		module: 'ziwei',
+		user: {
+			realname: userStore.realname || '',
+			gender: userStore.gender,
+			timestamp: userStore.timestamp,
+		},
+		selection: {
+			viewMode: ziweiStore.viewMode,
+			targetDate:
+				ziweiStore.targetDate instanceof Date
+					? ziweiStore.targetDate.toISOString()
+					: new Date(ziweiStore.targetDate as any).toISOString(),
+			focusPalaceIndex: ziweiStore.focusPalaceIndex,
+		},
+		summary: {
+			solarDate: chart.solarDate || '',
+			lunarDate: chart.lunarDate || '',
+			time: chart.time || '',
+			fiveElementsClass: chart.fiveElementsClass || '',
+			soul: chart.soul || '',
+			body: chart.body || '',
+			palaces,
+		},
+	};
+};
+
+const LOCAL_ZIWEI_RECORDS_KEY = 'local_ziwei_records';
+
+const saveToAccount = async () => {
+	saveError.value = '';
+
+	if (!astrolabe.value || !userStore.timestamp) {
+		uni.showToast({ title: '排盘数据不完整', icon: 'none', duration: 2000 });
+		return;
+	}
+
+	if (saving.value) return;
+	saving.value = true;
+
+	try {
+		const rawPayload = buildZiweiLitePayload();
+		const entry = {
+			id: userStore.recordId || Date.now(),
+			title: (userStore.realname || '').trim() || '佚名',
+			gender: String(userStore.gender ?? 0),
+			birthDatetime: String(userStore.timestamp),
+			createdAt: new Date().toISOString(),
+			rawPayload,
+		};
+
+		const records = getPersistentItem<any[]>(LOCAL_ZIWEI_RECORDS_KEY) || [];
+		const existingIdx = records.findIndex(r => r.id === entry.id);
+		if (existingIdx >= 0) {
+			records[existingIdx] = entry;
+			uni.showToast({ title: '记录已更新', icon: 'success', duration: 1500 });
+		} else {
+			records.unshift(entry);
+			userStore.recordId = entry.id as number;
+			uni.showToast({ title: '已保存', icon: 'success', duration: 1500 });
+		}
+		setPersistentItem(LOCAL_ZIWEI_RECORDS_KEY, records.slice(0, 200), 365 * 24 * 60 * 60 * 1000);
+	} catch (e: any) {
+		const message = e?.message || '保存失败，请重试';
+		saveError.value = message;
+		uni.showToast({ title: message, icon: 'none', duration: 2000 });
+	} finally {
+		saving.value = false;
+	}
+};
+
+function editZiwei() {
+	if (!userStore.timestamp) {
+		uni.showToast({
+			 title: '\u7F3A\u5C11\u51FA\u751F\u65F6\u95F4',
+			icon: 'none',
+			duration: 2000,
+		});
+		return;
+	}
+
+	const editData = {
+		realname: userStore.realname || '',
+		gender:
+			userStore.gender !== undefined && userStore.gender !== null
+				? Number(userStore.gender)
+				: 0,
+		timestamp: Number(userStore.timestamp),
+		recordId: userStore.recordId || null,
+		isEdit: true,
+	};
+
+	try {
+		uni.setStorageSync('edit_ziwei_data', JSON.stringify(editData));
+		uni.showToast({
+			 title: '\u8DF3\u8F6C\u4E2D...',
+			icon: 'loading',
+			duration: 900,
+		});
+		setTimeout(() => {
+			uni.reLaunch({
+				url: '/pages/ziwei/index',
+			});
+		}, 300);
+	} catch (e) {
+		console.error('\u51C6\u5907\u7F16\u8F91\u6570\u636E\u5931\u8D25:', e);
+		uni.showToast({
+			title: '\u8F7D\u5165\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5',
+			icon: 'none',
+			duration: 2000,
+		});
+	}
+}
+
+function goToChat() {
+	if (!astrolabe.value) {
+		uni.showToast({
+			title: '\u6682\u65E0\u6392\u76D8\u6570\u636E',
+			icon: 'none',
+			duration: 2000,
+		});
+		return;
+	}
+
+	uni.navigateTo({
+		url: '/pages/chat/index?from=ziwei',
+	});
+}
+
+function goStart() {
+	uni.reLaunch({
+		url: '/pages/ziwei/index',
+	});
+}
+
+const currentScopeLabel = computed(() => {
+    const h = currentHoroscope.value;
+    if (!h) return '';
+
+    if (ziweiStore.viewMode === 'decadal' && h.decadal) {
+		return `${h.decadal.heavenlyStem}${h.decadal.earthlyBranch}\u5927\u9650`;
+    } else if (ziweiStore.viewMode === 'yearly' && h.yearly) {
+		return `${h.yearly.heavenlyStem}${h.yearly.earthlyBranch}\u6D41\u5E74`;
+    } else if (ziweiStore.viewMode === 'monthly' && h.monthly) {
+		return `${h.monthly.heavenlyStem}${h.monthly.earthlyBranch}\u6D41\u6708`;
+    } else if (ziweiStore.viewMode === 'daily' && h.daily) {
+		return `${h.daily.heavenlyStem}${h.daily.earthlyBranch}\u6D41\u65E5`;
+    }
+    return '';
+});
+
+const summaryTiles = computed(() => {
+	if (!astrolabe.value) return [];
+	const tiles = [
+		{ label: '\u59D3\u540D', value: (userStore.realname || '').trim() || '\u533F\u540D' },
+		{ label: '\u6027\u522B', value: Number(userStore.gender) === 0 ? '\u7537' : '\u5973' },
+		{ label: '\u9633\u5386', value: astrolabe.value.solarDate || '-' },
+		{ label: '\u9634\u5386', value: astrolabe.value.lunarDate || '-' },
+		{ label: '\u4E94\u884C\u5C40', value: astrolabe.value.fiveElementsClass || '-' },
+		{ label: '\u547D\u4E3B / \u8EAB\u4E3B', value: `${astrolabe.value.soul || '-'} / ${astrolabe.value.body || '-'}` },
+	];
+	return tiles;
+});
+
+const handleTimelineSelectionUpdate = (payload: any) => {
+	const mode = payload?.mode;
+	const value = payload?.date;
+	if (!mode) return;
+	const date = value instanceof Date ? new Date(value.getTime()) : new Date(value || ziweiStore.targetDate);
+	if (!Number.isFinite(date.getTime())) return;
+	ziweiStore.setTimelineSelection({ mode, date });
+};
+
+type DynamicScope = 'decadal' | 'age' | 'yearly' | 'monthly' | 'daily';
+type MutagenName = string;
+type HoroscopeScope = 'hourly' | 'daily' | 'monthly' | 'yearly' | 'decadal' | 'age';
+
+const SCOPE_PREFIX: Record<DynamicScope, string> = {
+	decadal: '\u5927',
+	age: '\u5C0F',
+	yearly: '\u5E74',
+	monthly: '\u6708',
+	daily: '\u65E5',
+};
+
+const MUTAGEN_NAMES: MutagenName[] = ['\u7984', '\u6743', '\u79D1', '\u5FCC'];
+const DYNAMIC_LABEL_SCOPE_ORDER: HoroscopeScope[] = ['hourly', 'daily', 'monthly', 'yearly', 'decadal', 'age'];
+const DYNAMIC_STAR_SCOPE_ORDER: Array<Exclude<HoroscopeScope, 'age'>> = ['hourly', 'daily', 'monthly', 'yearly', 'decadal'];
+const DYNAMIC_LABEL_PREFIX: Record<HoroscopeScope, string> = {
+	hourly: '\u65F6',
+	daily: '\u65E5',
+	monthly: '\u6708',
+	yearly: '\u5E74',
+	decadal: '\u5927',
+	age: '\u5C0F',
+};
+const displayPalaceName = (name: string) => (name === '\u4EC6\u5F79' ? '\u4EA4\u53CB' : name);
+
+const palaceStarNameSet = computed(() => {
+	const sets = new Map<number, Set<string>>();
+	if (!astrolabe.value) return sets;
+	astrolabe.value.palaces.forEach((palace) => {
+		const names = new Set<string>();
+		[...(palace.majorStars || []), ...(palace.minorStars || [])].forEach((star: any) => {
+			const name = star?.name;
+			if (typeof name === 'string' && name) names.add(name);
+		});
+		sets.set(palace.index, names);
+	});
+	return sets;
+});
+
+const focusedSurroundedPalaces = computed(() => {
+	const focusIndex = ziweiStore.focusPalaceIndex;
+	if (focusIndex === null || !astrolabe.value) return null;
+
+	const focusPalace = astrolabe.value.palaces[focusIndex];
+	if (!focusPalace) return null;
+
+	if (ziweiStore.viewMode !== 'origin' && currentHoroscope.value?.surroundPalaces) {
+		try {
+			return currentHoroscope.value.surroundPalaces(focusPalace.name, ziweiStore.viewMode);
+		} catch (e) {
+			console.warn('Failed to load surrounded palaces in scope:', e);
+		}
+	}
+
+	try {
+		return astrolabe.value.surroundedPalaces(focusPalace.index);
+	} catch (e) {
+		console.warn('Failed to load surrounded palaces:', e);
+		return null;
+	}
+});
+
+const highlightedIndices = computed(() => {
+	const surrounded = focusedSurroundedPalaces.value;
+	if (!surrounded) return [];
+
+	return Array.from(
+        new Set(
+            [surrounded.target?.index, surrounded.opposite?.index, surrounded.wealth?.index, surrounded.career?.index].filter(
+                (idx): idx is number => typeof idx === 'number',
+            ),
+        ),
+    );
+});
+
+const focusSummary = computed(() => {
+    const focusIndex = ziweiStore.focusPalaceIndex;
+    if (focusIndex === null || !astrolabe.value) return null;
+
+	const focusPalace = astrolabe.value.palaces[focusIndex];
+	if (!focusPalace) return null;
+
+	const surrounded = focusedSurroundedPalaces.value;
+	const surroundMutagens = MUTAGEN_NAMES.map((name) => ({
+		name,
+		active: surrounded ? surrounded.haveMutagen(name) : false,
+    }));
+
+    const flyParts: string[] = [];
+	    astrolabe.value.palaces.forEach((targetPalace) => {
+	        const hits = MUTAGEN_NAMES.filter((mutagen) => {
+	            try {
+	                return focusPalace.fliesTo(targetPalace.index, mutagen);
+	            } catch (e) {
+	                return false;
+	            }
+	        });
+	        if (hits.length) {
+	            flyParts.push(`${displayPalaceName(targetPalace.name)}${hits.join('')}`);
+	        }
+	    });
+
+	    return {
+	        name: displayPalaceName(focusPalace.name),
+	        surroundMutagens,
+	        flyText: flyParts.join('\u3001'),
+	    };
+	});
+
+const sortedCells = computed(() => {
+    if (!astrolabe.value) return { top: [], left: [], right: [], bottom: [] };
+
+    const cellsMap = new Map();
+    
+	// 1. Initialize with Original Palaces
+	astrolabe.value.palaces.forEach(p => {
+		cellsMap.set(p.earthlyBranch, {
+			original: p,
+			dynamicLabels: [],
+			dynamicStars: [],
+			flyMutagens: [],
+			scopeMutagens: {},
+			displayJiangqian12: undefined,
+			displaySuiqian12: undefined,
+		});
+	});
+
+	// 2. Add Dynamic Info (Horoscope)
+	if (ziweiStore.viewMode !== 'origin' && currentHoroscope.value) {
+		const mode = ziweiStore.viewMode;
+		const horoscope = currentHoroscope.value;
+		const hasScopeMutagenCache = new Map<string, boolean>();
+
+		if (mode === 'yearly') {
+			const yearlyDecStar = (horoscope as any)?.yearly?.yearlyDecStar;
+			const yearlySuiqian12 = Array.isArray(yearlyDecStar?.suiqian12) ? yearlyDecStar.suiqian12 : [];
+			const yearlyJiangqian12 = Array.isArray(yearlyDecStar?.jiangqian12) ? yearlyDecStar.jiangqian12 : [];
+
+			astrolabe.value.palaces.forEach((basePalace, palaceIndex) => {
+				const cell = cellsMap.get(basePalace.earthlyBranch);
+				if (!cell) return;
+				const suiqianValue = yearlySuiqian12[palaceIndex];
+				const jiangqianValue = yearlyJiangqian12[palaceIndex];
+				if (typeof suiqianValue === 'string' && suiqianValue) {
+					cell.displaySuiqian12 = suiqianValue;
+				}
+				if (typeof jiangqianValue === 'string' && jiangqianValue) {
+					cell.displayJiangqian12 = jiangqianValue;
+				}
+			});
+		}
+
+		// Keep only current scope to avoid information overload.
+		const activeScopesByMode: Record<string, DynamicScope[]> = {
+            decadal: ['decadal'],
+            yearly: ['yearly'],
+            monthly: ['monthly'],
+            daily: ['daily'],
+        };
+        const activeScopes: DynamicScope[] = activeScopesByMode[mode] || [];
+
+		DYNAMIC_LABEL_SCOPE_ORDER.forEach((scope) => {
+			const scopeData = (horoscope as any)?.[scope];
+			if (!scopeData) return;
+			const prefix = DYNAMIC_LABEL_PREFIX[scope];
+
+			const palaceNames = Array.isArray(scopeData.palaceNames) ? scopeData.palaceNames : [];
+
+			// 2.1 Overlay dynamic palace labels for all available scopes.
+			palaceNames.forEach((palaceName: string, palaceIndex: number) => {
+				const basePalace = astrolabe.value?.palaces?.[palaceIndex];
+				if (!basePalace) return;
+
+                const cell = cellsMap.get(basePalace.earthlyBranch);
+                if (!cell) return;
+
+					if (!cell.dynamicLabels) cell.dynamicLabels = [];
+					cell.dynamicLabels.push({
+						text: `${prefix}${displayPalaceName(String(palaceName || ''))}`,
+						type: scope,
+					});
+				});
+		});
+
+		DYNAMIC_STAR_SCOPE_ORDER.forEach((scope) => {
+			const scopeData = (horoscope as any)?.[scope];
+			if (!scopeData) return;
+			const starsByPalace = Array.isArray(scopeData.stars) ? scopeData.stars : [];
+			starsByPalace.forEach((stars: any[], palaceIndex: number) => {
+				if (!Array.isArray(stars) || !stars.length) return;
+				const basePalace = astrolabe.value?.palaces?.[palaceIndex];
+				if (!basePalace) return;
+				const cell = cellsMap.get(basePalace.earthlyBranch);
+				if (!cell) return;
+				if (!Array.isArray(cell.dynamicStars)) cell.dynamicStars = [];
+				stars.forEach((star: any) => {
+					const starName = star?.name;
+					if (typeof starName !== 'string' || !starName) return;
+					if (!cell.dynamicStars.includes(starName)) {
+						cell.dynamicStars.push(starName);
+					}
+				});
+			});
+		});
+
+		activeScopes.forEach((scope) => {
+			const prefix = SCOPE_PREFIX[scope];
+			const scopeData = (horoscope as any)?.[scope];
+			if (!scopeData) return;
+			// 2.2 Apply scope mutagens to natal stars (iztro hasHoroscopeMutagen logic).
+			const scopeMutagenList = Array.isArray(scopeData.mutagen) ? scopeData.mutagen : [];
+			for (const cell of cellsMap.values()) {
+				const starSet = palaceStarNameSet.value.get(cell.original.index);
+
+				scopeMutagenList.forEach((starName: string, idx: number) => {
+					if (!starName) return;
+                    const mutagenName = MUTAGEN_NAMES[idx];
+                    if (!mutagenName) return;
+					const palaceName = cell.original?.name;
+					if (!palaceName) return;
+
+					if (typeof horoscope?.hasHoroscopeMutagen === 'function') {
+						const cacheKey = `${scope}|${palaceName}|${mutagenName}`;
+						let matched = hasScopeMutagenCache.get(cacheKey);
+						if (typeof matched !== 'boolean') {
+							try {
+								matched = horoscope.hasHoroscopeMutagen(palaceName, scope as any, mutagenName);
+							} catch (e) {
+								matched = false;
+							}
+							hasScopeMutagenCache.set(cacheKey, matched);
+						}
+						if (!matched) return;
+					}
+
+					if (!starSet?.has(starName)) return;
+
+                    const mutagenLabel = prefix + mutagenName;
+                    if (!mutagenLabel) return;
+
+                    if (!cell.scopeMutagens) cell.scopeMutagens = {};
+                    if (!cell.scopeMutagens[starName]) cell.scopeMutagens[starName] = [];
+                    cell.scopeMutagens[starName].push({
+                        scope,
+                        label: mutagenLabel,
+                    });
+                });
+            }
+        });
+    }
+
+    // 3. Add Flying Mutagen (Focus)
+    if (ziweiStore.focusPalaceIndex !== null) {
+        const focusPalace = astrolabe.value.palaces[ziweiStore.focusPalaceIndex];
+        if (focusPalace) {
+            astrolabe.value.palaces.forEach((targetPalace) => {
+                const cell = cellsMap.get(targetPalace.earthlyBranch);
+                if (!cell) return;
+
+                MUTAGEN_NAMES.forEach((mutagenName) => {
+                    try {
+                        if (focusPalace.fliesTo(targetPalace.index, mutagenName)) {
+                            if (!Array.isArray(cell.flyMutagens)) {
+                                cell.flyMutagens = [];
+                            }
+                            if (!cell.flyMutagens.includes(mutagenName)) {
+                                cell.flyMutagens.push(mutagenName);
+                            }
+                        }
+                    } catch (e) {
+                        // Ignore single mutagen check error and continue.
+                    }
+                });
+            });
+        }
+    }
+
+	for (const cell of cellsMap.values()) {
+		if (!Array.isArray(cell.flyMutagens)) {
+			cell.flyMutagens = [];
+		}
+		if (!Array.isArray(cell.dynamicStars)) {
+			cell.dynamicStars = [];
+		}
+	}
+
+	return {
+			top: ['\u5DF3', '\u5348', '\u672A', '\u7533'].map((b) => cellsMap.get(b)),
+			left: ['\u8FB0', '\u536F'].map((b) => cellsMap.get(b)),
+			right: ['\u9149', '\u620C'].map((b) => cellsMap.get(b)),
+			bottom: ['\u5BC5', '\u4E11', '\u5B50', '\u4EA5'].map((b) => cellsMap.get(b)),
+	};
+});
+
+const getCellClass = (cell: any) => {
+    const isFocus = ziweiStore.focusPalaceIndex === cell.original.index;
+	const isMing = cell.original.name === '\u547D\u5BAB';
+    
+    return {
+        'cell-focused': isFocus,
+        'cell-highlight': isMing && !isFocus
+    };
+};
+
+const DOUBLE_CLICK_WINDOW_MS = 280;
+
+const closeCellZoom = () => {
+	zoomedCell.value = null;
+};
+
+const handleCellClick = (cell: any) => {
+	if (!cell?.original) return;
+
+	const palaceIndex = cell.original.index;
+	ziweiStore.setFocus(palaceIndex);
+
+	const now = Date.now();
+	const isSamePalace = lastClickPalaceIndex.value === palaceIndex;
+	const isDoubleClick = isSamePalace && now - lastClickTs.value <= DOUBLE_CLICK_WINDOW_MS;
+
+	lastClickPalaceIndex.value = palaceIndex;
+	lastClickTs.value = now;
+
+	if (isDoubleClick) {
+		zoomedCell.value = cell;
+		lastClickPalaceIndex.value = null;
+		lastClickTs.value = 0;
+	}
+};
+</script>
+
+<style scoped>
+:deep(*) {
+	box-sizing: border-box;
+}
+
+.page-ziwei-result {
+	--mutagen-lu: #2f855a;
+	--mutagen-quan: #0f766e;
+	--mutagen-ke: #2563eb;
+	--mutagen-ji: #c2410c;
+}
+
+.page-ziwei-result .detail-card {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 16px 14px;
+}
+
+.page-ziwei-result .result-container {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.page-ziwei-result .section {
+	background: #ffffff;
+	border-radius: 14px;
+	border: 1px solid #e2e8f0;
+	padding: 12px;
+	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+.page-ziwei-result .section__header {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 10px;
+	padding-bottom: 8px;
+	border-bottom: 1px dashed #e5e7eb;
+}
+
+.page-ziwei-result .section__title {
+	font-size: 18px;
+	color: #2d3748;
+	margin: 0;
+}
+
+.page-ziwei-result .section__body {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.page-ziwei-result .info-grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 10px;
+}
+
+@media (min-width: 720px) {
+	.page-ziwei-result .info-grid {
+		grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	}
+}
+
+.layout-medium .page-ziwei-result .info-grid,
+.layout-wide .page-ziwei-result .info-grid {
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.page-ziwei-result .info-tile {
+	padding: 10px 12px;
+	border: 1px solid #e5e7eb;
+	border-radius: 12px;
+	background: #f8fafc;
+}
+
+.page-ziwei-result .actions-row {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 10px;
+	margin-top: 4px;
+}
+
+.page-ziwei-result .actions-row :deep(.tm-button) {
+	width: 100% !important;
+	min-width: 0 !important;
+}
+
+.page-ziwei-result .actions-row :deep(.tm-button__body) {
+	width: 100% !important;
+}
+
+@media (min-width: 720px) {
+	.page-ziwei-result .actions-row {
+		display: flex;
+		flex-direction: row;
+		flex-wrap: wrap;
+		align-items: center;
+	}
+
+	.page-ziwei-result .actions-row :deep(.tm-button) {
+		width: auto !important;
+		flex: 0 0 auto;
+	}
+
+	.page-ziwei-result .actions-row :deep(.tm-button__body) {
+		width: auto !important;
+	}
+}
+
+.layout-medium .page-ziwei-result .actions-row,
+.layout-wide .page-ziwei-result .actions-row {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+.layout-medium .page-ziwei-result .actions-row :deep(.tm-button),
+.layout-wide .page-ziwei-result .actions-row :deep(.tm-button) {
+	width: auto !important;
+	flex: 0 0 auto;
+}
+
+.layout-medium .page-ziwei-result .actions-row :deep(.tm-button__body),
+.layout-wide .page-ziwei-result .actions-row :deep(.tm-button__body) {
+	width: auto !important;
+}
+
+.page-ziwei-result .export-error {
+	padding: 8px 10px;
+	border-radius: 8px;
+	background: rgba(194, 65, 12, 0.08);
+	border: 1px solid rgba(194, 65, 12, 0.22);
+}
+
+.page-ziwei-result .export-error-text {
+	font-size: 12px;
+	color: #9a3412;
+}
+
+.page-ziwei-result .empty-state {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	gap: 12px;
+	min-height: 320px;
+	text-align: center;
+}
+
+.page-ziwei-result .chart-grid {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: clamp(520px, 68vh, 860px);
+	min-height: 520px;
+	background: #ffffff;
+	border: 1px solid #9ca3af;
+	border-radius: 8px;
+	overflow: hidden;
+	box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+@media (max-width: 719px) {
+	.page-ziwei-result .chart-grid {
+		height: 560px;
+		min-height: 560px;
+	}
+}
+
+.page-ziwei-result .chart-row {
+	display: flex;
+	flex-direction: row;
+	width: 100%;
+}
+
+.page-ziwei-result .chart-col {
+	display: flex;
+	flex-direction: column;
+}
+
+.page-ziwei-result .top-row,
+.page-ziwei-result .bottom-row {
+	height: 25%;
+	flex: 1;
+}
+
+.page-ziwei-result .middle-row {
+	height: 50%;
+	flex: 2;
+}
+
+.page-ziwei-result .side-col {
+	width: 25%;
+}
+
+.page-ziwei-result .chart-cell {
+	width: 25%;
+	height: 100%;
+	border: 1px solid #d1d5db;
+	background: #fff;
+	overflow: hidden;
+	transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.page-ziwei-result .middle-row .chart-cell {
+	width: 100%;
+	height: 50%;
+}
+
+.page-ziwei-result .cell-highlight {
+	background: #f9fafb;
+}
+
+.page-ziwei-result .cell-focused {
+	position: relative;
+	z-index: 2;
+	background: #fff7ed;
+	border: 2px solid rgba(217, 119, 6, 0.75);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.85);
+}
+
+.page-ziwei-result .center-info {
+	width: 50%;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	background: #f8fafc;
+	border-left: 1px solid #d1d5db;
+	border-right: 1px solid #d1d5db;
+}
+
+.page-ziwei-result .info-content {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 20rpx 24rpx;
+	max-width: 96%;
+}
+
+.page-ziwei-result .info-header {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-end;
+	margin-bottom: 18rpx;
+}
+
+.page-ziwei-result .info-name {
+	font-size: 36rpx;
+	font-weight: 700;
+	color: #2f312f;
+	margin-right: 10rpx;
+}
+
+.page-ziwei-result .info-gender {
+	font-size: 22rpx;
+	color: #636363;
+	margin-bottom: 4rpx;
+}
+
+.page-ziwei-result .info-row {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	margin-bottom: 8rpx;
+}
+
+.page-ziwei-result .info-label {
+	font-size: 23rpx;
+	color: #7a746a;
+}
+
+.page-ziwei-result .info-val {
+	font-size: 23rpx;
+	font-weight: 700;
+	color: #2f312f;
+}
+
+.page-ziwei-result .info-label-spaced,
+.page-ziwei-result .info-val-spaced {
+	margin-left: 10px;
+}
+
+.page-ziwei-result .scope-info {
+	margin-top: 10px;
+	padding: 6px 10px;
+	background: rgba(15, 118, 110, 0.08);
+	border: 1px solid rgba(15, 118, 110, 0.2);
+	border-radius: 8px;
+	display: flex;
+	flex-direction: row;
+}
+
+.page-ziwei-result .scope-label {
+	font-size: 12px;
+	color: #0f766e;
+}
+
+.page-ziwei-result .scope-val {
+	font-size: 12px;
+	font-weight: 700;
+	color: #0f766e;
+}
+
+.page-ziwei-result .focus-summary {
+	margin-top: 8px;
+	padding: 6px 10px;
+	width: 100%;
+	background: rgba(180, 83, 9, 0.08);
+	border: 1px solid rgba(180, 83, 9, 0.25);
+	border-radius: 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.page-ziwei-result .focus-title {
+	font-size: 12px;
+	font-weight: 700;
+	color: #92400e;
+}
+
+.page-ziwei-result .focus-mutagen-row {
+	display: flex;
+	flex-direction: row;
+	gap: 6px;
+}
+
+.page-ziwei-result .focus-mutagen {
+	font-size: 11px;
+	font-weight: 700;
+	color: #9ca3af;
+	padding: 0 4px;
+	border-radius: 999px;
+	border: 1px solid rgba(156, 163, 175, 0.55);
+	background: rgba(255, 255, 255, 0.95);
+}
+
+.page-ziwei-result .focus-mutagen.active {
+	color: #b45309;
+	border-color: rgba(180, 83, 9, 0.55);
+}
+
+.page-ziwei-result .focus-fly {
+	font-size: 11px;
+	color: #7c2d12;
+}
+
+.page-ziwei-result .legend-box {
+	margin-top: 24rpx;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 8rpx 12rpx;
+	background: rgba(255, 255, 255, 0.72);
+	border: 1px solid rgba(201, 190, 167, 0.7);
+	border-radius: 10px;
+}
+
+.page-ziwei-result .legend-title {
+	font-size: 20rpx;
+	color: #7a746a;
+	margin-bottom: 8rpx;
+}
+
+.page-ziwei-result .legend-items {
+	display: flex;
+	flex-direction: row;
+	gap: 10rpx;
+}
+
+.page-ziwei-result .legend-item {
+	font-size: 22rpx;
+	font-weight: 700;
+	padding: 2rpx 8rpx;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.95);
+	border: 1px solid rgba(201, 190, 167, 0.75);
+}
+
+.page-ziwei-result .lu {
+	color: var(--mutagen-lu);
+}
+
+.page-ziwei-result .quan {
+	color: var(--mutagen-quan);
+}
+
+.page-ziwei-result .ke {
+	color: var(--mutagen-ke);
+}
+
+.page-ziwei-result .ji {
+	color: var(--mutagen-ji);
+}
+
+.page-ziwei-result .palace-zoom-mask {
+	position: fixed;
+	inset: 0;
+	z-index: 1200;
+	background: rgba(15, 23, 42, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 16px;
+}
+
+.page-ziwei-result .palace-zoom-panel {
+	width: min(92vw, 760px);
+	height: min(84vh, 680px);
+	background: #ffffff;
+	border: 1px solid #cbd5e1;
+	border-radius: 14px;
+	box-shadow: 0 20px 48px rgba(15, 23, 42, 0.35);
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.page-ziwei-result .palace-zoom-header {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 12px;
+	border-bottom: 1px solid #e2e8f0;
+	background: #f8fafc;
+}
+
+.page-ziwei-result .palace-zoom-title-wrap {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.page-ziwei-result .palace-zoom-title {
+	font-size: 16px;
+	font-weight: 700;
+	color: #1f2937;
+}
+
+.page-ziwei-result .palace-zoom-subtitle {
+	font-size: 12px;
+	color: #64748b;
+}
+
+.page-ziwei-result .palace-zoom-close {
+	width: 30px;
+	height: 30px;
+	line-height: 30px;
+	text-align: center;
+	border-radius: 999px;
+	font-size: 20px;
+	color: #475569;
+	background: #ffffff;
+	border: 1px solid #cbd5e1;
+}
+
+.page-ziwei-result .palace-zoom-body {
+	flex: 1;
+	min-height: 0;
+	padding: 10px;
+	background: linear-gradient(180deg, #ffffff 0%, #fffaf4 100%);
+}
+
+.page-ziwei-result .palace-zoom-content {
+	width: 100%;
+	height: 100%;
+	display: flex;
+}
+
+.page-ziwei-result .palace-zoom-content :deep(.palace-content) {
+	flex: 1;
+	padding: 12px 14px;
+	gap: 8px;
+	border-radius: 10px;
+	border-color: rgba(203, 213, 225, 0.7);
+}
+
+.page-ziwei-result .palace-zoom-content :deep(.top-gods) {
+	min-height: 24px;
+	gap: 10px;
+}
+
+.page-ziwei-result .palace-zoom-content :deep(.god-text) {
+	font-size: 16px;
+	line-height: 1.2;
+}
+
+.page-ziwei-result .palace-zoom-content :deep(.dynamic-label) {
+	font-size: 14px;
+	padding: 2px 4px;
+}
+
+.page-ziwei-result .palace-zoom-content :deep(.star-row) {
+	min-height: 24px;
+}
+
+.page-ziwei-result .palace-zoom-content :deep(.star-name) {
+	font-size: 18px;
+	line-height: 1.2;
+}
+
+.page-ziwei-result .palace-zoom-content :deep(.star-bright),
+.page-ziwei-result .palace-zoom-content :deep(.star-mutagen-inline),
+.page-ziwei-result .palace-zoom-content :deep(.scope-mutagen-tag) {
+	font-size: 14px;
+}
+
+.page-ziwei-result .palace-zoom-content :deep(.center-col) {
+	width: 132px;
+	gap: 4px;
+}
+
+.page-ziwei-result .palace-zoom-content :deep(.dynamic-star-tag) {
+	font-size: 12px;
+	padding: 2px 6px;
+}
+
+.page-ziwei-result .palace-zoom-content :deep(.palace-name) {
+	font-size: 28px;
+	line-height: 1.2;
+}
+
+.page-ziwei-result .palace-zoom-content :deep(.palace-life),
+.page-ziwei-result .palace-zoom-content :deep(.body-palace),
+.page-ziwei-result .palace-zoom-content :deep(.palace-decade),
+.page-ziwei-result .palace-zoom-content :deep(.palace-ages) {
+	font-size: 14px;
+}
+
+.page-ziwei-result .palace-zoom-content :deep(.stem),
+.page-ziwei-result .palace-zoom-content :deep(.branch),
+.page-ziwei-result .palace-zoom-content :deep(.fly-text) {
+	font-size: 18px;
+}
+
+@media (max-width: 719px) {
+	.page-ziwei-result .palace-zoom-panel {
+		width: 96vw;
+		height: 82vh;
+	}
+
+	.page-ziwei-result .palace-zoom-content :deep(.star-name) {
+		font-size: 14px;
+	}
+
+	.page-ziwei-result .palace-zoom-content :deep(.palace-name) {
+		font-size: 22px;
+	}
+}
+</style>

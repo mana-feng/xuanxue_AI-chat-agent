@@ -1,0 +1,254 @@
+<template>
+	<tm-app>
+		<PageScaffold class="page-chat" title="AI 聊天" subtitle="对接大模型的专用界面">
+			<template #header-extra>
+				<view class="archive-btns">
+					<button class="archive-btn" :disabled="archiveBusy" @tap="handleRestoreArchive">恢复</button>
+					<button class="archive-btn" :disabled="archiveBusy" @tap="handleSaveArchive">保存</button>
+				</view>
+			</template>
+			<chat-panel
+				ref="panelRef"
+				class="chat-panel-wrapper"
+				:disable-auto-restore="shouldDisableRestore"
+				@send="handleSend"
+			/>
+		</PageScaffold>
+	</tm-app>
+</template>
+
+<script lang="ts" setup>
+import { nextTick, onMounted, ref } from 'vue';
+import { onLoad } from '@dcloudio/uni-app';
+import ChatPanel from '@/chat/ChatPanel.vue';
+import PageScaffold from '@/components/layout/PageScaffold.vue';
+import { callAi } from '@/services/ai';
+import { hasAiConfig } from '@/config/aiConfig';
+import { encodeTOON } from '@/utils/toon';
+import { useUserStore } from '@/store/user';
+import { useBaziStore } from '@/store/bazi';
+import { useYunStore } from '@/store/yun';
+import { useLiuyaoStore } from '@/store/liuyao';
+import { useZiweiStore } from '@/store/ziwei';
+import { buildBaziExportPayload } from '@/utils/baziExport';
+import { buildLiuyaoExportPayload } from '@/utils/liuyaoExport';
+import { buildZiweiExportPayload } from '@/utils/ziweiExport';
+
+type ChatContext = 'bazi' | 'liuyao' | 'ziwei';
+type ChatRole = 'system' | 'user' | 'assistant';
+type ChatMessage = {
+	role: ChatRole;
+	content: string;
+};
+
+const panelRef = ref<any>(null);
+const chatContext = ref<ChatContext>('bazi');
+const shouldDisableRestore = ref(false);
+const archiveBusy = ref(false);
+let firstSendDone = false;
+
+const userStore = useUserStore();
+const baziStore = useBaziStore();
+const yunStore = useYunStore();
+const liuyaoStore = useLiuyaoStore();
+const ziweiStore = useZiweiStore();
+
+onLoad((options: Record<string, unknown>) => {
+	const from = String(options?.from || '').toLowerCase();
+	if (from === 'bazi' || from === 'liuyao' || from === 'ziwei') {
+		chatContext.value = from as ChatContext;
+		shouldDisableRestore.value = true;
+	}
+});
+
+onMounted(() => {
+	setTimeout(() => {
+		if (chatContext.value === 'liuyao') {
+			panelRef.value?.appendAssistant('已为您加载六爻排盘结果，您可以让 AI 为您解读卦象。', 'ready');
+		} else if (chatContext.value === 'ziwei') {
+			panelRef.value?.appendAssistant('已为您加载紫薇排盘结果，您可以让 AI 为您解答命盘重点。', 'ready');
+		}
+	}, 120);
+});
+
+function handleSend(text: string) {
+	void sendToLLM(text);
+}
+
+function handleRestoreArchive() {
+	if (archiveBusy.value) return;
+	archiveBusy.value = true;
+	panelRef.value?.handleRestoreArchive?.();
+	setTimeout(() => {
+		archiveBusy.value = false;
+	}, 300);
+}
+
+function handleSaveArchive() {
+	if (archiveBusy.value) return;
+	archiveBusy.value = true;
+	panelRef.value?.handleSaveArchive?.();
+	setTimeout(() => {
+		archiveBusy.value = false;
+	}, 300);
+}
+
+function stripHtml(value: unknown): string {
+	const raw = String(value ?? '');
+	const stripped = raw.replace(/<[^>]+>/g, '');
+	return stripped || raw;
+}
+
+function normalizeError(value: unknown): string {
+	const raw = String(
+		(value as any)?.error || (value as any)?.message || (value as any)?.errMsg || value || '调用失败',
+	);
+	const stripped = stripHtml(raw).trim();
+	if (!stripped) return '调用失败';
+	if (
+		stripped.toLowerCase().includes('generativelanguage.googleapis.com') ||
+		(stripped.toLowerCase().includes('request to') && stripped.toLowerCase().includes('failed'))
+	) {
+		return '模型连接异常，请检查 API 配置';
+	}
+	return stripped;
+}
+
+function buildContextSystemPrompt(): string | null {
+	try {
+		if (chatContext.value === 'liuyao') {
+			const payload = buildLiuyaoExportPayload(liuyaoStore);
+			return payload ? `User Liuyao result:\n${payload}` : null;
+		}
+
+		if (chatContext.value === 'ziwei') {
+			const payload = buildZiweiExportPayload(userStore, ziweiStore);
+			const toon = payload ? encodeTOON(payload) : '';
+			return toon ? `User Ziwei profile (TOON):\n${toon}` : null;
+		}
+
+		const payload = buildBaziExportPayload(userStore, baziStore, yunStore);
+		const toon = payload ? encodeTOON(payload) : '';
+		return toon ? `User Bazi profile (TOON):\n${toon}` : null;
+	} catch (err) {
+		console.error('build context prompt failed:', err);
+		return null;
+	}
+}
+
+function buildMessages(inputText: string): ChatMessage[] {
+	const messages: ChatMessage[] = [];
+	const text = inputText.trim();
+	if (!text) return messages;
+
+	if (!firstSendDone) {
+		const systemPrompt = buildContextSystemPrompt();
+		if (systemPrompt) {
+			messages.push({
+				role: 'system',
+				content: systemPrompt,
+			});
+		}
+		firstSendDone = true;
+	}
+
+	const historyMessages = panelRef.value?.getMessages?.() || [];
+	for (const msg of historyMessages) {
+		if (msg?.id === 'm-1') continue;
+		if (msg?.status === 'waiting' || msg?.status === 'stream') continue;
+		const historyText = String(msg?.text || '').trim();
+		if (!historyText) continue;
+
+		messages.push({
+			role: msg?.role === 'user' ? 'user' : 'assistant',
+			content: historyText,
+		});
+	}
+
+	const lastHistory = historyMessages[historyMessages.length - 1];
+	const hasSameLatestUser =
+		lastHistory?.role === 'user' && String(lastHistory?.text || '').trim() === text;
+	if (!hasSameLatestUser) {
+		messages.push({ role: 'user', content: text });
+	}
+
+	return messages;
+}
+
+async function sendToLLM(text: string) {
+	const panel = panelRef.value;
+	if (!panel) return;
+
+	panel.setSending(true);
+	panel.createWaitingMessage();
+
+	try {
+		const messages = buildMessages(text);
+		if (!messages.length) {
+			throw new Error('消息不能为空');
+		}
+
+		if (!hasAiConfig()) {
+			throw new Error('请先在设置页面配置 AI API');
+		}
+
+		let fullReply = '';
+		await callAi(messages, {
+			onThinking: (thinking: string) => {
+				panel.appendThinking?.(thinking);
+			},
+			onChunk: (chunk: string) => {
+				fullReply += chunk;
+				panel.appendAssistant(chunk, 'stream');
+			},
+		});
+
+		if (!fullReply.trim()) {
+			throw new Error('回复为空，请检查 API 配置');
+		}
+
+		panel.finishStreaming();
+	} catch (err: any) {
+		const errorText = normalizeError(err);
+		panel.appendAssistant(`调用失败：${errorText}`, 'error');
+	} finally {
+		panel.setSending(false);
+	}
+}
+</script>
+
+<style scoped>
+.chat-panel-wrapper {
+	width: 100%;
+	height: 100%;
+}
+
+.archive-btns {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 8px;
+}
+
+.archive-btn {
+	height: 32px;
+	line-height: 32px;
+	padding: 0 16px;
+	font-size: 13px;
+	font-weight: 600;
+	border-radius: 20px;
+	border: none;
+	background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
+	color: #ffffff;
+	white-space: nowrap;
+}
+
+.archive-btn:active {
+	filter: brightness(0.95);
+}
+
+.archive-btn:disabled {
+	background: linear-gradient(135deg, #cbd5e1, #94a3b8);
+	color: #f8fafc;
+}
+</style>

@@ -1,0 +1,914 @@
+<template>
+	<tm-app>
+		<view class="app-shell">
+			<yx-nav-header></yx-nav-header>
+			<view class="app-main">
+					<view class="page-shell">
+					<view class="page-card history-card theme-card-glass">
+						<view class="page-title-wrapper history-header">
+							<view class="form-header-icon">
+								<tm-icon name="tmicon-md-time" :font-size="40" color="#667eea"></tm-icon>
+							</view>
+							<view class="form-header-text">
+								<h1 class="page-title">历史排盘</h1>
+								<p class="page-subtitle">查看、筛选并管理已保存的排盘</p>
+							</view>
+							<view class="header-actions">
+								<yx-teal-button
+									size="small"
+									:round="12"
+									:padding="[18, 18]"
+									icon="tmicon-md-refresh"
+									label="刷新"
+									@tap="fetchCharts"
+								></yx-teal-button>
+							</view>
+						</view>
+
+						<view class="section filters-card">
+								<header class="section__header">
+									<tm-icon name="tmicon-md-search" :font-size="26" color="#667eea"></tm-icon>
+									<h2 class="section__title">筛选与排序</h2>
+								</header>
+								<view class="section__body filters-grid">
+									<view class="filter-block search-block">
+										<tm-input
+											v-model="searchKeyword"
+											prefix="tmicon-md-search"
+											placeholder="搜索姓名..."
+											clearable
+											:round="12"
+											:border="1"
+											@input="onSearchInput"
+										></tm-input>
+									</view>
+									<view class="filter-block">
+										<tm-text :font-size="22" color="#666666" label="性别：" class="mb-6"></tm-text>
+										<tm-radio-group v-model="genderFilter">
+											<tm-radio label="全部" :value="''"></tm-radio>
+											<tm-radio label="男" :value="'0'"></tm-radio>
+											<tm-radio label="女" :value="'1'"></tm-radio>
+										</tm-radio-group>
+									</view>
+									<view class="filter-block">
+										<tm-text :font-size="22" color="#666666" label="排序：" class="mb-6"></tm-text>
+										<tm-segtab
+											v-model="sortByIndex"
+											:list="[
+												{ text: '时间' },
+												{ text: '姓名' }
+											]"
+											:margin="[0, 0]"
+											:width="260"
+										></tm-segtab>
+									</view>
+									<view class="filter-actions">
+										<yx-teal-button
+											size="small"
+											:padding="[16, 14]"
+											:round="12"
+											:label="sortOrder === 'DESC' ? '↓ 降序' : '↑ 升序'"
+											@tap="toggleSortOrder"
+										></yx-teal-button>
+										<yx-teal-button
+											v-if="searchKeyword || genderFilter"
+											size="small"
+											:padding="[16, 14]"
+											:round="12"
+											label="清除筛选"
+											@tap="clearFilters"
+										></yx-teal-button>
+										<tm-text
+											v-if="totalCount > 0"
+											class="filters-count"
+											:font-size="22"
+											color="#999999"
+											:label="`共找到${totalCount} 条记录`"
+										></tm-text>
+									</view>
+								</view>
+							</view>
+
+							<view v-if="loading" class="py-20 text-center">
+								<tm-text label="加载中..." color="#999999"></tm-text>
+							</view>
+							<view v-else-if="charts.length === 0" class="py-20 text-center">
+								<tm-text 
+									:label="searchKeyword || genderFilter ? '未找到符合条件的记录' : '暂无保存记录，可在排盘结果页点击「保存」哦'" 
+									color="#999999"
+								></tm-text>
+							</view>
+							<view v-else class="records-list">
+								<tm-sheet
+									v-for="item in charts"
+									:key="item.id"
+									:round="16"
+									:shadow="2"
+									:margin="[0, 0]"
+									:padding="[24, 20]"
+									class="record-card"
+								>
+									<view class="record-card__header">
+										<view class="record-meta">
+											<tm-text
+												:bold="true"
+												:font-size="30"
+												color="#2d3748"
+												:label="item.title || '未命名'"
+												_class="text-overflow-1"
+											></tm-text>
+											<tm-text
+												class="mt-6"
+												:font-size="26"
+												color="#718096"
+												:label="formatBirth(item) || ''"
+												_class="text-overflow-1"
+											></tm-text>
+											<view class="record-meta__row">
+												<tm-text
+													:font-size="22"
+													color="#a0aec0"
+													:label="getTypeLabel(item.type)"
+												></tm-text>
+												<tm-text
+													:font-size="22"
+													color="#a0aec0"
+													:label="'保存时间：' + (item.createdAtLabel || '')"
+												></tm-text>
+												<tm-text
+													v-if="item.gender !== null && item.gender !== undefined"
+													class="ml-12"
+													:font-size="22"
+													color="#a0aec0"
+													:label="getGenderDisplayLabel(item.gender)"
+												></tm-text>
+											</view>
+										</view>
+										<view class="record-actions">
+											<yx-teal-button
+												size="mini"
+												:padding="[12, 16]"
+												:round="12"
+												label="查看"
+												@tap="openChart(item)"
+											></yx-teal-button>
+											<yx-teal-button
+												size="mini"
+												:padding="[12, 16]"
+												:round="12"
+												label="删除"
+												@tap="removeChart(item)"
+											></yx-teal-button>
+										</view>
+									</view>
+								</tm-sheet>
+							</view>
+							<view v-if="error" class="mt-10">
+								<tm-text :label="error" color="red"></tm-text>
+							</view>
+					</view>
+				</view>
+			</view>
+		</view>
+	</tm-app>
+</template>
+
+<script lang="ts" setup>
+import { ref, computed, onMounted, watch } from 'vue';
+import { onLoad } from '@dcloudio/uni-app';
+import { useUserStore } from '@/store/user';
+import { useBaziStore } from '@/store/bazi';
+import { useLiuyaoStore } from '@/store/liuyao';
+import { getPersistentItem, setPersistentItem } from '@/utils/persistentStorage';
+import utils from '@/libs/utils/utils';
+
+const LOCAL_RECORDS_KEY = 'local_chart_records';
+
+interface ChartItem {
+	id: number;
+	title: string;
+	gender?: string | null;
+	birthDatetime: string;
+	createdAt: string;
+	createdAtLabel?: string;
+	type?: string;
+	rawPayload?: any;
+}
+
+const user_store = useUserStore();
+const bazi_store = useBaziStore();
+
+const charts = ref<ChartItem[]>([]);
+const loading = ref(false);
+const error = ref('');
+const totalCount = ref(0);
+
+const searchKeyword = ref('');
+const genderFilter = ref('');
+const sortByIndex = ref(0); // 0: 时间, 1: 姓名
+const sortBy = computed(() => (sortByIndex.value === 0 ? 'created_at' : 'name'));
+const sortOrder = ref<'ASC' | 'DESC'>('DESC');
+
+let searchTimer: any = null;
+
+function getGenderDisplayLabel(gender: any): string {
+	if (gender === '0' || gender === 0) {
+		return '男';
+	} else if (gender === '1' || gender === 1) {
+		return '女';
+	} else {
+		return '未知';
+	}
+}
+
+function getTypeLabel(type?: string): string {
+	const map: Record<string, string> = { bazi: '八字', ziwei: '紫微', liuyao: '六爻' };
+	return map[type || 'bazi'] || '八字';
+}
+
+watch([genderFilter, sortByIndex, sortOrder], () => {
+	fetchCharts();
+});
+
+onMounted(() => {
+	fetchCharts();
+});
+
+onLoad((options: any) => {
+});
+
+function onSearchInput() {
+	if (searchTimer) {
+		clearTimeout(searchTimer);
+	}
+	searchTimer = setTimeout(() => {
+		fetchCharts();
+	}, 500);
+}
+
+function toggleSortOrder() {
+	sortOrder.value = sortOrder.value === 'DESC' ? 'ASC' : 'DESC';
+}
+
+function clearFilters() {
+	searchKeyword.value = '';
+	genderFilter.value = '';
+	sortByIndex.value = 0;
+	sortOrder.value = 'DESC';
+	fetchCharts();
+}
+
+async function fetchCharts() {
+	loading.value = true;
+	error.value = '';
+
+	try {
+		const baziRecords = getPersistentItem<ChartItem[]>(LOCAL_RECORDS_KEY) || [];
+		const ziweiRecords = getPersistentItem<ChartItem[]>('local_ziwei_records') || [];
+		const liuyaoRecords = getPersistentItem<ChartItem[]>('local_liuyao_records') || [];
+
+		baziRecords.forEach(r => { if (!r.type) r.type = 'bazi'; });
+		ziweiRecords.forEach(r => { r.type = 'ziwei'; });
+		liuyaoRecords.forEach(r => { r.type = 'liuyao'; });
+
+		let filtered = [...baziRecords, ...ziweiRecords, ...liuyaoRecords];
+
+		if (searchKeyword.value) {
+			const kw = searchKeyword.value.trim().toLowerCase();
+			filtered = filtered.filter(r => (r.title || '').toLowerCase().includes(kw));
+		}
+
+		if (genderFilter.value) {
+			filtered = filtered.filter(r => String(r.gender) === genderFilter.value);
+		}
+
+		if (sortBy.value === 'name') {
+			filtered.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+		} else {
+			filtered.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+		}
+
+		if (sortOrder.value === 'DESC') {
+			filtered.reverse();
+		}
+
+		charts.value = filtered.map(it => ({
+			...it,
+			createdAtLabel: formatDateTime(it.createdAt || '')
+		}));
+		totalCount.value = charts.value.length;
+	} catch (e: any) {
+		console.error('获取历史记录失败:', e);
+		error.value = '读取本地记录失败';
+		charts.value = [];
+		totalCount.value = 0;
+	} finally {
+		loading.value = false;
+	}
+}
+
+/**
+ * 公告缓存与拉取
+ */
+function formatDateTime(iso: string) {
+	if (!iso) return '';
+	try {
+		const d = new Date(iso);
+		if (isNaN(d.getTime())) {
+			return '';
+		}
+		return utils.HideSecond(d.getTime()) || '';
+	} catch (e) {
+		return '';
+	}
+}
+
+function formatBirth(item: ChartItem) {
+	if (!item || !item.birthDatetime) return '';
+	try {
+		const d = new Date(item.birthDatetime);
+		if (isNaN(d.getTime())) {
+			return '';
+		}
+		const result = utils.HideSecond(d.getTime());
+		return result ? '出生：' + result : '';
+	} catch (e) {
+		return '';
+	}
+}
+
+function openChart(item: ChartItem) {
+	try {
+		if (item.type === 'ziwei') {
+			openZiweiChart(item);
+			return;
+		}
+		if (item.type === 'liuyao') {
+			openLiuyaoChart(item);
+			return;
+		}
+		openBaziChart(item);
+	} catch (e: any) {
+		uni.hideLoading();
+		uni.showToast({
+			title: '打开排盘记录失败：' + (e?.message || '未知错误'),
+			icon: 'none',
+			duration: 2000
+		});
+	}
+}
+
+function openZiweiChart(item: ChartItem) {
+	if (!item.rawPayload) {
+		uni.showToast({ title: '该记录缺少排盘数据', icon: 'none', duration: 2000 });
+		return;
+	}
+	user_store.set({
+		realname: item.title || '佚名',
+		gender: item.gender === '0' ? 0 : (item.gender === '1' ? 1 : 0),
+		timestamp: item.birthDatetime ? new Date(item.birthDatetime).getTime() : null,
+		recordId: item.id
+	});
+	uni.navigateTo({ url: '/pages/ziwei/index' });
+}
+
+function openLiuyaoChart(item: ChartItem) {
+	if (!item.rawPayload) {
+		uni.showToast({ title: '该记录缺少排盘数据', icon: 'none', duration: 2000 });
+		return;
+	}
+	const liuyaoStore = useLiuyaoStore();
+	const rp = item.rawPayload;
+	if (rp.lite && rp.params) {
+		uni.navigateTo({
+			url: `/pages/liuyao/index?restore=1&params=${encodeURIComponent(JSON.stringify(rp.params))}&options=${encodeURIComponent(JSON.stringify(rp.options || {}))}`
+		});
+	} else if (rp.profile && (rp.compiled || rp.display)) {
+		liuyaoStore.setResult({
+			compiled: rp.compiled,
+			display: rp.display,
+			profile: rp.profile,
+			createdAt: rp.ts || Date.now()
+		});
+		uni.navigateTo({ url: '/pages/liuyao/result' });
+	} else {
+		uni.showToast({ title: '该记录数据格式无法恢复', icon: 'none', duration: 2000 });
+	}
+}
+
+function openBaziChart(item: ChartItem) {
+	let useRawPayload = false;
+	if (item.rawPayload && item.rawPayload.user && item.rawPayload.bazi) {
+		const u = item.rawPayload.user;
+		const b = item.rawPayload.bazi;
+
+		if (
+			u.timestamp &&
+			u.gender !== undefined &&
+			u.gender !== null &&
+			b.solar &&
+			b.solar.year &&
+			b.sizhu &&
+			b.sizhu.year &&
+			b.yinli &&
+			b.xinzuo &&
+			b.table &&
+			Array.isArray(b.table) &&
+			b.table.length > 0
+		) {
+			let rawPayloadGender: number;
+			if (u.gender === null || u.gender === undefined) {
+				rawPayloadGender = 0;
+			} else {
+				rawPayloadGender = typeof u.gender === 'string' ? parseInt(u.gender) : u.gender;
+			}
+
+			let dbGender: number;
+			if (item.gender === null || item.gender === undefined) {
+				dbGender = 0;
+			} else if (typeof item.gender === 'string') {
+				dbGender = item.gender === '0' ? 0 : (item.gender === '1' ? 1 : 0);
+			} else {
+				dbGender = item.gender === 0 ? 0 : (item.gender === 1 ? 1 : 0);
+			}
+
+			let dbTimestamp: number;
+			if (typeof item.birthDatetime === 'string') {
+				const date = new Date(item.birthDatetime);
+				dbTimestamp = date.getTime();
+			} else if (typeof item.birthDatetime === 'number') {
+				dbTimestamp = item.birthDatetime;
+			} else {
+				dbTimestamp = 0;
+			}
+
+			const timestampDiff = Math.abs((u.timestamp || 0) - dbTimestamp);
+			if (rawPayloadGender === dbGender && timestampDiff < 1000) {
+				useRawPayload = true;
+			}
+		}
+	}
+
+	if (useRawPayload) {
+		const u = item.rawPayload.user;
+		user_store.set({
+			realname: u.realname || item.title || '佚名',
+			gender: u.gender,
+			timestamp: u.timestamp,
+			recordId: item.id
+		});
+		bazi_store.$patch(item.rawPayload.bazi);
+
+		setTimeout(() => {
+			uni.navigateTo({
+				url: '/pages/index/detail'
+			});
+		}, 100);
+		return;
+	}
+
+	if (!item.birthDatetime) {
+		uni.showToast({
+			title: '该记录缺少出生时间数据',
+			icon: 'none',
+			duration: 2000
+		});
+		return;
+	}
+
+	let timestamp: number;
+	if (typeof item.birthDatetime === 'string') {
+		const date = new Date(item.birthDatetime);
+		timestamp = date.getTime();
+		if (isNaN(timestamp)) {
+			uni.showToast({
+				title: '出生时间格式错误，无法解析',
+				icon: 'none',
+				duration: 2000
+			});
+			return;
+		}
+	} else if (typeof item.birthDatetime === 'number') {
+		timestamp = item.birthDatetime;
+		if (isNaN(timestamp) || timestamp <= 0) {
+			uni.showToast({
+				title: '出生时间无效',
+				icon: 'none',
+				duration: 2000
+			});
+			return;
+		}
+	} else {
+		uni.showToast({
+			title: '出生时间格式错误',
+			icon: 'none',
+			duration: 2000
+		});
+		return;
+	}
+
+	let gender: number;
+	if (item.gender === null || item.gender === undefined) {
+		gender = 0;
+	} else if (typeof item.gender === 'string') {
+		gender = item.gender === '0' ? 0 : (item.gender === '1' ? 1 : 0);
+	} else {
+		gender = item.gender === 0 ? 0 : (item.gender === 1 ? 1 : 0);
+	}
+
+	uni.showLoading({
+		title: '排盘中，请稍后！'
+	});
+
+	user_store.set({
+		realname: item.title || '佚名',
+		gender: gender,
+		timestamp: timestamp,
+		recordId: item.id
+	});
+
+	try {
+		bazi_store.pull({
+			timestamp: timestamp,
+			gender: gender
+		});
+	} catch (pullError: any) {
+		uni.hideLoading();
+		uni.showToast({
+			title: '排盘计算失败：' + (pullError?.message || '未知错误'),
+			icon: 'none',
+			duration: 2000
+		});
+		return;
+	}
+
+	setTimeout(() => {
+		uni.hideLoading();
+		if (!bazi_store.solar || !bazi_store.solar.year) {
+			uni.showToast({
+				title: '排盘数据不完整，请重试',
+				icon: 'none',
+				duration: 2000
+			});
+			return;
+		}
+		uni.navigateTo({
+			url: '/pages/index/detail'
+		});
+	}, 200);
+}
+
+function removeChart(item: ChartItem) {
+	uni.showModal({
+		title: '删除确认',
+		content: '确定要删除这条排盘记录吗？',
+		success(res) {
+			if (res.confirm) {
+				doRemove(item);
+			}
+		}
+	});
+}
+
+async function doRemove(item: ChartItem) {
+	try {
+		const keyMap: Record<string, string> = {
+			bazi: LOCAL_RECORDS_KEY,
+			ziwei: 'local_ziwei_records',
+			liuyao: 'local_liuyao_records'
+		};
+		const key = keyMap[item.type || 'bazi'] || LOCAL_RECORDS_KEY;
+		const records = getPersistentItem<ChartItem[]>(key) || [];
+		const updated = records.filter(r => r.id !== item.id);
+		setPersistentItem(key, updated, 365 * 24 * 60 * 60 * 1000);
+
+		charts.value = charts.value.filter(c => c.id !== item.id);
+		totalCount.value = charts.value.length;
+		uni.showToast({ title: '已删除', icon: 'none', duration: 1500 });
+	} catch (e: any) {
+		console.error('删除失败:', e);
+		error.value = '删除失败';
+	}
+}
+
+function goToHome() {
+	uni.reLaunch({
+		url: '/pages/agent/index'
+	});
+}
+</script>
+
+<style scoped>
+.history-card {
+	display: flex;
+	flex-direction: column;
+}
+
+.history-card > view {
+	margin-bottom: 18px;
+}
+
+.history-card > view:last-child {
+	margin-bottom: 0;
+}
+
+.history-header {
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 12px;
+}
+
+.header-actions {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	flex-wrap: wrap;
+	justify-content: flex-start;
+	width: 100%;
+}
+
+.header-actions > view {
+	margin-right: 8px;
+	margin-bottom: 8px;
+}
+
+.header-actions > view:last-child {
+	margin-right: 0;
+}
+
+.filters-card {
+	background: #f9fafb;
+	border-radius: 16px;
+	border: 1px solid #edf2f7;
+}
+
+.filters-grid {
+	display: flex;
+	flex-direction: column;
+	flex-wrap: nowrap;
+	gap: 12px;
+}
+
+.filters-grid > view {
+	width: 100%;
+	margin-right: 0;
+	margin-bottom: 0;
+}
+
+@media (min-width: 720px) {
+	.filters-grid {
+		flex-direction: row;
+		flex-wrap: wrap;
+		gap: 0;
+	}
+
+	.filters-grid > view {
+		width: calc(50% - 6px);
+		margin-right: 12px;
+		margin-bottom: 12px;
+	}
+
+	.filters-grid > view:nth-child(2n) {
+		margin-right: 0;
+	}
+}
+
+:global(.layout-medium) .filters-grid,
+:global(.layout-wide) .filters-grid {
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 0;
+}
+
+:global(.layout-medium) .filters-grid > view,
+:global(.layout-wide) .filters-grid > view {
+	width: calc(50% - 6px);
+	margin-right: 12px;
+	margin-bottom: 12px;
+}
+
+:global(.layout-medium) .filters-grid > view:nth-child(2n),
+:global(.layout-wide) .filters-grid > view:nth-child(2n) {
+	margin-right: 0;
+}
+
+.search-block {
+	width: 100%;
+	margin-right: 0;
+}
+
+.filter-block {
+	display: flex;
+	flex-direction: column;
+}
+
+.filter-block > view {
+	margin-bottom: 8px;
+}
+
+.filter-block > view:last-child {
+	margin-bottom: 0;
+}
+
+.filter-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+.filter-actions > view {
+	margin-right: 8px;
+	margin-bottom: 8px;
+}
+
+.filter-actions > view:last-child {
+	margin-right: 0;
+}
+
+.filters-count {
+	flex: 1;
+	text-align: left;
+}
+
+.records-list {
+	display: flex;
+	flex-direction: column;
+}
+
+.records-list > view {
+	margin-bottom: 12px;
+}
+
+.records-list > view:last-child {
+	margin-bottom: 0;
+}
+
+.record-card {
+	background: #ffffff;
+}
+
+.record-card__header {
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-start;
+	gap: 12px;
+}
+
+.record-card__header > view {
+	margin-right: 0;
+}
+
+.record-card__header > view:last-child {
+	margin-right: 0;
+}
+
+.record-meta {
+	flex: 1;
+}
+
+.record-meta__row {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	margin-top: 8rpx;
+	flex-wrap: wrap;
+}
+
+.record-meta__row > view {
+	margin-right: 8rpx;
+	margin-bottom: 8rpx;
+}
+
+.record-meta__row > view:last-child {
+	margin-right: 0;
+}
+
+.record-actions {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: flex-start;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.record-actions > view {
+	margin-bottom: 0;
+	margin-right: 8px;
+}
+
+.record-actions > view:last-child {
+	margin-right: 0;
+}
+
+.empty-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 80rpx 40rpx;
+	text-align: center;
+}
+
+.text-center {
+	text-align: center;
+}
+
+.announcement-list {
+	max-height: 60vh;
+	overflow-y: auto;
+}
+
+.announcement-modal .tm-text {
+	word-break: break-word;
+}
+
+.modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 12px;
+}
+
+@media (min-width: 900px) {
+	.history-header {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.header-actions {
+		width: auto;
+		justify-content: flex-end;
+	}
+
+	.record-card__header {
+		flex-direction: row;
+		justify-content: space-between;
+	}
+
+	.record-card__header > view {
+		margin-right: 16px;
+	}
+
+	.record-actions {
+		flex-direction: column;
+		align-items: flex-end;
+		justify-content: center;
+		gap: 0;
+	}
+
+	.record-actions > view {
+		margin-right: 0;
+		margin-bottom: 8px;
+	}
+
+	.record-actions > view:last-child {
+		margin-bottom: 0;
+	}
+
+	.filters-count {
+		text-align: right;
+	}
+}
+
+:global(.layout-wide) .history-header {
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+}
+
+:global(.layout-wide) .header-actions {
+	width: auto;
+	justify-content: flex-end;
+}
+
+:global(.layout-wide) .record-card__header {
+	flex-direction: row;
+	justify-content: space-between;
+}
+
+:global(.layout-wide) .record-card__header > view {
+	margin-right: 16px;
+}
+
+:global(.layout-wide) .record-actions {
+	flex-direction: column;
+	align-items: flex-end;
+	justify-content: center;
+	gap: 0;
+}
+
+:global(.layout-wide) .record-actions > view {
+	margin-right: 0;
+	margin-bottom: 8px;
+}
+
+:global(.layout-wide) .record-actions > view:last-child {
+	margin-bottom: 0;
+}
+
+:global(.layout-wide) .filters-count {
+	text-align: right;
+}
+</style>
