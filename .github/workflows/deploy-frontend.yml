@@ -9,10 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  contents: write
 
 jobs:
   build-and-deploy:
@@ -20,9 +17,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: 24
+          node-version: 22
           cache: npm
           cache-dependency-path: frontend-only/package-lock.json
 
