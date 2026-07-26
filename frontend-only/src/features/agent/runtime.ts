@@ -57,7 +57,7 @@ export function normalizeError(value: unknown): string {
 		stripped.toLowerCase().includes('generativelanguage.googleapis.com') ||
 		(stripped.toLowerCase().includes('request to') && stripped.toLowerCase().includes('failed'))
 	) {
-		return '内网模型连接异常，请检查后台 LLM 配置';
+		return '模型连接异常，请检查 AI API 配置';
 	}
 	return stripped;
 }

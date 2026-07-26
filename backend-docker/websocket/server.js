@@ -28,6 +28,19 @@ let cachedDb = null;
 const JWT_SECRET = config.JWT_SECRET;
 const wsRateMap = new Map();
 
+// 定期清理已过期的限流记录，避免 Map 无限增长
+const wsRateCleanupTimer = setInterval(() => {
+	const now = Date.now();
+	for (const [key, rec] of wsRateMap.entries()) {
+		if (now > rec.resetAt) {
+			wsRateMap.delete(key);
+		}
+	}
+}, 5 * 60 * 1000);
+if (typeof wsRateCleanupTimer.unref === 'function') {
+	wsRateCleanupTimer.unref();
+}
+
 function resolveWsLlmErrorCode({ statusCode, rawMessage, rawCode, fallbackCode } = {}) {
 	const normalizedStatus = normalizeStatusCode(statusCode || 500);
 	const codeText = typeof rawCode === 'string' ? rawCode : '';

@@ -56,7 +56,17 @@ function writeStreamError(res, { statusCode = 502, rawMessage, rawCode } = {}) {
 	res.end();
 }
 
-async function pipeLLMStream(res, cfg, llmRes) {
+async function pipeLLMStream(res, cfg, llmRes, onComplete) {
+	const notifyComplete = () => {
+		if (typeof onComplete === 'function') {
+			try {
+				onComplete();
+			} catch (err) {
+				console.error('LLM stream onComplete failed:', sanitizeErrorForLog(err));
+			}
+		}
+	};
+
 	if (!llmRes.ok || !llmRes.body) {
 		const text = await llmRes.text().catch(() => '');
 		writeStreamError(res, {
@@ -121,6 +131,7 @@ async function pipeLLMStream(res, cfg, llmRes) {
 		llmRes.body.on('end', () => {
 			res.write('data: [DONE]\n\n');
 			res.end();
+			notifyComplete();
 		});
 
 		llmRes.body.on('error', (err) => {
@@ -179,6 +190,7 @@ async function pipeLLMStream(res, cfg, llmRes) {
 
 			res.write('data: [DONE]\n\n');
 			res.end();
+			notifyComplete();
 		});
 
 		llmRes.body.on('error', (err) => {
@@ -196,6 +208,7 @@ async function pipeLLMStream(res, cfg, llmRes) {
 	});
 	llmRes.body.on('end', () => {
 		res.end();
+		notifyComplete();
 	});
 	llmRes.body.on('error', (err) => {
 		writeStreamError(res, {
@@ -243,7 +256,11 @@ async function handleLLMRequest(req, res, { scope = 'chat', requireQuota = false
 				body: JSON.stringify(payload),
 			});
 
-			await pipeLLMStream(res, cfg, llmRes);
+			await pipeLLMStream(res, cfg, llmRes, () => {
+				if (requireQuota && userId) {
+					recordLLMUsage(userId, 0);
+				}
+			});
 			return;
 		}
 
@@ -312,8 +329,8 @@ router.post('/chat', llmLimiter, authMiddleware, apiSignatureMiddleware(), async
 	return handleLLMRequest(req, res, { scope: 'chat', requireQuota: true });
 });
 
-router.post('/agent', llmLimiter, async (req, res) => {
-	return handleLLMRequest(req, res, { scope: 'agent', requireQuota: false });
+router.post('/agent', llmLimiter, authMiddleware, apiSignatureMiddleware(), async (req, res) => {
+	return handleLLMRequest(req, res, { scope: 'agent', requireQuota: true });
 });
 
 module.exports = router;

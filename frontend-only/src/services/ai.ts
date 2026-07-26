@@ -20,63 +20,59 @@ export async function callAi(
 		'Content-Type': 'application/json',
 	};
 
-	if (apiKey) {
-		headers['Authorization'] = `Bearer ${apiKey}`;
-	}
-
 	let url = apiUrl;
 	let body: any;
 	const useStream = !!(callbacks?.onChunk || callbacks?.onThinking);
+	// Gemini 原生端点（.../models/xxx:generateContent）与 OpenAI 兼容端点
+	// （.../openai/chat/completions）的请求格式完全不同，按 URL 区分。
+	const isGeminiNative = provider === 'gemini' && !url.includes('/chat/completions');
+	const systemText = messages
+		.filter((m) => m.role === 'system')
+		.map((m) => m.content)
+		.join('\n\n');
 
-	switch (provider) {
-		case 'openai':
-		case 'custom':
-			body = {
-				model,
-				messages,
-				stream: useStream,
-			};
-			break;
-		case 'anthropic':
-			body = {
-				model,
-				messages: messages.map((m) => ({
+	if (provider === 'anthropic') {
+		// Anthropic 使用 x-api-key 而非 Bearer；浏览器直连必须带 CORS 豁免头
+		if (apiKey) headers['x-api-key'] = apiKey;
+		headers['anthropic-version'] = '2023-06-01';
+		headers['anthropic-dangerous-direct-browser-access'] = 'true';
+		body = {
+			model,
+			messages: messages
+				.filter((m) => m.role !== 'system')
+				.map((m) => ({
 					role: m.role === 'assistant' ? 'assistant' : 'user',
 					content: m.content,
 				})),
-				max_tokens: 4096,
-				stream: useStream,
-			};
-			if (useStream) {
-				body.thinking = { type: 'enabled', budget_tokens: 10000 };
-			}
-			headers['anthropic-version'] = '2023-06-01';
-			break;
-		case 'gemini':
-			body = {
-				contents: messages.map((m) => ({
+			max_tokens: 4096,
+			stream: useStream,
+		};
+		if (systemText) {
+			body.system = systemText;
+		}
+	} else if (isGeminiNative) {
+		// 密钥放请求头，避免出现在 URL / 浏览器历史里
+		if (apiKey) headers['x-goog-api-key'] = apiKey;
+		body = {
+			contents: messages
+				.filter((m) => m.role !== 'system')
+				.map((m) => ({
 					role: m.role === 'assistant' ? 'model' : 'user',
 					parts: [{ text: m.content }],
 				})),
-			};
-			if (url.includes('generativelanguage.googleapis.com') && !url.includes('key=')) {
-				url = `${url}?key=${apiKey}`;
-				delete headers['Authorization'];
-			}
-			break;
-		case 'ollama':
-			body = {
-				model,
-				messages,
-				stream: useStream,
-			};
-			break;
-		default:
-			body = {
-				model,
-				messages,
-				stream: useStream,
-			};
+		};
+		if (systemText) {
+			body.systemInstruction = { parts: [{ text: systemText }] };
+		}
+		url = resolveGeminiNativeUrl(url, model, useStream);
+	} else {
+		// OpenAI / Gemini 兼容模式 / qwen / deepseek / kimi / zhipu / ollama / custom
+		if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+		body = {
+			model,
+			messages,
+			stream: useStream,
+		};
 	}
 
 	if (useStream) {
@@ -85,6 +81,11 @@ export async function callAi(
 		} catch (streamErr: any) {
 			const msg = String(streamErr?.message || '').toLowerCase();
 			if (msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('err_aborted') || msg.includes('cors') || streamErr instanceof TypeError) {
+				if (isGeminiNative) {
+					// 原生 Gemini 的流式/非流式是不同端点，请求体本身不带 stream 字段
+					const fallbackUrl = resolveGeminiNativeUrl(apiUrl, model, false);
+					return await nonStreamRequest(fallbackUrl, headers, body, provider);
+				}
 				const nonStreamBody = { ...body, stream: false };
 				return await nonStreamRequest(url, headers, nonStreamBody, provider);
 			}
@@ -93,6 +94,17 @@ export async function callAi(
 	}
 
 	return nonStreamRequest(url, headers, body, provider);
+}
+
+function resolveGeminiNativeUrl(baseUrl: string, model: string, stream: boolean): string {
+	const endpoint = stream ? 'streamGenerateContent' : 'generateContent';
+	let url = String(baseUrl || '').trim().replace(/[?#].*$/, '');
+	if (/:(streamGenerateContent|generateContent)$/.test(url)) {
+		url = url.replace(/:(streamGenerateContent|generateContent)$/, `:${endpoint}`);
+	} else {
+		url = `${url.replace(/\/+$/, '')}/models/${model}:${endpoint}`;
+	}
+	return stream ? `${url}?alt=sse` : url;
 }
 
 async function nonStreamRequest(
@@ -116,7 +128,11 @@ async function nonStreamRequest(
 						if (provider === 'anthropic') {
 							content = data?.content?.[0]?.text || '';
 						} else if (provider === 'gemini') {
-							content = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+							// 兼容原生（candidates）和 OpenAI 兼容（choices）两种响应
+							content =
+								data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+								data?.choices?.[0]?.message?.content ||
+								'';
 						} else {
 							content = data?.choices?.[0]?.message?.content || '';
 						}
@@ -151,7 +167,11 @@ function extractStreamChunk(
 			}
 		}
 	} else if (provider === 'gemini') {
-		content = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+		// 原生 SSE 走 candidates；OpenAI 兼容端点走 choices.delta
+		content =
+			data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+			data?.choices?.[0]?.delta?.content ||
+			'';
 	} else {
 		thinking = data?.choices?.[0]?.delta?.reasoning_content || '';
 		content = data?.choices?.[0]?.delta?.content || '';

@@ -95,10 +95,19 @@ function securityHeaders(req, res, next) {
 	next();
 }
 
+// Free-form natural language endpoints: chat text legitimately contains
+// words like SELECT/UPDATE or "--", and all DB access is parameterized,
+// so pattern-matching the body only causes false positives here.
+const INPUT_VALIDATION_SKIP_PREFIXES = ['/api/llm/'];
+
 /**
  * Validate input and block obvious injection payloads.
  */
 function inputValidation(req, res, next) {
+	if (INPUT_VALIDATION_SKIP_PREFIXES.some((prefix) => req.path.startsWith(prefix))) {
+		return next();
+	}
+
 	if (req.body && typeof req.body === 'object') {
 		const bodyStr = JSON.stringify(req.body);
 

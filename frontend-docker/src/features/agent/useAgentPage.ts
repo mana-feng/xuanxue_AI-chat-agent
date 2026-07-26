@@ -300,6 +300,7 @@ export function useAgentPage() {
 		try {
 			const res = await request('/api/llm/agent', {
 				method: 'POST',
+				needAuth: true,
 				data: {
 					stream: false,
 					messages: buildMessages(),

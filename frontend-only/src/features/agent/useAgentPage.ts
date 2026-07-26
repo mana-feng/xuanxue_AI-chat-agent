@@ -320,7 +320,7 @@ export function useAgentPage() {
 			}
 
 			let rawReply = '';
-			await callAi(buildMessages(), {
+			const returnedReply = await callAi(buildMessages(), {
 				onThinking: (thinking: string) => {
 					appendToMessage(waitingId, '', thinking);
 				},
@@ -329,6 +329,11 @@ export function useAgentPage() {
 					appendToMessage(waitingId, chunk);
 				},
 			});
+
+			// 流式失败回退到非流式时不会触发 onChunk，改用返回值
+			if (!rawReply.trim()) {
+				rawReply = String(returnedReply || '');
+			}
 
 			if (!String(rawReply).trim()) {
 				throw new Error('模型未返回可显示内容');

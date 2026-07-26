@@ -85,9 +85,9 @@ async function initDatabase() {
 					const [rows] = await pool.execute(sql, params || []);
 					return rows;
 				} catch (err) {
+					// 不打印参数值：可能包含密码哈希、token 等敏感数据
 					console.error('数据库查询错误:', err.message);
 					console.error('SQL:', sql);
-					console.error('参数:', params);
 					throw err;
 				}
 			},
@@ -98,7 +98,6 @@ async function initDatabase() {
 				} catch (err) {
 					console.error('数据库执行错误:', err.message);
 					console.error('SQL:', sql);
-					console.error('参数:', params);
 					throw err;
 				}
 			},
@@ -109,7 +108,6 @@ async function initDatabase() {
 				} catch (err) {
 					console.error('数据库查询错误:', err.message);
 					console.error('SQL:', sql);
-					console.error('参数:', params);
 					throw err;
 				}
 			},

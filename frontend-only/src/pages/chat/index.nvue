@@ -45,7 +45,6 @@ const panelRef = ref<any>(null);
 const chatContext = ref<ChatContext>('bazi');
 const shouldDisableRestore = ref(false);
 const archiveBusy = ref(false);
-let firstSendDone = false;
 
 const userStore = useUserStore();
 const baziStore = useBaziStore();
@@ -141,15 +140,13 @@ function buildMessages(inputText: string): ChatMessage[] {
 	const text = inputText.trim();
 	if (!text) return messages;
 
-	if (!firstSendDone) {
-		const systemPrompt = buildContextSystemPrompt();
-		if (systemPrompt) {
-			messages.push({
-				role: 'system',
-				content: systemPrompt,
-			});
-		}
-		firstSendDone = true;
+	// LLM API 是无状态的，每次请求都必须带上排盘上下文
+	const systemPrompt = buildContextSystemPrompt();
+	if (systemPrompt) {
+		messages.push({
+			role: 'system',
+			content: systemPrompt,
+		});
 	}
 
 	const historyMessages = panelRef.value?.getMessages?.() || [];
@@ -192,17 +189,23 @@ async function sendToLLM(text: string) {
 			throw new Error('请先在设置页面配置 AI API');
 		}
 
-		let fullReply = '';
-		await callAi(messages, {
+		let streamedReply = '';
+		const returnedReply = await callAi(messages, {
 			onThinking: (thinking: string) => {
 				panel.appendThinking?.(thinking);
 			},
 			onChunk: (chunk: string) => {
-				fullReply += chunk;
+				streamedReply += chunk;
 				panel.appendAssistant(chunk, 'stream');
 			},
 		});
 
+		// 流式失败回退到非流式时不会触发 onChunk，此时用返回值补上界面内容
+		if (!streamedReply.trim() && String(returnedReply || '').trim()) {
+			panel.appendAssistant(returnedReply, 'stream');
+		}
+
+		const fullReply = streamedReply.trim() ? streamedReply : String(returnedReply || '');
 		if (!fullReply.trim()) {
 			throw new Error('回复为空，请检查 API 配置');
 		}

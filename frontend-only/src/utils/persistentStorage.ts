@@ -47,9 +47,8 @@ export function removePersistentItem(key: string) {
 	uni.removeStorageSync(key);
 }
 
-export const setSecureItem = setPersistentItem;
-export const getSecureItem = getPersistentItem;
-export const removeSecureItem = removePersistentItem;
+// 注意：以上存储仅做 base64 编码，并非加密。历史别名 setSecureItem/getSecureItem
+// 因命名有误导性已移除，如需持久化请直接使用 setPersistentItem/getPersistentItem。
 
 type IDBValue = any;
 

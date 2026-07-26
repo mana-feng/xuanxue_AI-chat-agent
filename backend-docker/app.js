@@ -51,6 +51,22 @@ function isLocalDevOrigin(origin) {
 	}
 }
 
+// 精确匹配主机名后缀，避免 evil-servicewechat.com / servicewechat.com.evil.com 之类绕过
+function isWechatOrigin(origin) {
+	if (!origin || typeof origin !== 'string') return false;
+	try {
+		const url = new URL(origin);
+		if (!['http:', 'https:'].includes(url.protocol)) return false;
+		const host = (url.hostname || '').toLowerCase();
+		const allowedSuffixes = ['servicewechat.com', 'weixin.qq.com'];
+		return allowedSuffixes.some(
+			(suffix) => host === suffix || host.endsWith(`.${suffix}`)
+		);
+	} catch (e) {
+		return false;
+	}
+}
+
 function resolveTrustProxySetting(rawValue, isProd) {
 	if (rawValue === undefined || rawValue === null || rawValue === '') {
 		return isProd ? 1 : false;
@@ -95,8 +111,8 @@ app.use(
 			}
 
 			// Wechat mini program origins
-			if (origin.includes('servicewechat.com') || origin.includes('weixin.qq.com')) {
-				return callback(null, true);
+			if (isWechatOrigin(origin)) {
+				return callback(null, origin);
 			}
 
 			if (CORS_ORIGINS.length > 0) {

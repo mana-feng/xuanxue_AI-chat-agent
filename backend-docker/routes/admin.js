@@ -1,5 +1,6 @@
 /**
- * 绠＄悊鍛樿矾鐢? * 娉ㄦ剰锛氭墍鏈夌鐞嗗憳鎿嶄綔閮芥槸鏁忔劅鎿嶄綔锛屽缓璁坊鍔燗PI绛惧悕楠岃瘉
+ * 管理员路由
+ * 注意：所有管理员操作都是敏感操作，建议添加API签名验证
  */
 const express = require('express');
 const router = express.Router();
@@ -63,7 +64,7 @@ function parseAdminRawPayload(rawPayload) {
 }
 
 /**
- * 鍏憡绠＄悊
+ * 公告管理
  */
 router.get('/announcements', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	try {
@@ -73,7 +74,7 @@ router.get('/announcements', adminMiddleware, apiSignatureMiddleware(), async (r
 		res.json(rows || []);
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鑾峰彇鍏憡鍒楄〃澶辫触' });
+		return res.status(500).json({ error: '获取公告列表失败' });
 	}
 });
 
@@ -90,14 +91,14 @@ router.post('/announcements', adminMiddleware, apiSignatureMiddleware(), async (
 		res.json({ success: true, id: result.lastID });
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鍒涘缓鍏憡澶辫触' });
+		return res.status(500).json({ error: '创建公告失败' });
 	}
 });
 
 router.put('/announcements/:id', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	const id = parseInt(req.params.id, 10);
 	if (!id) {
-		return res.status(400).json({ error: '鏃犳晥鐨勫叕鍛奍D' });
+		return res.status(400).json({ error: '无效的公告ID' });
 	}
 	const { title, content, expiresAt } = req.body || {};
 	if (!title || !content) {
@@ -111,26 +112,26 @@ router.put('/announcements/:id', adminMiddleware, apiSignatureMiddleware(), asyn
 		res.json({ success: true });
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鏇存柊鍏憡澶辫触' });
+		return res.status(500).json({ error: '更新公告失败' });
 	}
 });
 
 router.delete('/announcements/:id', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	const id = parseInt(req.params.id, 10);
 	if (!id) {
-		return res.status(400).json({ error: '鏃犳晥鐨勫叕鍛奍D' });
+		return res.status(400).json({ error: '无效的公告ID' });
 	}
 	try {
 		await db.run('DELETE FROM announcements WHERE id = ?', [id]);
 		res.json({ success: true });
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鍒犻櫎鍏憡澶辫触' });
+		return res.status(500).json({ error: '删除公告失败' });
 	}
 });
 
 /**
- * 鑾峰彇閭閰嶇疆
+ * 获取邮箱配置
  */
 router.get('/email-config', adminMiddleware, async (req, res) => {
 	try {
@@ -146,18 +147,18 @@ router.get('/email-config', adminMiddleware, async (req, res) => {
 		});
 	} catch (e) {
 		console.error('Admin route error');
-		res.status(500).json({ error: '鑾峰彇閭欢閰嶇疆澶辫触' });
+		res.status(500).json({ error: '获取邮件配置失败' });
 	}
 });
 
 /**
- * 鏇存柊閭閰嶇疆
+ * 更新邮箱配置
  */
 router.put('/email-config', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	const { host, port, user, pass, from, fromName } = req.body || {};
 
 	try {
-		// 娓呯悊鍜岄獙璇佽緭鍏?
+		// 清理和验证输入
 		const sanitizedHost = SecurityUtils.sanitizeString(String(host || ''), {
 			maxLength: 200,
 		}).trim();
@@ -175,21 +176,21 @@ router.put('/email-config', adminMiddleware, apiSignatureMiddleware(), async (re
 			: '';
 		const portNum = Number(port);
 
-		// 楠岃瘉蹇呭～椤?
+		// 验证必填项
 		if (!sanitizedHost) {
-			return res.status(400).json({ error: 'SMTP 鏈嶅姟鍣ㄥ湴鍧€涓嶈兘涓虹┖' });
+			return res.status(400).json({ error: 'SMTP 服务器地址不能为空' });
 		}
 		if (!sanitizedUser) {
-			return res.status(400).json({ error: '閭璐﹀彿涓嶈兘涓虹┖' });
+			return res.status(400).json({ error: '邮箱账号不能为空' });
 		}
 		if (Number.isNaN(portNum) || portNum <= 0 || portNum > 65535) {
 			return res.status(400).json({ error: '请求失败' });
 		}
 		if (!sanitizedFrom || !SecurityUtils.isValidEmail(sanitizedFrom)) {
-			return res.status(400).json({ error: '鍙戜欢浜洪偖绠辨牸寮忎笉姝ｇ‘' });
+			return res.status(400).json({ error: '发件人邮箱格式不正确' });
 		}
 
-		// 瀵嗙爜澶勭悊锛氬鏋滄彁渚涘垯鏇存柊锛屽惁鍒欐鏌ユ槸鍚﹀凡鏈夊瘑鐮?
+		// 密码处理：如果提供则更新，否则检查是否已有密码
 		let finalPass = null;
 		if (pass && String(pass).trim()) {
 			finalPass = String(pass).trim();
@@ -201,7 +202,7 @@ router.put('/email-config', adminMiddleware, apiSignatureMiddleware(), async (re
 			finalPass = existingPass;
 		}
 
-		// 浣跨敤鏂扮殑鎵归噺璁剧疆鏂规硶
+		// 使用新的批量设置方法
 		await ConfigService.setEmailConfig(db, {
 			host: sanitizedHost,
 			port: portNum,
@@ -211,18 +212,18 @@ router.put('/email-config', adminMiddleware, apiSignatureMiddleware(), async (re
 			fromName: sanitizedFromName,
 		});
 
-		// 閲嶆柊鍔犺浇閰嶇疆
+		// 重新加载配置
 		await reloadEmailConfig();
 
 		res.json({ success: true, message: '操作成功' });
 	} catch (e) {
 		console.error('Admin route error');
-		res.status(500).json({ error: '鏇存柊閭欢閰嶇疆澶辫触' });
+		res.status(500).json({ error: '更新邮件配置失败' });
 	}
 });
 
 /**
- * 鑾峰彇閭閰嶇疆鍘嗗彶
+ * 获取邮箱配置历史
  */
 router.get('/email-configs', adminMiddleware, async (req, res) => {
 	try {
@@ -230,51 +231,49 @@ router.get('/email-configs', adminMiddleware, async (req, res) => {
 		res.json({ success: true, data: list });
 	} catch (e) {
 		console.error('Admin route error');
-		res.status(500).json({ error: '鑾峰彇閭閰嶇疆鍘嗗彶澶辫触' });
+		res.status(500).json({ error: '获取邮箱配置历史失败' });
 	}
 });
 
 /**
- * 鍒囨崲婵€娲荤殑閭閰嶇疆
+ * 切换激活的邮箱配置
  */
 router.post('/email-configs/:id/activate', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	try {
 		const configId = parseInt(req.params.id, 10);
 		if (!configId || isNaN(configId)) {
-			return res.status(400).json({ error: '鏃犳晥鐨勯厤缃甀D' });
+			return res.status(400).json({ error: '无效的配置ID' });
 		}
 		await ConfigService.activateEmailConfig(db, configId);
 		await reloadEmailConfig();
 		res.json({ success: true, message: '操作成功' });
 	} catch (e) {
 		console.error('Admin route error');
-		const msg = '鍒囨崲澶辫触';
-		const status = msg.includes('') ? 404 : 400;
-		res.status(status).json({ error: msg });
+		const status = /不存在|not found/i.test(String(e?.message || '')) ? 404 : 400;
+		res.status(status).json({ error: '切换失败' });
 	}
 });
 
 /**
- * 鍒犻櫎閭閰嶇疆鍘嗗彶
+ * 删除邮箱配置历史
  */
 router.delete('/email-configs/:id', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	try {
 		const configId = parseInt(req.params.id, 10);
 		if (!configId || isNaN(configId)) {
-			return res.status(400).json({ error: '鏃犳晥鐨勯厤缃甀D' });
+			return res.status(400).json({ error: '无效的配置ID' });
 		}
 		await ConfigService.deleteEmailConfig(db, configId);
 		res.json({ success: true, message: '操作成功' });
 	} catch (e) {
 		console.error('Admin route error');
-		const msg = '鍒犻櫎澶辫触';
-		const status = msg.includes('') ? 404 : 400;
-		res.status(status).json({ error: msg });
+		const status = /不存在|not found/i.test(String(e?.message || '')) ? 404 : 400;
+		res.status(status).json({ error: '删除失败' });
 	}
 });
 
 /**
- * 鑾峰彇缁熻浠ｇ爜
+ * 获取统计代码
  */
 router.get('/analytics-snippet', adminMiddleware, async (req, res) => {
 	try {
@@ -282,12 +281,12 @@ router.get('/analytics-snippet', adminMiddleware, async (req, res) => {
 		res.json({ success: true, data: { snippet } });
 	} catch (e) {
 		console.error('Admin route error');
-		res.status(500).json({ error: '鑾峰彇缁熻浠ｇ爜澶辫触' });
+		res.status(500).json({ error: '获取统计代码失败' });
 	}
 });
 
 /**
- * 鏇存柊缁熻浠ｇ爜
+ * 更新统计代码
  */
 router.put('/analytics-snippet', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	const { snippet } = req.body || {};
@@ -299,17 +298,17 @@ router.put('/analytics-snippet', adminMiddleware, apiSignatureMiddleware(), asyn
 		res.json({ success: true });
 	} catch (e) {
 		console.error('Admin route error');
-		res.status(500).json({ error: '鏇存柊缁熻浠ｇ爜澶辫触' });
+		res.status(500).json({ error: '更新统计代码失败' });
 	}
 });
 
 /**
- * 鑾峰彇 LLM 閰嶇疆
+ * 获取 LLM 配置
  */
 router.get('/llm-config', adminMiddleware, async (req, res) => {
 	try {
 		const cfg = await ConfigService.getLLMConfig(db);
-		// 灏濊瘯浠庡巻鍙茶褰曚腑鑾峰彇褰撳墠婵€娲荤殑妯″瀷鍚嶇О
+		// 尝试从历史记录中获取当前激活的模型名称
 		try {
 			const models = await ConfigService.getLLMModels(db);
 			const activeModel = models.find(m => m.is_active === 1);
@@ -317,17 +316,17 @@ router.get('/llm-config', adminMiddleware, async (req, res) => {
 				cfg.name = activeModel.name;
 			}
 		} catch (e) {
-			console.warn('鑾峰彇妯″瀷鍚嶇О澶辫触:', e.message);
+			console.warn('获取模型名称失败:', e.message);
 		}
 		res.json(cfg);
 	} catch (e) {
 		console.error('Admin route error');
-		res.status(500).json({ error: '鑾峰彇閰嶇疆澶辫触' });
+		res.status(500).json({ error: '获取配置失败' });
 	}
 });
 
 /**
- * 淇濆瓨 LLM 閰嶇疆
+ * 保存 LLM 配置
  */
 router.put('/llm-config', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	const { provider, baseUrl, apiKey, model, extra, name } = req.body || {};
@@ -343,58 +342,59 @@ router.put('/llm-config', adminMiddleware, apiSignatureMiddleware(), async (req,
 		res.json({ success: true });
 	} catch (e) {
 		console.error('Admin route error');
-		res.status(400).json({ error: '淇濆瓨澶辫触' });
+		res.status(400).json({ error: '保存失败' });
 	}
 });
 
 /**
- * 鑾峰彇鎵€鏈夊巻鍙叉ā鍨嬮厤缃? */
+ * 获取所有历史模型配置
+ */
 router.get('/llm-models', adminMiddleware, async (req, res) => {
 	try {
 		const models = await ConfigService.getLLMModels(db);
 		res.json({ success: true, data: models });
 	} catch (e) {
 		console.error('Admin route error');
-		res.status(500).json({ error: '鑾峰彇妯″瀷鍘嗗彶澶辫触' });
+		res.status(500).json({ error: '获取模型历史失败' });
 	}
 });
 
 /**
- * 鍒囨崲婵€娲荤殑妯″瀷閰嶇疆
+ * 切换激活的模型配置
  */
 router.post('/llm-models/:id/activate', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	try {
 		const modelId = parseInt(req.params.id, 10);
 		if (!modelId || isNaN(modelId)) {
-			return res.status(400).json({ error: '鏃犳晥鐨勬ā鍨?ID' });
+			return res.status(400).json({ error: '无效的模型 ID' });
 		}
 		await ConfigService.activateLLMModel(db, modelId);
 		res.json({ success: true, message: '操作成功' });
 	} catch (e) {
 		console.error('Admin route error');
-		res.status(500).json({ error: '鍒囨崲妯″瀷澶辫触' });
+		res.status(500).json({ error: '切换模型失败' });
 	}
 });
 
 /**
- * 鍒犻櫎妯″瀷閰嶇疆
+ * 删除模型配置
  */
 router.delete('/llm-models/:id', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	try {
 		const modelId = parseInt(req.params.id, 10);
 		if (!modelId || isNaN(modelId)) {
-			return res.status(400).json({ error: '鏃犳晥鐨勬ā鍨?ID' });
+			return res.status(400).json({ error: '无效的模型 ID' });
 		}
 		await ConfigService.deleteLLMModel(db, modelId);
 		res.json({ success: true, message: '操作成功' });
 	} catch (e) {
 		console.error('Admin route error');
-		res.status(500).json({ error: '鍒犻櫎妯″瀷澶辫触' });
+		res.status(500).json({ error: '删除模型失败' });
 	}
 });
 
 /**
- * 鑾峰彇棰濆害閲嶇疆閰嶇疆
+ * 获取额度重置配置
  */
 router.get('/quota-reset-config', adminMiddleware, async (req, res) => {
 	try {
@@ -402,12 +402,12 @@ router.get('/quota-reset-config', adminMiddleware, async (req, res) => {
 		res.json(config);
 	} catch (e) {
 		console.error('Admin route error');
-		res.status(500).json({ error: '鑾峰彇閰嶇疆澶辫触' });
+		res.status(500).json({ error: '获取配置失败' });
 	}
 });
 
 /**
- * 淇濆瓨棰濆害閲嶇疆閰嶇疆
+ * 保存额度重置配置
  */
 router.put('/quota-reset-config', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	try {
@@ -419,18 +419,18 @@ router.put('/quota-reset-config', adminMiddleware, apiSignatureMiddleware(), asy
 			target
 		});
 		
-		// 閲嶆柊鍔犺浇璋冨害鍣?
+		// 重新加载调度器
 		await reloadScheduler();
 		
 		res.json({ success: true });
 	} catch (e) {
 		console.error('Admin route error');
-		res.status(400).json({ error: '淇濆瓨澶辫触' });
+		res.status(400).json({ error: '保存失败' });
 	}
 });
 
 /**
- * 鑾峰彇缁熻鏁版嵁
+ * 获取统计数据
  */
 router.get('/stats', adminMiddleware, async (req, res) => {
 	const queries = {
@@ -458,12 +458,12 @@ router.get('/stats', adminMiddleware, async (req, res) => {
 		res.json(results);
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鑾峰彇缁熻鏁版嵁澶辫触' });
+		return res.status(500).json({ error: '获取统计数据失败' });
 	}
 });
 
 /**
- * 鑾峰彇璁垮織缁熻℃暟鎹
+ * 获取访客统计数据
  */
 router.get('/stats/analytics', adminMiddleware, async (req, res) => {
 	try {
@@ -706,7 +706,7 @@ router.get('/stats/analytics', adminMiddleware, async (req, res) => {
 });
 
 /**
- * 鑾峰彇鐢ㄦ埛鍒楄〃
+ * 获取用户列表
  */
 router.get('/users', adminMiddleware, async (req, res) => {
 	const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -754,12 +754,12 @@ router.get('/users', adminMiddleware, async (req, res) => {
 		});
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鏌ヨ澶辫触' });
+		return res.status(500).json({ error: '查询失败' });
 	}
 });
 
 /**
- * 鑾峰彇鐢ㄦ埛AI棰濆害鍒楄〃
+ * 获取用户AI额度列表
  */
 router.get('/users-quotas', adminMiddleware, async (req, res) => {
 	const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -805,17 +805,17 @@ router.get('/users-quotas', adminMiddleware, async (req, res) => {
 		});
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鏌ヨ澶辫触' });
+		return res.status(500).json({ error: '查询失败' });
 	}
 });
 
 /**
- * 鑾峰彇鎸囧畾鐢ㄦ埛AI棰濆害
+ * 获取指定用户AI额度
  */
 router.get('/users/:id/quota', adminMiddleware, async (req, res) => {
 	const id = SecurityUtils.validateId(req.params.id);
 	if (!id) {
-		return res.status(400).json({ error: '鏃犳晥鐨勭敤鎴稩D' });
+		return res.status(400).json({ error: '无效的用户ID' });
 	}
 
 	try {
@@ -835,17 +835,17 @@ router.get('/users/:id/quota', adminMiddleware, async (req, res) => {
 		});
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鏌ヨ澶辫触' });
+		return res.status(500).json({ error: '查询失败' });
 	}
 });
 
 /**
- * 璁剧疆鎸囧畾鐢ㄦ埛AI棰濆害
+ * 设置指定用户AI额度
  */
 router.put('/users/:id/quota', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	const id = SecurityUtils.validateId(req.params.id);
 	if (!id) {
-		return res.status(400).json({ error: '鏃犳晥鐨勭敤鎴稩D' });
+		return res.status(400).json({ error: '无效的用户ID' });
 	}
 
 	const { remainingCount } = req.body || {};
@@ -856,11 +856,11 @@ router.put('/users/:id/quota', adminMiddleware, apiSignatureMiddleware(), async 
 			return res.status(404).json({ error: '请求失败' });
 		}
 
-		// 妫€鏌ユ槸鍚﹀凡瀛樺湪棰濆害璁板綍
+		// 检查是否已存在额度记录
 		const existing = await db.get('SELECT user_id FROM user_llm_quotas WHERE user_id = ?', [id]);
 
 		if (existing) {
-			// 鏇存柊鐜版湁璁板綍
+			// 更新现有记录
 			const updateFields = [];
 			const updateValues = [];
 
@@ -880,7 +880,7 @@ router.put('/users/:id/quota', adminMiddleware, apiSignatureMiddleware(), async 
 				updateValues
 			);
 		} else {
-			// 鍒涘缓鏂拌褰?
+			// 创建新记录
 			await db.run(
 				`INSERT INTO user_llm_quotas 
 				(user_id, per_minute_limit, remaining_daily_count, remaining_token, updated_at) 
@@ -892,24 +892,24 @@ router.put('/users/:id/quota', adminMiddleware, apiSignatureMiddleware(), async 
 			);
 		}
 
-		res.json({ success: true, message: '棰濆害鏇存柊鎴愬姛' });
+		res.json({ success: true, message: '额度更新成功' });
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鏇存柊澶辫触' });
+		return res.status(500).json({ error: '更新失败' });
 	}
 });
 
 /**
- * 鍒涘缓鐢ㄦ埛
+ * 创建用户
  */
 router.post('/users', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	const { email, username, password, role = 'user' } = req.body || {};
 
 	if (!email || !password) {
-		return res.status(400).json({ error: '缂哄皯 email 鎴?password' });
+		return res.status(400).json({ error: '缺少 email 或 password' });
 	}
 
-	// 浣跨敤瀹夊叏宸ュ叿楠岃瘉鍜屾竻鐞嗚緭鍏?
+	// 使用安全工具验证和清理输入
 	const trimmedEmail = SecurityUtils.sanitizeString(String(email), {
 		maxLength: 255,
 	}).toLowerCase();
@@ -918,7 +918,7 @@ router.post('/users', adminMiddleware, apiSignatureMiddleware(), async (req, res
 		return res.status(400).json({ error: '请求失败' });
 	}
 
-	// 楠岃瘉鐢ㄦ埛鍚嶏紙濡傛灉鎻愪緵锛?
+	// 验证用户名（如果提供）
 	let trimmedUsername = null;
 	if (username) {
 		const usernameValidation = SecurityUtils.validateUsername(username);
@@ -928,18 +928,18 @@ router.post('/users', adminMiddleware, apiSignatureMiddleware(), async (req, res
 		trimmedUsername = usernameValidation.sanitized;
 	}
 
-	// 楠岃瘉瀵嗙爜
+	// 验证密码
 	const passwordValidation = SecurityUtils.validatePassword(password);
 	if (!passwordValidation.valid) {
 		return res.status(400).json({ error: passwordValidation.error });
 	}
 
-	// 楠岃瘉瑙掕壊
+	// 验证角色
 	if (role !== 'user' && role !== 'admin') {
-		return res.status(400).json({ error: '鏃犳晥鐨勮鑹诧紝蹇呴』鏄?user 鎴?admin' });
+		return res.status(400).json({ error: '无效的角色，必须是 user 或 admin' });
 	}
 
-	// 妫€鏌ラ偖绠辨垨鐢ㄦ埛鍚嶆槸鍚﹀凡瀛樺湪
+	// 检查邮箱或用户名是否已存在
 	const checkQuery = trimmedUsername
 		? 'SELECT id FROM users WHERE email = ? OR username = ?'
 		: 'SELECT id FROM users WHERE email = ?';
@@ -974,17 +974,17 @@ router.post('/users', adminMiddleware, apiSignatureMiddleware(), async (req, res
 		});
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鍒涘缓澶辫触' });
+		return res.status(500).json({ error: '创建失败' });
 	}
 });
 
 /**
- * 鑾峰彇鐢ㄦ埛璇︽儏
+ * 获取用户详情
  */
 router.get('/users/:id', adminMiddleware, async (req, res) => {
 	const id = SecurityUtils.validateId(req.params.id);
 	if (!id) {
-		return res.status(400).json({ error: '鏃犳晥鐨勭敤鎴稩D' });
+		return res.status(400).json({ error: '无效的用户ID' });
 	}
 
 	try {
@@ -1015,39 +1015,39 @@ router.get('/users/:id', adminMiddleware, async (req, res) => {
 		}
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鏌ヨ澶辫触' });
+		return res.status(500).json({ error: '查询失败' });
 	}
 });
 
 /**
- * 鏇存柊鐢ㄦ埛淇℃伅
+ * 更新用户信息
  */
 router.put('/users/:id', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	const id = SecurityUtils.validateId(req.params.id);
 	const { email, username, password, role } = req.body || {};
 
 	if (!id) {
-		return res.status(400).json({ error: '鏃犳晥鐨勭敤鎴稩D' });
+		return res.status(400).json({ error: '无效的用户ID' });
 	}
 
-	// 涓嶈兘淇敼鑷繁鐨勮鑹?
+	// 不能修改自己的角色
 	if (role && req.user.id === id && role !== 'admin') {
 		return res.status(400).json({ error: '请求失败' });
 	}
 
 	try {
-		// 鍏堟煡璇㈢敤鎴锋槸鍚﹀瓨鍦?
+		// 先查询用户是否存在
 		const userRow = await db.get('SELECT id, email, username, role FROM users WHERE id = ?', [id]);
 
 		if (!userRow) {
 			return res.status(404).json({ error: '请求失败' });
 		}
 
-		// 楠岃瘉鍜屽噯澶囨洿鏂版暟鎹?
+		// 验证和准备更新数据
 		const updates = [];
 		const params = [];
 
-		// 鏇存柊閭
+		// 更新邮箱
 		if (email !== undefined) {
 			const trimmedEmail = SecurityUtils.sanitizeString(String(email), {
 				maxLength: 255,
@@ -1059,7 +1059,7 @@ router.put('/users/:id', adminMiddleware, apiSignatureMiddleware(), async (req, 
 			params.push(trimmedEmail);
 		}
 
-		// 鏇存柊鐢ㄦ埛鍚?
+		// 更新用户名
 		if (username !== undefined) {
 			if (username === null || username === '') {
 				updates.push('username = NULL');
@@ -1073,7 +1073,7 @@ router.put('/users/:id', adminMiddleware, apiSignatureMiddleware(), async (req, 
 			}
 		}
 
-		// 鏇存柊瀵嗙爜
+		// 更新密码
 		if (password !== undefined && password !== null && password !== '') {
 			const passwordValidation = SecurityUtils.validatePassword(password);
 			if (!passwordValidation.valid) {
@@ -1084,20 +1084,20 @@ router.put('/users/:id', adminMiddleware, apiSignatureMiddleware(), async (req, 
 			params.push(passwordHash);
 		}
 
-		// 鏇存柊瑙掕壊
+		// 更新角色
 		if (role !== undefined) {
 			if (role !== 'user' && role !== 'admin') {
-				return res.status(400).json({ error: '鏃犳晥鐨勮鑹诧紝蹇呴』鏄?user 鎴?admin' });
+				return res.status(400).json({ error: '无效的角色，必须是 user 或 admin' });
 			}
 			updates.push('role = ?');
 			params.push(role);
 		}
 
 		if (updates.length === 0) {
-			return res.status(400).json({ error: '娌℃湁瑕佹洿鏂扮殑瀛楁' });
+			return res.status(400).json({ error: '没有要更新的字段' });
 		}
 
-		// 妫€鏌ラ偖绠卞拰鐢ㄦ埛鍚嶆槸鍚﹀啿绐?
+		// 检查邮箱和用户名是否冲突
 		const checkConditions = [];
 		const checkParams = [];
 
@@ -1136,26 +1136,26 @@ router.put('/users/:id', adminMiddleware, apiSignatureMiddleware(), async (req, 
 		res.json({ success: true });
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鏇存柊澶辫触' });
+		return res.status(500).json({ error: '更新失败' });
 	}
 });
 
 /**
- * 鏇存柊鐢ㄦ埛瑙掕壊
+ * 更新用户角色
  */
 router.put('/users/:id/role', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	const id = SecurityUtils.validateId(req.params.id);
 	const { role } = req.body || {};
 
 	if (!id) {
-		return res.status(400).json({ error: '鏃犳晥鐨勭敤鎴稩D' });
+		return res.status(400).json({ error: '无效的用户ID' });
 	}
 
 	if (!role || (role !== 'user' && role !== 'admin')) {
-		return res.status(400).json({ error: '鏃犳晥鐨勮鑹诧紝蹇呴』鏄?user 鎴?admin' });
+		return res.status(400).json({ error: '无效的角色，必须是 user 或 admin' });
 	}
 
-	// 涓嶈兘淇敼鑷繁鐨勮鑹?
+	// 不能修改自己的角色
 	if (req.user.id === id) {
 		return res.status(400).json({ error: '请求失败' });
 	}
@@ -1170,29 +1170,29 @@ router.put('/users/:id/role', adminMiddleware, apiSignatureMiddleware(), async (
 		res.json({ success: true });
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鏇存柊澶辫触' });
+		return res.status(500).json({ error: '更新失败' });
 	}
 });
 
 /**
- * 鍒犻櫎鐢ㄦ埛
+ * 删除用户
  */
 router.delete('/users/:id', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	const id = SecurityUtils.validateId(req.params.id);
 	if (!id) {
-		return res.status(400).json({ error: '鏃犳晥鐨勭敤鎴稩D' });
+		return res.status(400).json({ error: '无效的用户ID' });
 	}
 
-	// 涓嶈兘鍒犻櫎鑷繁
+	// 不能删除自己
 	if (req.user.id === id) {
-		return res.status(400).json({ error: '涓嶈兘鍒犻櫎鑷繁' });
+		return res.status(400).json({ error: '不能删除自己' });
 	}
 
 	try {
-		// 鍏堝垹闄よ鐢ㄦ埛鐨勬墍鏈夊叓瀛楄褰?
+		// 先删除该用户的所有八字记录
 		await db.run('DELETE FROM bazi_records WHERE user_id = ?', [id]);
 
-		// 鍐嶅垹闄ょ敤鎴?
+		// 再删除用户
 		const result = await db.run('DELETE FROM users WHERE id = ?', [id]);
 
 		if (result.changes === 0) {
@@ -1202,15 +1202,16 @@ router.delete('/users/:id', adminMiddleware, apiSignatureMiddleware(), async (re
 		res.json({ success: true });
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鍒犻櫎澶辫触' });
+		return res.status(500).json({ error: '删除失败' });
 	}
 });
 
 /**
- * 鑾峰彇鍏瓧璁板綍鍒楄〃
+ * 获取八字记录列表
  */
 /**
- * 鑾峰彇缁熶竴鎺掔洏璁板綍鍒楄〃锛堝叓瀛?鍏埢/绱井锛? */
+ * 获取统一排盘记录列表（八字/六爻/紫微）
+ */
 router.get('/chart-records', adminMiddleware, async (req, res) => {
 	const page = Math.max(1, parseInt(req.query.page, 10) || 1);
 	const pageSize = Math.min(200, Math.max(1, parseInt(req.query.pageSize, 10) || 20));
@@ -1281,18 +1282,18 @@ router.get('/chart-records', adminMiddleware, async (req, res) => {
 		});
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鏌ヨ澶辫触' });
+		return res.status(500).json({ error: '查询失败' });
 	}
 });
 
 /**
- * 鑾峰彇缁熶竴鎺掔洏璁板綍璇︽儏
+ * 获取统一排盘记录详情
  */
 router.get('/chart-records/:id', adminMiddleware, async (req, res) => {
 	const id = SecurityUtils.validateId(req.params.id);
 	const rawType = String(req.query.type || '').trim().toLowerCase();
 	if (!id) {
-		return res.status(400).json({ error: '鏃犳晥鐨勮褰旾D' });
+		return res.status(400).json({ error: '无效的记录ID' });
 	}
 	if (rawType === 'all') {
 		return res.status(400).json({ error: '请求失败' });
@@ -1340,12 +1341,12 @@ router.get('/chart-records/:id', adminMiddleware, async (req, res) => {
 		});
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鏌ヨ澶辫触' });
+		return res.status(500).json({ error: '查询失败' });
 	}
 });
 
 /**
- * 鍒涘缓缁熶竴鎺掔洏璁板綍
+ * 创建统一排盘记录
  */
 router.post('/chart-records', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	const { type, userId, name, gender, birthDatetime, calendarType, rawPayload } = req.body || {};
@@ -1353,7 +1354,7 @@ router.post('/chart-records', adminMiddleware, apiSignatureMiddleware(), async (
 	const tableName = ADMIN_RECORD_TYPE_TABLE_MAP[chartType];
 
 	if (!userId || birthDatetime === null || birthDatetime === undefined || birthDatetime === '') {
-		return res.status(400).json({ error: '缂哄皯 userId 鎴?birthDatetime' });
+		return res.status(400).json({ error: '缺少 userId 或 birthDatetime' });
 	}
 
 	try {
@@ -1384,7 +1385,7 @@ router.post('/chart-records', adminMiddleware, apiSignatureMiddleware(), async (
 				}
 				rawPayloadJson = payloadStr;
 			} catch (e) {
-				return res.status(400).json({ error: '鏁版嵁鏍煎紡閿欒锛屾棤娉曚繚瀛? ' });
+				return res.status(400).json({ error: '数据格式错误，无法保存' });
 			}
 		}
 
@@ -1412,18 +1413,18 @@ router.post('/chart-records', adminMiddleware, apiSignatureMiddleware(), async (
 		});
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鍒涘缓澶辫触' });
+		return res.status(500).json({ error: '创建失败' });
 	}
 });
 
 /**
- * 鏇存柊缁熶竴鎺掔洏璁板綍
+ * 更新统一排盘记录
  */
 router.put('/chart-records/:id', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	const id = SecurityUtils.validateId(req.params.id);
 	const rawType = String(req.body?.type || req.query.type || '').trim().toLowerCase();
 	if (!id) {
-		return res.status(400).json({ error: '鏃犳晥鐨勮褰旾D' });
+		return res.status(400).json({ error: '无效的记录ID' });
 	}
 	if (rawType === 'all') {
 		return res.status(400).json({ error: '请求失败' });
@@ -1498,13 +1499,13 @@ router.put('/chart-records/:id', adminMiddleware, apiSignatureMiddleware(), asyn
 					updates.push('raw_payload = ?');
 					params.push(payloadStr);
 				} catch (e) {
-					return res.status(400).json({ error: '鏁版嵁鏍煎紡閿欒: ' });
+					return res.status(400).json({ error: '数据格式错误: ' });
 				}
 			}
 		}
 
 		if (updates.length === 0) {
-			return res.status(400).json({ error: '娌℃湁瑕佹洿鏂扮殑瀛楁' });
+			return res.status(400).json({ error: '没有要更新的字段' });
 		}
 
 		params.push(id);
@@ -1517,18 +1518,18 @@ router.put('/chart-records/:id', adminMiddleware, apiSignatureMiddleware(), asyn
 		res.json({ success: true, chartType });
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鏇存柊澶辫触' });
+		return res.status(500).json({ error: '更新失败' });
 	}
 });
 
 /**
- * 鍒犻櫎缁熶竴鎺掔洏璁板綍
+ * 删除统一排盘记录
  */
 router.delete('/chart-records/:id', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	const id = SecurityUtils.validateId(req.params.id);
 	const rawType = String(req.query.type || '').trim().toLowerCase();
 	if (!id) {
-		return res.status(400).json({ error: '鏃犳晥鐨勮褰旾D' });
+		return res.status(400).json({ error: '无效的记录ID' });
 	}
 	if (rawType === 'all') {
 		return res.status(400).json({ error: '请求失败' });
@@ -1545,7 +1546,7 @@ router.delete('/chart-records/:id', adminMiddleware, apiSignatureMiddleware(), a
 		res.json({ success: true });
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鍒犻櫎澶辫触' });
+		return res.status(500).json({ error: '删除失败' });
 	}
 });
 
@@ -1609,17 +1610,17 @@ router.get('/records', adminMiddleware, async (req, res) => {
 		});
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鏌ヨ澶辫触' });
+		return res.status(500).json({ error: '查询失败' });
 	}
 });
 
 /**
- * 鑾峰彇鍏瓧璁板綍璇︽儏
+ * 获取八字记录详情
  */
 router.get('/records/:id', adminMiddleware, async (req, res) => {
 	const id = SecurityUtils.validateId(req.params.id);
 	if (!id) {
-		return res.status(400).json({ error: '鏃犳晥鐨勮褰旾D' });
+		return res.status(400).json({ error: '无效的记录ID' });
 	}
 
 	try {
@@ -1674,34 +1675,34 @@ router.get('/records/:id', adminMiddleware, async (req, res) => {
 	} catch (err) {
 		console.error('Admin route error');
 		if (err.code === 'ER_MALFORMED_PACKET') {
-			console.error('鏁版嵁鍖呴敊璇紝鍙兘鏄煡璇㈢粨鏋滆繃澶ф垨杩炴帴闂');
+			console.error('数据包错误，可能是查询结果过大或连接问题');
 			return res.status(500).json({
-				error: '鏌ヨ澶辫触锛氭暟鎹寘閿欒锛岃妫€鏌ユ暟鎹簱杩炴帴鎴栬仈绯荤鐞嗗憳',
+				error: '查询失败：数据包错误，请检查数据库连接或联系管理员',
 			});
 		}
-		return res.status(500).json({ error: '鏌ヨ澶辫触' });
+		return res.status(500).json({ error: '查询失败' });
 	}
 });
 
 /**
- * 鍒涘缓鍏瓧璁板綍
+ * 创建八字记录
  */
 router.post('/records', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	const { userId, name, gender, birthDatetime, calendarType, rawPayload } = req.body || {};
 
 	if (!userId || birthDatetime === null || birthDatetime === undefined || birthDatetime === '') {
-		return res.status(400).json({ error: '缂哄皯 userId 鎴?birthDatetime' });
+		return res.status(400).json({ error: '缺少 userId 或 birthDatetime' });
 	}
 
 	try {
-		// 楠岃瘉鐢ㄦ埛鏄惁瀛樺湪
+		// 验证用户是否存在
 		const userRow = await db.get('SELECT id FROM users WHERE id = ?', [userId]);
 
 		if (!userRow) {
 			return res.status(404).json({ error: '请求失败' });
 		}
 
-		// 浣跨敤瀹夊叏宸ュ叿楠岃瘉鍜屾竻鐞嗚緭鍏?
+		// 使用安全工具验证和清理输入
 		const sanitizedName = name
 			? SecurityUtils.sanitizeString(String(name), { maxLength: 100 })
 			: null;
@@ -1716,7 +1717,7 @@ router.post('/records', adminMiddleware, apiSignatureMiddleware(), async (req, r
 			? SecurityUtils.sanitizeString(String(calendarType), { maxLength: 20 })
 			: null;
 
-		// 瀹夊叏鍦板簭鍒楀寲 rawPayload
+		// 安全地序列化 rawPayload
 		let rawPayloadJson = null;
 		if (rawPayload) {
 			try {
@@ -1727,7 +1728,7 @@ router.post('/records', adminMiddleware, apiSignatureMiddleware(), async (req, r
 				rawPayloadJson = payloadStr;
 			} catch (e) {
 				console.error('Admin route error');
-				return res.status(400).json({ error: '鏁版嵁鏍煎紡閿欒锛屾棤娉曚繚瀛? ' });
+				return res.status(400).json({ error: '数据格式错误，无法保存' });
 			}
 		}
 
@@ -1756,19 +1757,19 @@ router.post('/records', adminMiddleware, apiSignatureMiddleware(), async (req, r
 		});
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鍒涘缓澶辫触' });
+		return res.status(500).json({ error: '创建失败' });
 	}
 });
 
 /**
- * 鏇存柊鍏瓧璁板綍
+ * 更新八字记录
  */
 router.put('/records/:id', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	const id = SecurityUtils.validateId(req.params.id);
 	const { userId, name, gender, birthDatetime, calendarType, rawPayload } = req.body || {};
 
 	if (!id) {
-		return res.status(400).json({ error: '鏃犳晥鐨勮褰旾D' });
+		return res.status(400).json({ error: '无效的记录ID' });
 	}
 
 	try {
@@ -1839,13 +1840,13 @@ router.put('/records/:id', adminMiddleware, apiSignatureMiddleware(), async (req
 					updates.push('raw_payload = ?');
 					params.push(payloadStr);
 				} catch (e) {
-					return res.status(400).json({ error: '鏁版嵁鏍煎紡閿欒: ' });
+					return res.status(400).json({ error: '数据格式错误: ' });
 				}
 			}
 		}
 
 		if (updates.length === 0) {
-			return res.status(400).json({ error: '娌℃湁瑕佹洿鏂扮殑瀛楁' });
+			return res.status(400).json({ error: '没有要更新的字段' });
 		}
 
 		params.push(id);
@@ -1859,17 +1860,17 @@ router.put('/records/:id', adminMiddleware, apiSignatureMiddleware(), async (req
 		res.json({ success: true });
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鏇存柊澶辫触' });
+		return res.status(500).json({ error: '更新失败' });
 	}
 });
 
 /**
- * 鍒犻櫎鍏瓧璁板綍
+ * 删除八字记录
  */
 router.delete('/records/:id', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	const id = SecurityUtils.validateId(req.params.id);
 	if (!id) {
-		return res.status(400).json({ error: '鏃犳晥鐨勮褰旾D' });
+		return res.status(400).json({ error: '无效的记录ID' });
 	}
 
 	try {
@@ -1880,12 +1881,12 @@ router.delete('/records/:id', adminMiddleware, apiSignatureMiddleware(), async (
 		res.json({ success: true });
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鍒犻櫎澶辫触' });
+		return res.status(500).json({ error: '删除失败' });
 	}
 });
 
 /**
- * 鑾峰彇鍏埢璁板綍鍒楄〃
+ * 获取六爻记录列表
  */
 router.get('/liuyao-records', adminMiddleware, async (req, res) => {
 	const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -1947,17 +1948,17 @@ router.get('/liuyao-records', adminMiddleware, async (req, res) => {
 		});
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鏌ヨ澶辫触' });
+		return res.status(500).json({ error: '查询失败' });
 	}
 });
 
 /**
- * 鑾峰彇鍏埢璁板綍璇︽儏
+ * 获取六爻记录详情
  */
 router.get('/liuyao-records/:id', adminMiddleware, async (req, res) => {
 	const id = SecurityUtils.validateId(req.params.id);
 	if (!id) {
-		return res.status(400).json({ error: '鏃犳晥鐨勮褰旾D' });
+		return res.status(400).json({ error: '无效的记录ID' });
 	}
 
 	try {
@@ -2012,34 +2013,34 @@ router.get('/liuyao-records/:id', adminMiddleware, async (req, res) => {
 	} catch (err) {
 		console.error('Admin route error');
 		if (err.code === 'ER_MALFORMED_PACKET') {
-			console.error('鏁版嵁鍖呴敊璇紝鍙兘鏄煡璇㈢粨鏋滆繃澶ф垨杩炴帴闂');
+			console.error('数据包错误，可能是查询结果过大或连接问题');
 			return res.status(500).json({
-				error: '鏌ヨ澶辫触锛氭暟鎹寘閿欒锛岃妫€鏌ユ暟鎹簱杩炴帴鎴栬仈绯荤鐞嗗憳',
+				error: '查询失败：数据包错误，请检查数据库连接或联系管理员',
 			});
 		}
-		return res.status(500).json({ error: '鏌ヨ澶辫触' });
+		return res.status(500).json({ error: '查询失败' });
 	}
 });
 
 /**
- * 鍒涘缓鍏埢璁板綍
+ * 创建六爻记录
  */
 router.post('/liuyao-records', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	const { userId, name, gender, birthDatetime, calendarType, rawPayload } = req.body || {};
 
 	if (!userId || birthDatetime === null || birthDatetime === undefined || birthDatetime === '') {
-		return res.status(400).json({ error: '缂哄皯 userId 鎴?birthDatetime' });
+		return res.status(400).json({ error: '缺少 userId 或 birthDatetime' });
 	}
 
 	try {
-		// 楠岃瘉鐢ㄦ埛鏄惁瀛樺湪
+		// 验证用户是否存在
 		const userRow = await db.get('SELECT id FROM users WHERE id = ?', [userId]);
 
 		if (!userRow) {
 			return res.status(404).json({ error: '请求失败' });
 		}
 
-		// 浣跨敤瀹夊叏宸ュ叿楠岃瘉鍜屾竻鐞嗚緭鍏?
+		// 使用安全工具验证和清理输入
 		const sanitizedName = name
 			? SecurityUtils.sanitizeString(String(name), { maxLength: 100 })
 			: null;
@@ -2054,7 +2055,7 @@ router.post('/liuyao-records', adminMiddleware, apiSignatureMiddleware(), async 
 			? SecurityUtils.sanitizeString(String(calendarType), { maxLength: 20 })
 			: null;
 
-		// 瀹夊叏鍦板簭鍒楀寲 rawPayload
+		// 安全地序列化 rawPayload
 		let rawPayloadJson = null;
 		if (rawPayload) {
 			try {
@@ -2065,7 +2066,7 @@ router.post('/liuyao-records', adminMiddleware, apiSignatureMiddleware(), async 
 				rawPayloadJson = payloadStr;
 			} catch (e) {
 				console.error('Admin route error');
-				return res.status(400).json({ error: '鏁版嵁鏍煎紡閿欒锛屾棤娉曚繚瀛? ' });
+				return res.status(400).json({ error: '数据格式错误，无法保存' });
 			}
 		}
 
@@ -2094,19 +2095,19 @@ router.post('/liuyao-records', adminMiddleware, apiSignatureMiddleware(), async 
 		});
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鍒涘缓澶辫触' });
+		return res.status(500).json({ error: '创建失败' });
 	}
 });
 
 /**
- * 鏇存柊鍏埢璁板綍
+ * 更新六爻记录
  */
 router.put('/liuyao-records/:id', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	const id = SecurityUtils.validateId(req.params.id);
 	const { userId, name, gender, birthDatetime, calendarType, rawPayload } = req.body || {};
 
 	if (!id) {
-		return res.status(400).json({ error: '鏃犳晥鐨勮褰旾D' });
+		return res.status(400).json({ error: '无效的记录ID' });
 	}
 
 	try {
@@ -2177,13 +2178,13 @@ router.put('/liuyao-records/:id', adminMiddleware, apiSignatureMiddleware(), asy
 					updates.push('raw_payload = ?');
 					params.push(payloadStr);
 				} catch (e) {
-					return res.status(400).json({ error: '鏁版嵁鏍煎紡閿欒: ' });
+					return res.status(400).json({ error: '数据格式错误: ' });
 				}
 			}
 		}
 
 		if (updates.length === 0) {
-			return res.status(400).json({ error: '娌℃湁瑕佹洿鏂扮殑瀛楁' });
+			return res.status(400).json({ error: '没有要更新的字段' });
 		}
 
 		params.push(id);
@@ -2197,17 +2198,17 @@ router.put('/liuyao-records/:id', adminMiddleware, apiSignatureMiddleware(), asy
 		res.json({ success: true });
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鏇存柊澶辫触' });
+		return res.status(500).json({ error: '更新失败' });
 	}
 });
 
 /**
- * 鍒犻櫎鍏埢璁板綍
+ * 删除六爻记录
  */
 router.delete('/liuyao-records/:id', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	const id = SecurityUtils.validateId(req.params.id);
 	if (!id) {
-		return res.status(400).json({ error: '鏃犳晥鐨勮褰旾D' });
+		return res.status(400).json({ error: '无效的记录ID' });
 	}
 
 	try {
@@ -2218,12 +2219,12 @@ router.delete('/liuyao-records/:id', adminMiddleware, apiSignatureMiddleware(), 
 		res.json({ success: true });
 	} catch (err) {
 		console.error('Admin route error');
-		return res.status(500).json({ error: '鍒犻櫎澶辫触' });
+		return res.status(500).json({ error: '删除失败' });
 	}
 });
 
 /**
- * 鑾峰彇棰濆害閲嶇疆閰嶇疆
+ * 获取额度重置配置
  */
 router.get('/quota-reset-config', adminMiddleware, async (req, res) => {
 	try {
@@ -2231,12 +2232,12 @@ router.get('/quota-reset-config', adminMiddleware, async (req, res) => {
 		res.json(config);
 	} catch (e) {
 		console.error('Admin route error');
-		res.status(500).json({ error: '鑾峰彇閰嶇疆澶辫触' });
+		res.status(500).json({ error: '获取配置失败' });
 	}
 });
 
 /**
- * 鏇存柊棰濆害閲嶇疆閰嶇疆
+ * 更新额度重置配置
  */
 router.post('/quota-reset-config', adminMiddleware, apiSignatureMiddleware(), async (req, res) => {
 	const { enabled, time, timezone, target } = req.body || {};
@@ -2252,13 +2253,13 @@ router.post('/quota-reset-config', adminMiddleware, apiSignatureMiddleware(), as
 			target: target
 		});
 
-		// 閲嶆柊鍔犺浇瀹氭椂浠诲姟
+		// 重新加载定时任务
 		await reloadScheduler();
 
-		res.json({ success: true, message: '閰嶇疆宸蹭繚瀛樺苟鐢熸晥' });
+		res.json({ success: true, message: '配置已保存并生效' });
 	} catch (e) {
 		console.error('Admin route error');
-		res.status(500).json({ error: '鏇存柊閰嶇疆澶辫触' });
+		res.status(500).json({ error: '更新配置失败' });
 	}
 });
 

@@ -2,7 +2,16 @@ export interface AiConfig {
 	apiUrl: string;
 	apiKey: string;
 	model: string;
-	provider: 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'custom';
+	provider:
+		| 'openai'
+		| 'anthropic'
+		| 'gemini'
+		| 'qwen'
+		| 'deepseek'
+		| 'kimi'
+		| 'zhipu'
+		| 'ollama'
+		| 'custom';
 }
 
 const STORAGE_KEY = 'xuanxue_ai_config';
