@@ -1,7 +1,7 @@
 export const API_BASE_URL = '';
 
 export const theme = {
-	primary: '#00BFA5',
+	primary: '#667eea',
 };
 
 export const dizhi: Record<string, Record<string, string>> = {

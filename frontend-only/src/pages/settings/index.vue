@@ -245,7 +245,7 @@ onMounted(() => {
 
 .toggle-btn {
 	font-size: 12px;
-	color: #00BFA5;
+	color: #667eea;
 	margin-top: 6px;
 	display: inline-block;
 	cursor: pointer;
@@ -284,8 +284,8 @@ onMounted(() => {
 }
 
 .status.success {
-	background: #e6fffa;
-	color: #00BFA5;
+	background: #eef2ff;
+	color: #667eea;
 }
 
 .status.error {

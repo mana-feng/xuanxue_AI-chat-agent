@@ -40,7 +40,7 @@
 									:font-size="28"
 									:bold="true"
 									type="primary"
-									label="保存到账号"
+									label="保存到本地"
 									icon="tmicon-md-save"
 									@tap="handleAction('save')"
 								></tm-button>
@@ -731,7 +731,8 @@ onShow(() => {
 }
 
 .page-liuyao-result .yao-table {
-	min-width: 820px;
+	/* 需与 .yao-row 六列宽度之和 (70+80+140+180+180+140=790) 一致，否则表头背景/边框对不齐右边缘 */
+	min-width: 790px;
 	width: 100%;
 	border: 1px solid #e5e7eb;
 	border-radius: 12px;

@@ -1,12 +1,14 @@
 <template>
   <view class="time-input-component">
-    <tm-text
-      v-if="label"
-      class="time-input-label"
-      :font-size="22"
-      color="#2d3748"
-      :label="label"
-    ></tm-text>
+    <view v-if="label" class="time-input-header">
+      <tm-text
+        class="time-input-label"
+        :font-size="22"
+        color="#2d3748"
+        :label="label"
+      ></tm-text>
+      <text class="now-link" @tap="onUseNow">现在</text>
+    </view>
     <tm-button
       class="time-picker-btn"
       type="primary"
@@ -20,15 +22,6 @@
       :padding="[24, 24]"
       :shadow="0"
       @tap="$emit('open')"
-    ></tm-button>
-    <tm-button
-      class="suffix-btn"
-      size="small"
-      type="primary"
-      :round="6"
-      :padding="[6, 10]"
-      label="现在"
-      @tap="onUseNow"
     ></tm-button>
   </view>
 </template>
@@ -61,25 +54,37 @@ function onUseNow() {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+}
+.time-input-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+.time-input-label {
+  font-weight: 600;
+}
+.now-link {
+  font-size: 13px;
+  color: #667eea;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #eef2ff;
+  cursor: pointer;
+}
+.now-link:active {
+  background: #e0e7ff;
 }
 .time-picker-btn {
   width: 100%;
   justify-content: flex-start;
   font-size: 20px;
   text-align: left;
-  min-height: 70px;
 }
 .time-picker-btn :deep(.tm-button__content) {
   gap: 12px;
-}
-.time-input-label {
-  font-weight: 600;
-}
-.suffix-btn {
-  align-self: flex-end;
-  font-size: 16px;
-  padding: 8px 16px !important;
 }
 @media (min-width: 900px) {
   .time-picker-btn {

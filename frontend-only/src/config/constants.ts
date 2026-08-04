@@ -1,7 +1,8 @@
 export const theme = {
-	primary: '#00BFA5',
-	primaryDark: '#00897B',
-	primaryLight: '#B2DFDB',
+	// 主色与全站自定义渐变 (#667eea → #764ba2) 保持一致，避免 tmui 默认绿色主题
+	primary: '#667eea',
+	primaryDark: '#5a67d8',
+	primaryLight: '#c3dafe',
 	background: '#F5F5F5',
 	cardBg: '#FFFFFF',
 	textPrimary: '#212121',

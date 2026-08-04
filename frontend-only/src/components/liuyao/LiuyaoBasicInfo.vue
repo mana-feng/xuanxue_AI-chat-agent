@@ -10,8 +10,8 @@
 				:padding="[20, 18]"
 			></tm-input>
 
-			<view class="helper-row">
-				<tm-text :font-size="22" color="#94a3b8" label="性别"></tm-text>
+			<view class="gender-row">
+				<tm-text :font-size="22" color="#4b5563" label="性别"></tm-text>
 				<tm-segtab
 					v-model="genderLocal"
 					:list="[{ text: '男' }, { text: '女' }]"
@@ -25,8 +25,8 @@
 				<TimeInput v-model="timeLabelLocal" @open="$emit('openTimePicker')" @use-now="$emit('useNowTime')" />
 			</view>
 
-			<view class="helper-row">
-				<tm-text :font-size="22" color="#94a3b8" label="默认填入当前时间，点击选择可使用滚动轮盘选择阳历日期与时间。"></tm-text>
+			<view class="hint-row">
+				<tm-text :font-size="20" color="#94a3b8" label="默认填入当前时间，点击可用滚轮选择阳历日期与时间。"></tm-text>
 			</view>
 	</view>
 </template>
@@ -64,14 +64,22 @@ watch(() => props.gender, v => (genderLocal.value = v));
 </script>
 
 <style scoped>
+.gender-row {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	margin-top: 14px;
+}
 .time-row {
 	display: flex;
 	align-items: center;
 	gap: 12px;
 	flex-wrap: wrap;
+	margin-top: 14px;
 }
-.helper-row {
+.hint-row {
 	margin-top: 8px;
+	line-height: 1.4;
 }
 </style>
 
