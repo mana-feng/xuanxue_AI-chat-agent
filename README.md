@@ -66,7 +66,7 @@ npm run dev:h5
 访问：
 
 - 用户端：<http://localhost:3000>
-- 管理端：[http://localhost:3002](http://localhost:3001)
+- 管理端：<http://localhost:3002>
 
 ## 核心功能
 
@@ -172,7 +172,7 @@ docker compose -f docker-compose.deploy.yml up -d
 
 访问：
 - 用户端：`http://localhost:3000`
-- 管理端：`http://localhost:3002`
+- 管理端：`http://localhost:3001`
 
 ## 免责声明
 
