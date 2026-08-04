@@ -1,8 +1,10 @@
 export const theme = {
-	// 主色与全站自定义渐变 (#667eea → #764ba2) 保持一致，避免 tmui 默认绿色主题
-	primary: '#667eea',
-	primaryDark: '#5a67d8',
-	primaryLight: '#c3dafe',
+	// 与 frontend-docker 保持一致的主题色
+	primary: '#0052d9',
+	// 自定义淡蓝按钮主题色（用于统一操作按钮）
+	'soft-blue': '#93c5fd',
+	primaryDark: '#003ba6',
+	primaryLight: '#d0e2ff',
 	background: '#F5F5F5',
 	cardBg: '#FFFFFF',
 	textPrimary: '#212121',

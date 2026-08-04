@@ -64,17 +64,17 @@ watch(() => props.gender, v => (genderLocal.value = v));
 </script>
 
 <style scoped>
+/* nvue 兼容模式下 view 默认 flex-direction: column，横向排列必须显式声明 row */
 .gender-row {
 	display: flex;
+	flex-direction: row;
 	align-items: center;
 	gap: 16px;
 	margin-top: 14px;
 }
 .time-row {
 	display: flex;
-	align-items: center;
-	gap: 12px;
-	flex-wrap: wrap;
+	flex-direction: column;
 	margin-top: 14px;
 }
 .hint-row {

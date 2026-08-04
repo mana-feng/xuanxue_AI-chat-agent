@@ -50,8 +50,6 @@
 
 					<tm-button
 						type="primary"
-						linear="right"
-						linear-deep="accent"
 						:block="true"
 						:round="12"
 						:padding="[24, 24]"
@@ -93,8 +91,6 @@
 					:type="canSubmit ? 'primary' : 'grey'"
 					:round="999"
 					:bold="true"
-					:linear="canSubmit ? 'right' : ''"
-					:linear-deep="'accent'"
 					:shadow="canSubmit ? 10 : 0"
 					:disabled="!canSubmit"
 					icon="tmicon-calendar-alt"

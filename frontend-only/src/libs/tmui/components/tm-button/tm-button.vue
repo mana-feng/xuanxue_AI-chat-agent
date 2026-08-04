@@ -248,19 +248,12 @@ const effectiveColor = computed(() => {
 	if (typeof props.type === 'string' && props.type.trim() !== '') return props.type.trim();
 	return props.color;
 })
-const isNeutralThemeColor = (value: string) => {
-	const v = (value || '').trim().toLowerCase();
-	if (!v) return false;
-	if (v === 'white' || v === 'black') return true;
-	if (v.startsWith('grey')) return true;
-	if (v.startsWith('gray')) return true;
-	return false;
-}
 const effectiveLinear = computed(() => {
 	if (typeof props.linear === 'string' && props.linear !== '') return props.linear;
 	if (props.text || props.outlined || props.transprent) return props.linear;
-	if (isNeutralThemeColor(effectiveColor.value)) return '';
-	return 'right';
+	// 默认使用纯色。此前默认强制 'right' 渐变，会把主色自动拉伸出一条高饱和的
+	// 蓝→青渐变，观感廉价；需要渐变的按钮显式传 linear 即可。
+	return '';
 })
 const effectiveLinearDeep = computed(() => {
 	if (typeof props.linear === 'string' && props.linear !== '') return props.linearDeep;

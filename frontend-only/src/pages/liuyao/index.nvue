@@ -309,8 +309,10 @@ onLoad(() => {
 	margin-top: 4px;
 }
 
+/* nvue 兼容模式下 view 默认 flex-direction: column，横向排列必须显式声明 row */
 .method-picker-left {
 	display: flex;
+	flex-direction: row;
 	align-items: center;
 	gap: 10px;
 }
@@ -339,6 +341,7 @@ onLoad(() => {
 
 .helper-row {
 	display: flex;
+	flex-direction: row;
 	width: 100%;
 	flex-wrap: wrap;
 	gap: 12px;
@@ -348,6 +351,7 @@ onLoad(() => {
 
 .online-shake-wrapper {
 	display: flex;
+	flex-direction: row;
 	align-items: center;
 	gap: 16px;
 	flex-wrap: wrap;
@@ -386,6 +390,7 @@ onLoad(() => {
 
 .picker-trigger {
 	display: flex;
+	flex-direction: row;
 	align-items: center;
 	justify-content: space-between;
 	padding: 14px 16px;
@@ -400,6 +405,7 @@ onLoad(() => {
 
 .helper-actions {
 	display: flex;
+	flex-direction: row;
 	gap: 16px;
 	flex-wrap: wrap;
 	width: 100%;

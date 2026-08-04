@@ -1,7 +1,7 @@
 <template>
 	<view
 class="flex flex-col relative"
-		:style="[appConfig.theme ? { background: appConfig.theme } : '', { width: '100vw', minWidth: '100vw', minHeight: appConfig.height + 'px' }, layoutCssVars]">
+		:style="[appConfig.theme ? { background: appConfig.theme } : '', { width: '100%', minWidth: '100%', minHeight: appConfig.height + 'px' }, layoutCssVars]">
 		<!-- #ifndef APP-NVUE -->
 		<!-- 	<image
 			v-if="appConfig.bgImg"
@@ -15,8 +15,9 @@ class="flex flex-col relative"
 v-if="isSetThemeOk" class="flex flex-col flex-1" :class="[blur ? 'blur' : '']" :style="[
 			{
 				zIndex: 1,
-				width: '100vw',
-				minWidth: '100vw',
+				/* 用 100% 而非 100vw：H5 下 100vw 含滚动条宽度，会让每个页面多出约 17px 横向滚动 */
+				width: '100%',
+				minWidth: '100%',
 				minHeight: appConfig.height + 'px'
 			},
 			blur ? { backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(248, 248, 248, 0.7)' } : ''

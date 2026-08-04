@@ -12,8 +12,6 @@
     <tm-button
       class="time-picker-btn"
       type="primary"
-      linear="right"
-      linear-deep="accent"
       :block="true"
       :round="12"
       icon="tmicon-calendar-alt"
@@ -56,8 +54,10 @@ function onUseNow() {
   flex-direction: column;
   gap: 8px;
 }
+/* nvue 兼容模式下 view 默认 flex-direction: column，横向排列必须显式声明 row */
 .time-input-header {
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: space-between;
   width: 100%;

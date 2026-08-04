@@ -24,14 +24,15 @@ defineProps({
 </script>
 
 <style scoped>
+/* nvue 兼容模式下 view 默认 flex-direction: column，横向排列必须显式声明 row */
 .param-grid {
 	display: flex;
+	flex-direction: row;
 	gap: 10px;
-	flex-wrap: nowrap;
-	overflow-x: auto;
+	flex-wrap: wrap;
 	align-items: center;
 	margin-top: 8px;
-	justify-content: center;
+	justify-content: flex-start;
 }
 .param-chip {
 	background: #fff;
@@ -40,6 +41,7 @@ defineProps({
 	border-radius: 8px;
 	box-shadow: 0 4px 12px rgba(31, 41, 55, 0.03);
 	display: flex;
+	flex-direction: row;
 	align-items: center;
 	gap: 8px;
 	min-width: 140px;
