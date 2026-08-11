@@ -37,6 +37,36 @@ jobs:
         run: npm run build:h5
         working-directory: frontend-only
 
+      # 把统计代码注入构建产物，而不是写进仓库源码。
+      # 片段存放在仓库级 Secret ANALYTICS_SNIPPET 中（Settings -> Secrets and
+      # variables -> Actions -> Repository secrets）。注意必须是 repository
+      # secret：本 job 没有声明 environment，挂在 github-pages 环境下的
+      # environment secret 在这里取不到，会静默跳过。
+      # env 必须留在 step 层，不要提到 job 层，否则 npm ci 等步骤也能读到它。
+      - name: Inject analytics snippet
+        env:
+          ANALYTICS_SNIPPET: ${{ secrets.ANALYTICS_SNIPPET }}
+        run: |
+          node -e '
+          const fs = require("fs");
+          const f = "frontend-only/dist/build/h5/index.html";
+          const raw = process.env.ANALYTICS_SNIPPET || "";
+          if (!raw.trim()) {
+            console.log("::warning::ANALYTICS_SNIPPET 未设置或为空，已跳过注入，本次发布的站点不含统计代码");
+            process.exit(0);
+          }
+          const snippet = Buffer.from(raw.replace(/\r\n/g, "\n") + "\n", "utf8");
+          const html = fs.readFileSync(f);
+          const anchor = Buffer.from("</body>", "utf8");
+          const at = html.lastIndexOf(anchor);
+          if (at < 0) {
+            console.error("FATAL: 未在 " + f + " 中找到 </body>，注入锚点失效");
+            process.exit(1);
+          }
+          fs.writeFileSync(f, Buffer.concat([html.subarray(0, at), snippet, html.subarray(at)]));
+          console.log("injected " + snippet.length + " bytes at byte offset " + at);
+          '
+
       - name: Add CNAME
         run: echo "xuan.manafeng.com" > frontend-only/dist/build/h5/CNAME
 
